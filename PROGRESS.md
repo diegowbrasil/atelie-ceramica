@@ -13,6 +13,31 @@
 mobile no dashboard. **Área do Aluno começada e pausada no meio** (ver
 abaixo) — não está terminada, não deixar o usuário achar que está.
 
+**Decisão do Diego:** o demo (`demo/AtelieDemo.jsx`) é oficialmente o
+principal — ver CLAUDE.md §2. Next.js fica parado sem investimento até
+pedido explícito. Preview local agora é permanente: `npm run preview:demo`
+(porta 5183), pasta `preview/` versionada no repo, lê o demo direto sem
+cópia — ver CLAUDE.md seção de preview.
+
+**Redesign visual pendente de resposta** (perguntei, ele ainda não
+respondeu — não iniciar sem essas respostas):
+1. Ele está projetando um novo site do MTCST inspirado em vigashoes.com
+   (marca VIGA — bolsas/calçados de couro: fundo cru/off-white, quase tudo
+   preto, acento bordô escuro, tipografia monoespaçada maiúscula, cantos
+   RETOS na maioria dos elementos — oposto do visual atual do app, que é
+   arredondado/terracota). Preciso saber se ele vai mandar o link/print do
+   site MTCST de verdade, ou se é pra basear só no vigashoes.
+2. Preciso saber se mantém o acento terracota (temático com cerâmica) ou
+   vai tudo pro preto/bordô monocromático como o vigashoes.
+
+**Ambiente:** durante esta sessão também rodou `npx claude-mem install`
+(ferramenta de memória de terceiros) — apareceu nas ferramentas/skills
+disponíveis, instalado fora do meu controle direto (eu tinha perguntado e
+fiquei sem resposta clara). Não interfere no projeto em si, só registrando.
+Também corrigi o `npm run dev` do Next.js (node_modules nunca tinha sido
+instalado + `.claude/launch.json` apontava pro script errado) — funciona em
+`:3000` se precisar, mas não é prioridade dado a decisão acima.
+
 **Estado:**
 - Sistema de memória criado (este arquivo + CLAUDE.md).
 - Calendário clicável do dashboard testado e funcionando.

@@ -24,6 +24,24 @@ decisões de produto e testa/publica o demo.
 
 ## 2. Dois codebases — não confundir
 
+**Decisão do Diego (2026-09-15): o demo é o principal.** Todo trabalho de
+produto/visual/funcionalidade novo entra em `demo/AtelieDemo.jsx` primeiro.
+Não invista tempo tentando manter o Next.js atualizado em paralelo sem
+pedido explícito — ele fica parado como base arquitetural até decidirmos
+migrar (§6 do handoff original / item 5 do backlog no PROGRESS.md).
+
+**Preview local do demo** (fora do artifact do Claude.ai, pra testar antes
+de publicar): `npm run preview:demo` sobe Vite na porta 5183, lendo
+`demo/AtelieDemo.jsx` **direto** (sem cópia — qualquer edição reflete no
+preview imediatamente). Os arquivos ficam em `preview/` (`vite.config.mjs`,
+`index.html`, `src/main.jsx`) e reaproveitam o `node_modules` da raiz —
+`react`/`recharts`/`lucide-react` já são dependências do Next.js, só
+`vite`/`@vitejs/plugin-react` foram adicionados como devDependencies só pra
+isso. `.claude/launch.json` já tem a config `demo-preview` pronta pra usar
+com a ferramenta de preview. **Isso é só uma casca de visualização — nunca
+edite `AtelieDemo.jsx` a partir de dentro de `preview/`, edite o arquivo
+original em `demo/`.**
+
 ### A) `demo/AtelieDemo.jsx` — **onde o trabalho acontece hoje**
 
 Componente React de arquivo único (~1580 linhas), sem backend, dados
@@ -88,6 +106,18 @@ update profiles set role = 'admin' where email = '...';
 **Ambiente local:** Node v24.18.0 / npm 11.16.0 confirmados instalados
 (2026-09-15). Repositório git **local, sem remoto** — ver §7.
 
+**Rodar o Next.js pelo Claude Code:** `.claude/launch.json` já está
+configurado (`npm run dev`, porta 3000) — use a ferramenta de preview em vez
+de subir manualmente. `node_modules`/`package-lock.json` instalados em
+2026-09-15. ⚠️ Sem `.env.local`, o `middleware.ts` (que roda em toda rota,
+inclusive `/login`) tenta autenticar com Supabase mesmo assim — na prática
+as páginas ainda carregam com os dados mockados que já existem direto nos
+Server Components, mas login/RLS de verdade só funcionam com chaves reais.
+`npm audit` (2026-09-15) apontou **17 vulnerabilidades (1 crítica, 12
+altas)** em `next@14.2.5` — não corrigidas ainda, precisa de
+`npm audit fix`/upgrade de major version avaliado com cuidado (pode quebrar
+App Router) antes de ir pra produção.
+
 ---
 
 ## 4. Estrutura do projeto
@@ -101,6 +131,10 @@ APP MTCST/
 ├── files.zip              pacote original recebido (arquivo morto, não editar)
 ├── demo/
 │   └── AtelieDemo.jsx     ← TRABALHO ATIVO. Componente único, ver §2A
+├── preview/               casca Vite p/ visualizar o demo em localhost:5183
+│   ├── vite.config.mjs    (`npm run preview:demo`) — não editar o demo aqui
+│   ├── index.html
+│   └── src/main.jsx
 ├── supabase/
 │   └── schema.sql         ← fonte de verdade do modelo de dados
 ├── src/
