@@ -9,32 +9,68 @@
 
 ## Onde continuar agora
 
-**Última sessão:** 2026-09-15 — sessão de retomada do projeto (handoff).
+**Última sessão:** 2026-09-15 — retomada do projeto + correção de bug de
+mobile no dashboard. **Área do Aluno começada e pausada no meio** (ver
+abaixo) — não está terminada, não deixar o usuário achar que está.
 
-**Estado:** projeto reorganizado num repositório único, sistema de memória
-criado, e a feature pendente de verificação (calendário clicável do
-dashboard) **testada manualmente e confirmada funcionando**. Nenhuma
-funcionalidade nova foi construída ainda nesta sessão — o trabalho até aqui
-foi organização + memória + verificação do estado existente.
+**Estado:**
+- Sistema de memória criado (este arquivo + CLAUDE.md).
+- Calendário clicável do dashboard testado e funcionando.
+- **Bug de mobile corrigido**: o card "Turmas da semana" (`AgendaSemanaCard`)
+  usava `grid grid-cols-7` com `min-w-[150px]` por coluna — em telas de
+  celular (375px) isso força ~1050px de largura mínima e estoura a tela.
+  Corrigido para `flex overflow-x-auto` (scroll horizontal) abaixo do
+  breakpoint `md`, mantendo o grid de 7 colunas no desktop. Mesmo padrão que
+  já era usado nas abas de dia da tela Turmas. Também dei `flex-wrap` no
+  grupo de botões do cabeçalho de `OficinaDetalhe` (checkbox "Ver como
+  aluno" + "Editar oficina" + "Enviar lembrete"), que corria risco de
+  estourar a largura em telas estreitas.
+- **Início da Área do Aluno** (backlog #1): comecei a preparar o terreno —
+  troquei a constante `SOLICITACOES` por `SOLICITACOES_INICIAIS` (vai virar
+  `useState` na App, hoje ainda é só a constante renomeada nos 3 lugares que
+  usavam) e adicionei o mock `ALUNO_LOGADO = { nome: "Maria Oliveira", diaId:
+  "ter", turmaId: "ter-1830" }`. **Nada além disso foi construído ainda** —
+  não existe tela de aluno, não existe troca de papel (admin/aluno), não
+  existe `vagas` lifted pro nível da App. Isso tudo ainda precisa ser feito
+  (ver plano em "Próximo passo imediato").
 
-**Próximo passo imediato:** seguir o backlog sugerido em CONTEXTO.md /
-abaixo, começando por **Área do Aluno**, salvo se o Diego priorizar
-diferente.
+**Próximo passo imediato — retomar a Área do Aluno:**
+1. Lift `vagas` (hoje `useState` local dentro de `Turmas`) pro nível da
+   `App`, do mesmo jeito que `fornadas`/`oficinas` já são — necessário pra
+   `AlunoDashboard` conseguir ler o pacote da Maria sem duplicar estado.
+2. Lift `SOLICITACOES_INICIAIS` pra `useState(solicitacoes)` na App, com
+   `resolverSolicitacao(id, aprovado)` (remove da lista) e
+   `adicionarSolicitacao({ tipo })` (usa `ALUNO_LOGADO`, insere no topo).
+   Atualizar os 3 lugares que hoje leem `SOLICITACOES_INICIAIS` direto
+   (Dashboard, sidebar de Turmas, tela Solicitações) pra usar o estado real.
+3. Adicionar `papel` (`"admin" | "aluno"`) na App + botão "Ver como aluno" /
+   "Voltar ao admin" (rodapé do sidebar desktop + menu mobile) + `NAV_ALUNO`
+   = Início, Minha turma, Oficinas.
+4. `AlunoDashboard`: próxima aula, progresso do pacote, oficinas inscritas
+   com status das peças, atalhos.
+5. Estender `Turmas` (reaproveitar componente, não duplicar) com props de
+   papel: card da própria aluna mantém o toggle 🟢/🔴 (isso é o "confirmar
+   presença" do backlog — RSVP pra próxima aula, diferente do "Marcar
+   presença" em pessoa que continua admin-only); cards de outras pessoas
+   ficam só-leitura; vagas vazias mostram "Solicitar vaga" em vez de
+   "Cadastrar aluno".
+6. Estender `OficinaDetalhe` com prop de papel pra esconder ações de admin
+   e forçar `verComoAluno`.
+7. Modal "Solicitar reposição" (turma destino + observação).
+8. Rodar esbuild + testar os dois papéis no navegador (admin e aluno) antes
+   de reportar concluído.
 
-**Backlog pendente (ordem sugerida, herdada do handoff original):**
-1. **Área do Aluno** — login separado, visão só-leitura: próximas aulas,
-   aulas restantes do pacote, confirmar presença, solicitar reposição,
-   solicitar vaga, status das peças das oficinas. Hoje só existe o toggle
-   "Ver como aluno" na tela de Oficinas do demo.
-2. **Notificações** — sino no header + tabela `notificacoes` (já existe no
+**Backlog seguinte (depois da Área do Aluno terminada):**
+1. **Notificações** — sino no header + tabela `notificacoes` (já existe no
    schema): última aula do pacote, pacote encerrado, solicitações, oficina
    amanhã, queima iniciada/finalizada, peças prontas.
-3. **Reposições** — fluxo completo solicitação → aprovar/recusar →
-   confirmado.
-4. **Relatórios e Configurações** — hoje são placeholder "Em breve" (tela
+2. **Reposições** — fluxo completo solicitação → aprovar/recusar →
+   confirmado (a parte de "solicitar" nasce junto com a Área do Aluno; falta
+   o lado do admin aprovar/recusar de verdade, hoje é só notificação).
+3. **Relatórios e Configurações** — hoje são placeholder "Em breve" (tela
    `EmBreve` no demo).
-5. **Migrar o demo para o projeto Next.js + Supabase** (ver CLAUDE.md §2B).
-6. Integração real de WhatsApp (hoje é link `wa.me`), pagamentos, sensores
+4. **Migrar o demo para o projeto Next.js + Supabase** (ver CLAUDE.md §2B).
+5. Integração real de WhatsApp (hoje é link `wa.me`), pagamentos, sensores
    do forno.
 
 ---
@@ -48,20 +84,21 @@ diferente.
   "Ver como aluno"), Forno (painel + nova fornada em página dedicada +
   histórico + duplicar configuração), Pagamentos (pendentes + cobrar via
   WhatsApp + histórico), Solicitações (aprovar/recusar, ainda sem persistir
-  a resolução). Calendário do dashboard clicável (implementado, teste
-  manual pendente — ver acima).
+  a resolução). Calendário do dashboard clicável (implementado e testado).
+  Layout mobile do calendário "Turmas da semana" corrigido (scroll
+  horizontal abaixo de `md`, ver histórico de sessões 2026-09-15).
 - Next.js/Supabase: schema completo com RLS (`supabase/schema.sql`), design
   system, componentes de UI base, layout (Sidebar/MobileNav), Dashboard,
   Turmas, Forno, login com roteamento por perfil, motor de cálculo isolado
   em `src/lib/forno.ts`.
 
 ### Em andamento
-- Nada em edição de código no momento — sessão atual é de retomada/
-  organização.
+- **Área do Aluno** (demo) — começada e pausada no meio, ver "Onde continuar
+  agora" no topo deste arquivo para o plano detalhado de retomada. Até agora
+  só existe `SOLICITACOES_INICIAIS` (renomeada, ainda não é `useState`) e o
+  mock `ALUNO_LOGADO`. Nenhuma tela nova, nenhuma troca de papel ainda.
 
 ### Pendente (não implementado em nenhum dos dois codebases)
-- Área do Aluno (login/visão do aluno de verdade — só existe o toggle
-  simulado no demo).
 - Notificações (sino + realtime).
 - Reposições (fluxo completo).
 - Relatórios, Configurações.
@@ -72,9 +109,15 @@ diferente.
   forno.
 
 ### Bugs conhecidos
-- Nenhum bug em aberto registrado no momento. (Histórico: o arquivo único
-  do demo já quebrou a sintaxe 3× por edições anteriores a esta sessão —
-  sempre corrigido rodando esbuild; ver CLAUDE.md §8.)
+- **Aviso de React no console** (não trava nada, funcionalidade OK): "Cannot
+  update a component (...) while rendering a different component" apontando
+  pro componente `Turmas`. Detectado em 2026-09-15 no console do navegador,
+  parece pré-existente (não relacionado às edições desta sessão, que não
+  tocaram na lógica interna de `Turmas`). Não investigado a fundo ainda —
+  próxima pessoa que mexer em `Turmas` pode aproveitar pra rastrear a causa.
+- (Histórico: o arquivo único do demo já quebrou a sintaxe 3× por edições
+  anteriores a esta sessão — sempre corrigido rodando esbuild; ver CLAUDE.md
+  §8.)
 
 ---
 
@@ -141,5 +184,76 @@ no Claude.ai a cada retomada. O Diego pediu para dar continuidade ao app.
 **Testes realizados:** esbuild (sintaxe) + teste manual em navegador via
 harness Vite descartável, cobrindo os 3 casos do calendário clicável
 (dia com turma, dia com oficina, dia vazio) — todos corretos.
+
+**Próximos passos:** ver "Onde continuar agora" no topo deste arquivo.
+
+---
+
+### 2026-09-15 (continuação) — Correção de mobile + início da Área do Aluno
+
+**Contexto:** Diego pediu pra testar o app de novo (harness reaberto) e, ao
+ver o preview, pediu pra otimizar para celular também. No meio dessa
+verificação eu tinha acabado de começar a construir a Área do Aluno (backlog
+#1) — fiquei pausado nela pra atender o pedido de mobile primeiro.
+
+**O que foi feito:**
+- Reaberto o harness de preview descartável (`scratchpad/preview`, mesmo
+  esquema da sessão anterior — Vite + cópia do `AtelieDemo.jsx`) e
+  recriado temporariamente `.claude/launch.json` (removido de novo ao
+  final, aponta pra um caminho de scratchpad que não sobrevive entre
+  sessões).
+- **Bug de mobile encontrado e corrigido** — ver detalhes em "Onde continuar
+  agora" e em "Estado atual". Em resumo: `AgendaSemanaCard` (calendário do
+  dashboard) estourava a largura da tela em viewport de celular
+  (`grid-cols-7` + `min-w-[150px]` por coluna = ~1050px mínimo). Trocado por
+  scroll horizontal abaixo do breakpoint `md`. Também adicionado
+  `flex-wrap` no grupo de botões do cabeçalho de `OficinaDetalhe` por
+  segurança (risco parecido, menor).
+- Validação: esbuild passou após cada edição. Confirmado visualmente em
+  viewport mobile genuíno (375×812) que o bug existia antes da correção
+  (screenshot mostrando as colunas SEX/SÁB/DOM cortadas). Depois da
+  correção, confirmei por leitura de DOM (`window.innerWidth` via JS) que a
+  emulação de mobile do navegador embutido ficou instável no meio da sessão
+  — o painel voltou sozinho pra um viewport largo (~1180px) mesmo depois de
+  eu reaplicar `resize_window` várias vezes (preset e dimensões explícitas).
+  Isso parece uma limitação do ambiente desta sessão específica (o painel
+  redimensionando por conta própria), não algo que dá pra corrigir do lado
+  do código. Consegui confirmar que o app continua renderizando sem erros
+  nesse viewport largo (usa o caminho `md:grid` normalmente), mas **não
+  consegui re-confirmar visualmente a correção em viewport mobile genuíno
+  depois de aplicada** — a validação final ficou apoiada em: (a) o
+  screenshot mobile de antes da correção, que mostrou o bug com clareza, (b)
+  o padrão de código usado na correção ser idêntico a um padrão já
+  comprovado no mesmo arquivo (abas de dia da tela Turmas, que já usam
+  `overflow-x-auto`), e (c) esbuild + checagem de que nada quebrou no
+  viewport largo. **Vale o Diego conferir no celular de verdade** (publicando
+  o artifact) antes de considerar 100% fechado.
+- Notado (não corrigido, não é desta sessão): aviso de React no console
+  sobre `Turmas` fazendo setState durante render de outro componente — não
+  trava nada, registrado em "Bugs conhecidos" pra investigar depois.
+- **Área do Aluno**: comecei o primeiro passo (renomear `SOLICITACOES` →
+  `SOLICITACOES_INICIAIS`, adicionar mock `ALUNO_LOGADO`) e parei aí pra
+  atender o pedido de mobile. Plano completo de retomada documentado em
+  "Onde continuar agora" no topo deste arquivo — 8 passos, do lift de estado
+  até o teste final nos dois papéis.
+- Preview harness parado e tab fechada ao final; `.claude/launch.json`
+  removido de novo do projeto.
+
+**Decisões tomadas:**
+- Priorizar o pedido explícito de mobile em cima do trabalho de feature que
+  já estava em andamento, em vez de terminar a Área do Aluno primeiro e
+  voltar depois — o pedido do Diego chegou no meio da construção.
+
+**Testes realizados:** esbuild após cada edição; inspeção visual em
+viewport mobile genuíno (confirmou o bug antes da correção); inspeção via
+JS (`window.innerWidth`/`scrollWidth`) depois que a emulação ficou
+instável; checagem de console (`read_console_messages`) sem erros novos
+introduzidos pelas edições desta sessão.
+
+**Problemas pendentes:**
+- Confirmar visualmente em celular real (ou navegador com emulação mobile
+  estável) que o calendário do dashboard não estoura mais a tela.
+- Aviso de React em `Turmas` (setState durante render) — não investigado.
+- Área do Aluno — só o primeiro passo dos 8 foi feito.
 
 **Próximos passos:** ver "Onde continuar agora" no topo deste arquivo.

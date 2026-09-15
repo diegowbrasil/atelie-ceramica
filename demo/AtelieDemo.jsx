@@ -124,11 +124,15 @@ const OFICINAS_RESUMO = [
   { nome: "Esmaltação Criativa", data: "18 de maio · 14:00–17:00", faltam: "6 dias" },
 ];
 
-const SOLICITACOES = [
-  { nome: "Beatriz Almeida", tipo: "Quer participar da turma", quando: "12/05 às 10:23" },
-  { nome: "Felipe Martins", tipo: "Quer participar da turma", quando: "12/05 às 09:15" },
-  { nome: "Lucas Mendes", tipo: "Solicitou reposição · Quinta 18:30", quando: "11/05 às 20:02" },
+const SOLICITACOES_INICIAIS = [
+  { id: "sol1", nome: "Beatriz Almeida", tipo: "Quer participar da turma", quando: "12/05 às 10:23" },
+  { id: "sol2", nome: "Felipe Martins", tipo: "Quer participar da turma", quando: "12/05 às 09:15" },
+  { id: "sol3", nome: "Lucas Mendes", tipo: "Solicitou reposição · Quinta 18:30", quando: "11/05 às 20:02" },
 ];
+
+/* Aluno "logado" no demo — não há autenticação real, é um recorte fixo dos
+   dados fictícios para simular a Área do Aluno. Ver CLAUDE.md §2A. */
+const ALUNO_LOGADO = { nome: "Maria Oliveira", diaId: "ter", turmaId: "ter-1830" };
 
 /* Categorias de conteúdo do forno — seleção múltipla, sem "misturado" */
 const CATEGORIAS = [
@@ -536,7 +540,7 @@ function Dashboard({ ir, ativa, onAbrirDia, onAbrirOficinas }) {
         </Card>
         <Card className="p-4">
           <h3 className="mb-3 text-sm font-semibold">Solicitações pendentes</h3>
-          <ul className="space-y-3 text-sm">{SOLICITACOES.map((s) => (
+          <ul className="space-y-3 text-sm">{SOLICITACOES_INICIAIS.map((s) => (
             <li key={s.nome} className="flex items-center justify-between"><span><span className="block font-medium">{s.nome}</span><span className="text-stone-400">{s.tipo}</span></span></li>
           ))}</ul>
         </Card>
@@ -555,7 +559,7 @@ function AgendaSemanaCard({ onAbrirDia, onAbrirOficinas }) {
         <h3 className="text-base font-semibold">Turmas da semana</h3>
         <button className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-50">Ver calendário completo</button>
       </div>
-      <div className="grid grid-cols-7 gap-3">
+      <div className="flex gap-3 overflow-x-auto pb-1 md:grid md:grid-cols-7 md:overflow-visible md:pb-0">
         {AGENDA_SEMANA.map((d) => {
           const vazio = d.aulas.length === 0;
           const isHoje = d.dia === hoje;
@@ -571,7 +575,7 @@ function AgendaSemanaCard({ onAbrirDia, onAbrirOficinas }) {
               key={d.dia}
               onClick={clicarDia}
               className={
-                "min-w-[150px] rounded-2xl border p-3 transition-colors " +
+                "w-[150px] shrink-0 md:w-auto md:min-w-0 rounded-2xl border p-3 transition-colors " +
                 (isHoje ? "border-orange-300 bg-orange-50/50" : "border-stone-200 bg-stone-50/70") +
                 (clicavel ? " cursor-pointer hover:border-orange-300 hover:bg-orange-50/40" : "")
               }
@@ -1127,7 +1131,7 @@ function Turmas({ notificar, diaInicial = "ter" }) {
           <Card className="p-4">
             <h3 className="mb-3 text-sm font-semibold">Solicitações pendentes</h3>
             <ul className="space-y-3">
-              {SOLICITACOES.slice(0, 2).map((s) => (
+              {SOLICITACOES_INICIAIS.slice(0, 2).map((s) => (
                 <li key={s.nome} className="flex items-center justify-between text-sm">
                   <span><span className="block font-medium">{s.nome}</span><span className="text-stone-400">{s.tipo}</span></span>
                   <div className="flex gap-1.5">
@@ -1345,7 +1349,7 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
             <span className="flex items-center gap-1.5"><Users size={14} />{oficina.vagas} vagas</span>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
           <label className="flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-xs font-medium text-stone-500">
             <input type="checkbox" checked={verComoAluno} onChange={(e) => setVerComoAluno(e.target.checked)} />
             Ver como aluno
@@ -1470,7 +1474,7 @@ function Solicitacoes({ notificar }) {
       <h1 className="mb-1 text-2xl font-semibold">Solicitações</h1>
       <p className="mb-5 text-sm text-stone-400">Vagas e reposições aguardando aprovação.</p>
       <Card><ul className="divide-y divide-stone-100">
-        {SOLICITACOES.map((s) => (
+        {SOLICITACOES_INICIAIS.map((s) => (
           <li key={s.nome} className="flex items-center justify-between gap-3 px-4 py-3">
             <div className="flex items-center gap-3"><Avatar nome={s.nome} /><div><div className="text-sm font-medium">{s.nome}</div><div className="text-xs text-stone-400">{s.tipo} · {s.quando}</div></div></div>
             <div className="flex gap-1.5">
