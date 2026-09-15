@@ -11,19 +11,15 @@
 
 **Última sessão:** 2026-09-15 — sessão de retomada do projeto (handoff).
 
-**Estado:** projeto reorganizado num repositório único, verificação de
-integridade do demo em andamento. Nenhuma funcionalidade nova foi construída
-ainda nesta sessão — o trabalho até aqui foi de organização + criação deste
-sistema de memória.
+**Estado:** projeto reorganizado num repositório único, sistema de memória
+criado, e a feature pendente de verificação (calendário clicável do
+dashboard) **testada manualmente e confirmada funcionando**. Nenhuma
+funcionalidade nova foi construída ainda nesta sessão — o trabalho até aqui
+foi organização + memória + verificação do estado existente.
 
-**Próximo passo imediato:**
-1. Terminar a verificação em andamento: rodar `npx esbuild` no
-   `demo/AtelieDemo.jsx` e testar manualmente (clique em cada dia) o
-   calendário "Turmas da semana" do dashboard — a última feature que tinha
-   sido implementada antes desta sessão (clique no dia → abre Turmas
-   naquele dia; dia com oficina → abre Oficinas).
-2. Depois disso, seguir o backlog sugerido em CONTEXTO.md / abaixo,
-   começando por **Área do Aluno**, salvo se o Diego priorizar diferente.
+**Próximo passo imediato:** seguir o backlog sugerido em CONTEXTO.md /
+abaixo, começando por **Área do Aluno**, salvo se o Diego priorizar
+diferente.
 
 **Backlog pendente (ordem sugerida, herdada do handoff original):**
 1. **Área do Aluno** — login separado, visão só-leitura: próximas aulas,
@@ -113,6 +109,19 @@ no Claude.ai a cada retomada. O Diego pediu para dar continuidade ao app.
   `Turmas` aceita `diaInicial`) — **ainda não testada manualmente em
   navegador** nesta sessão.
 - Confirmado ambiente local: Node v24.18.0, npm 11.16.0.
+- **Validação de sintaxe**: `npx esbuild demo/AtelieDemo.jsx --bundle=false
+  --format=esm --outfile=/dev/null` → sucesso, sem erros.
+- **Teste manual em navegador**: montado um harness descartável (Vite +
+  React + lucide-react + recharts + Tailwind via CDN) só para rodar o
+  `AtelieDemo.jsx` real fora do ambiente de artifact e clicar nele. Vivia em
+  `scratchpad/preview` (fora do projeto, não versionado, já removido/expirou
+  com a sessão). Resultado: dashboard renderiza igual ao esperado (KPIs,
+  card do forno com mini-gráfico, calendário "Turmas da semana" com os 7
+  dias). Clique na coluna **QUA** → abriu Turmas já em "Quarta-feira · 16:30
+  às 18:30" com os alunos certos. Clique na coluna **SÁB** (tem oficina) →
+  abriu a lista de Oficinas. Clique na coluna **SEG** (vazia, "Sem aulas")
+  → não navegou, ficou no Dashboard, como esperado. **Feature do calendário
+  clicável confirmada funcionando ponta a ponta.**
 - Criados `CLAUDE.md` e `PROGRESS.md` (este arquivo) a pedido do Diego, para
   que sessões futuras não precisem reexplicar o projeto do zero. `CLAUDE.md`
   absorveu e reorganizou o conteúdo de `CONTEXTO.md` no formato padrão de
@@ -129,7 +138,8 @@ no Claude.ai a cada retomada. O Diego pediu para dar continuidade ao app.
   `COMECE-AQUI.md` continuam existindo para o fluxo separado de publicação
   via artifact do Claude.ai.
 
-**Testes realizados:** nenhum teste manual em navegador ainda nesta sessão
-(planejado como próximo passo imediato, acima).
+**Testes realizados:** esbuild (sintaxe) + teste manual em navegador via
+harness Vite descartável, cobrindo os 3 casos do calendário clicável
+(dia com turma, dia com oficina, dia vazio) — todos corretos.
 
 **Próximos passos:** ver "Onde continuar agora" no topo deste arquivo.

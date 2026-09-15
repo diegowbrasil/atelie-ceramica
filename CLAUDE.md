@@ -196,8 +196,7 @@ função com outro parâmetro.
 - Calendário "Turmas da semana": colunas por dia, dia atual em laranja,
   cards brancos com sombra, avatares empilhados, dias vazios com
   "Sem aulas". **Colunas são clicáveis** → leva a Turmas naquele dia (dia
-  com oficina → leva a Oficinas). Implementado, ver PROGRESS.md p/ status de
-  teste.
+  com oficina → leva a Oficinas). Implementado e testado.
 
 ---
 
