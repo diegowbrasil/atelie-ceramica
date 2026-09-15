@@ -1,0 +1,13 @@
+{
+  "name": "Ateliê de Cerâmica",
+  "short_name": "Ateliê",
+  "description": "Gestão de turmas, oficinas e queimas.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#FBF8F3",
+  "theme_color": "#B85A2C",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
