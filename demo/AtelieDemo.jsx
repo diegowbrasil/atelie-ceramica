@@ -257,22 +257,26 @@ function fmtRelativo(d, agora) {
 /*  UI base                                                             */
 /* ------------------------------------------------------------------ */
 
+const FONT_DISPLAY = { fontFamily: "var(--font-display)" };
+
 function Card({ className = "", children }) {
-  return <div className={"rounded-2xl border border-stone-200 bg-white shadow-sm " + className}>{children}</div>;
+  return <div className={"border border-[var(--line)] bg-white " + className}>{children}</div>;
 }
 function Badge({ tone = "neutral", children }) {
   const tones = {
     success: "bg-emerald-50 text-emerald-700", warning: "bg-amber-100 text-amber-700",
-    danger: "bg-rose-100 text-rose-600", info: "bg-orange-50 text-orange-700", neutral: "bg-stone-100 text-stone-500",
+    danger: "bg-rose-100 text-rose-600",
+    info: "border border-[var(--ink)] text-[var(--ink)]",
+    neutral: "bg-[var(--cream-soft)] text-[var(--ink-soft)]",
   };
-  return <span className={"inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium " + tones[tone]}>{children}</span>;
+  return <span className={"inline-flex items-center px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide " + tones[tone]}>{children}</span>;
 }
 function Avatar({ nome, size = 40, stacked }) {
   const iniciais = nome ? nome.split(" ").slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") : "?";
   return (
     <div
       style={{ width: size, height: size, fontSize: Math.max(9, size * 0.36) }}
-      className={"flex items-center justify-center overflow-hidden rounded-full bg-orange-100 text-orange-700 font-semibold shrink-0 leading-none " + (stacked ? "ring-2 ring-white" : "")}
+      className={"flex items-center justify-center overflow-hidden rounded-full bg-[var(--ink)] text-[var(--cream)] font-medium shrink-0 leading-none " + (stacked ? "ring-2 ring-white" : "")}
     >
       {iniciais}
     </div>
@@ -280,7 +284,7 @@ function Avatar({ nome, size = 40, stacked }) {
 }
 function VaseMark() {
   return (
-    <svg width="24" height="24" viewBox="0 0 26 26" fill="none" className="text-orange-700 shrink-0">
+    <svg width="24" height="24" viewBox="0 0 26 26" fill="none" className="text-[var(--ink)] shrink-0">
       <path d="M10 3h6l1 3-1.5 1.5c1.7 1.6 2.8 3.4 2.8 6 0 5-3 8.5-5.3 8.5S8 18.5 8 13.5c0-2.6 1.1-4.4 2.8-6L9.3 6 10 3Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
       <path d="M9.3 6h7.4" stroke="currentColor" strokeWidth="1.4" />
     </svg>
@@ -289,8 +293,8 @@ function VaseMark() {
 function Modal({ children, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl animate-in">{children}</div>
+      <div className="absolute inset-0 bg-[var(--ink)]/40" onClick={onClose} />
+      <div className="relative w-full max-w-sm border border-[var(--line)] bg-white p-5 shadow-xl animate-in">{children}</div>
     </div>
   );
 }
@@ -373,17 +377,27 @@ export default function AtelieDemo() {
   function abrirDiaTurmas(diaId) { setDiaTurmaAlvo(diaId); ir("turmas"); }
 
   return (
-    <div className="flex min-h-screen w-full bg-stone-50 text-stone-800" style={{ fontFamily: "ui-sans-serif, system-ui, sans-serif" }}>
-      <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}.animate-in{animation:fadeUp .2s ease-out both}`}</style>
+    <div className="flex min-h-screen w-full bg-[var(--cream)] text-[var(--ink)]" style={{ fontFamily: "var(--font-mono)" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+        :root {
+          --cream: #F2F2EB; --cream-soft: #E7E4DA; --line: #DEDAD1;
+          --ink: #3B3833; --ink-soft: #8A8479;
+          --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+          --font-display: 'Space Grotesk', ui-sans-serif, sans-serif;
+        }
+        @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        .animate-in{animation:fadeUp .2s ease-out both}
+      `}</style>
 
-      <aside className="hidden md:flex md:w-32 md:shrink-0 md:flex-col md:border-r md:border-stone-200 md:bg-stone-50 md:px-1.5 md:py-5">
+      <aside className="hidden md:flex md:w-32 md:shrink-0 md:flex-col md:border-r md:border-[var(--line)] md:bg-[var(--cream)] md:px-1.5 md:py-5">
         <div className="mb-6 flex justify-center px-1"><VaseMark /></div>
         <nav className="flex-1 space-y-0.5">
           {NAV.map((item) => (
-            <button key={item.id} onClick={() => ir(item.id)} title={item.label} className={"relative flex w-full flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[10px] font-medium leading-tight transition-colors " + ((tela === item.id || (item.id === "forno" && tela === "fornoNova") || (item.id === "oficinas" && tela === "oficinaDetalhe")) ? "bg-orange-50 text-orange-700" : "text-stone-500 hover:bg-stone-100")}>
+            <button key={item.id} onClick={() => ir(item.id)} title={item.label} className={"relative flex w-full flex-col items-center gap-0.5 px-1 py-2 text-[10px] font-medium uppercase tracking-wide leading-tight transition-colors " + ((tela === item.id || (item.id === "forno" && tela === "fornoNova") || (item.id === "oficinas" && tela === "oficinaDetalhe")) ? "bg-white text-[var(--ink)]" : "text-[var(--ink-soft)] hover:bg-white/60")}>
               <item.icon size={16} />
               <span className="truncate w-full text-center">{item.label}</span>
-              {!!item.badge && <span className="absolute right-1 top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-orange-600 text-[9px] font-semibold text-white">{item.badge}</span>}
+              {!!item.badge && <span className="absolute right-1 top-1 flex h-3.5 w-3.5 items-center justify-center bg-[var(--ink)] text-[9px] font-semibold text-[var(--cream)]">{item.badge}</span>}
             </button>
           ))}
         </nav>
@@ -392,14 +406,14 @@ export default function AtelieDemo() {
 
       {menuAberto && (
         <div className="fixed inset-0 z-40 md:hidden">
-          <div className="absolute inset-0 bg-black/30" onClick={() => setMenuAberto(false)} />
+          <div className="absolute inset-0 bg-[var(--ink)]/30" onClick={() => setMenuAberto(false)} />
           <div className="absolute left-0 top-0 h-full w-64 bg-white p-4 shadow-xl">
             <div className="mb-6 flex items-center justify-between"><VaseMark /><button onClick={() => setMenuAberto(false)}><X size={20} /></button></div>
             <nav className="space-y-1">
               {NAV.map((item) => (
-                <button key={item.id} onClick={() => ir(item.id)} className={"flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium " + (tela === item.id ? "bg-orange-50 text-orange-700" : "text-stone-500")}>
+                <button key={item.id} onClick={() => ir(item.id)} className={"flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium uppercase tracking-wide " + (tela === item.id ? "bg-[var(--cream-soft)] text-[var(--ink)]" : "text-[var(--ink-soft)]")}>
                   <item.icon size={17} />{item.label}
-                  {!!item.badge && <span className="ml-auto rounded-full bg-orange-600 px-1.5 py-0.5 text-[11px] font-semibold text-white">{item.badge}</span>}
+                  {!!item.badge && <span className="ml-auto bg-[var(--ink)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--cream)]">{item.badge}</span>}
                 </button>
               ))}
             </nav>
@@ -408,10 +422,10 @@ export default function AtelieDemo() {
       )}
 
       <div className="flex-1 pb-20 md:pb-0">
-        <header className="flex items-center justify-between border-b border-stone-200 bg-white px-4 py-3 md:hidden">
+        <header className="flex items-center justify-between border-b border-[var(--line)] bg-white px-4 py-3 md:hidden">
           <button onClick={() => setMenuAberto(true)}><Menu size={22} /></button>
           <VaseMark />
-          <Bell size={20} className="text-stone-400" />
+          <Bell size={20} className="text-[var(--ink-soft)]" />
         </header>
 
         <main className="w-full pl-4 pr-0 py-5 md:pl-6 md:pr-0 md:py-8">
@@ -455,30 +469,30 @@ export default function AtelieDemo() {
         </main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-stone-200 bg-white/95 px-1 py-1.5 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-[var(--line)] bg-white/95 px-1 py-1.5 backdrop-blur md:hidden">
         {TABS_MOBILE.map((id) => {
           const item = NAV.find((n) => n.id === id);
           const ativoTab = tela === id || (id === "forno" && tela === "fornoNova");
           return (
-            <button key={id} onClick={() => ir(id)} className={"flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium " + (ativoTab ? "text-orange-700" : "text-stone-400")}>
+            <button key={id} onClick={() => ir(id)} className={"flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] font-medium uppercase tracking-wide " + (ativoTab ? "text-[var(--ink)]" : "text-[var(--ink-soft)]")}>
               <item.icon size={20} strokeWidth={ativoTab ? 2.4 : 1.8} />{item.label}
             </button>
           );
         })}
-        <button onClick={() => setMenuAberto(true)} className="flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium text-stone-400"><Menu size={20} />Mais</button>
+        <button onClick={() => setMenuAberto(true)} className="flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--ink-soft)]"><Menu size={20} />Mais</button>
       </nav>
 
-      {toast && <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-stone-800 px-4 py-2.5 text-sm text-white shadow-lg md:bottom-6">{toast}</div>}
+      {toast && <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 bg-[var(--ink)] px-4 py-2.5 text-sm text-[var(--cream)] shadow-lg md:bottom-6">{toast}</div>}
 
       {modalConflito && (
         <Modal onClose={() => setModalConflito(false)}>
           <h3 className="mb-2 text-base font-semibold">Já existe uma fornada em andamento</h3>
-          <p className="mb-5 text-sm leading-relaxed text-stone-500">
+          <p className="mb-5 text-sm leading-relaxed text-[var(--ink-soft)]">
             Você já possui uma fornada sendo acompanhada. Ao iniciar uma nova fornada, a atual será encerrada automaticamente e salva no histórico. Nenhuma informação será perdida. Deseja continuar?
           </p>
           <div className="flex gap-2">
-            <button onClick={() => setModalConflito(false)} className="flex-1 rounded-xl border border-stone-200 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-50">Cancelar</button>
-            <button onClick={confirmarSalvarEIniciarNova} className="flex-1 rounded-xl bg-orange-600 py-2.5 text-sm font-medium text-white hover:bg-orange-700">Salvar e criar nova</button>
+            <button onClick={() => setModalConflito(false)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]">Cancelar</button>
+            <button onClick={confirmarSalvarEIniciarNova} className="flex-1 bg-[var(--ink)] py-2.5 text-sm font-medium text-white hover:opacity-90">Salvar e criar nova</button>
           </div>
         </Modal>
       )}
@@ -492,7 +506,7 @@ export default function AtelieDemo() {
 
 function Dashboard({ ir, ativa, onAbrirDia, onAbrirOficinas }) {
   const kpis = [
-    { icon: CalendarDays, valor: 4, label: "Aulas hoje", tone: "text-orange-700 bg-orange-50", tela: "turmas" },
+    { icon: CalendarDays, valor: 4, label: "Aulas hoje", tone: "text-[var(--ink)] bg-[var(--cream-soft)]", tela: "turmas" },
     { icon: Users, valor: 28, label: "Alunos confirmados", tone: "text-emerald-700 bg-emerald-50", tela: "alunos" },
     { icon: RotateCcw, valor: 2, label: "Reposições pendentes", tone: "text-amber-600 bg-amber-100", tela: "solicitacoes" },
     { icon: CreditCard, valor: 5, label: "Pagamentos pendentes", tone: "text-rose-600 bg-rose-100", tela: "pagamentos" },
@@ -500,18 +514,18 @@ function Dashboard({ ir, ativa, onAbrirDia, onAbrirOficinas }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-stone-800">Painel geral</h1>
-        <p className="text-sm text-stone-400">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })} · dados de demonstração</p>
+        <h1 className="text-2xl font-semibold text-[var(--ink)]" style={FONT_DISPLAY}>Painel geral</h1>
+        <p className="text-sm text-[var(--ink-soft)]">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })} · dados de demonstração</p>
       </div>
       <div className="grid gap-3 lg:grid-cols-[300px_1fr]">
         <div className="grid grid-cols-2 gap-2">
           {kpis.map((k) => (
             <button key={k.label} onClick={() => ir(k.tela)} className="text-left">
-              <Card className="flex items-center gap-2 p-2.5 hover:border-stone-300">
-                <div className={"flex h-8 w-8 shrink-0 items-center justify-center rounded-lg " + k.tone}><k.icon size={14} /></div>
+              <Card className="flex items-center gap-2 p-2.5 hover:border-[var(--ink-soft)]">
+                <div className={"flex h-8 w-8 shrink-0 items-center justify-center " + k.tone}><k.icon size={14} /></div>
                 <div className="min-w-0">
-                  <div className="text-base font-semibold leading-tight text-stone-800">{k.valor}</div>
-                  <div className="truncate text-[11px] leading-tight text-stone-400">{k.label}</div>
+                  <div className="text-base font-semibold leading-tight text-[var(--ink)]">{k.valor}</div>
+                  <div className="truncate text-[11px] leading-tight text-[var(--ink-soft)]">{k.label}</div>
                 </div>
               </Card>
             </button>
@@ -519,7 +533,7 @@ function Dashboard({ ir, ativa, onAbrirDia, onAbrirOficinas }) {
         </div>
 
         {ativa ? <KilnMiniCard fornada={ativa} onDetalhes={() => ir("forno")} /> : (
-          <Card className="flex items-center justify-center p-5 text-center text-sm text-stone-400">Nenhuma fornada ativa no momento.</Card>
+          <Card className="flex items-center justify-center p-5 text-center text-sm text-[var(--ink-soft)]">Nenhuma fornada ativa no momento.</Card>
         )}
       </div>
 
@@ -529,19 +543,19 @@ function Dashboard({ ir, ativa, onAbrirDia, onAbrirOficinas }) {
         <Card className="p-4">
           <h3 className="mb-3 text-sm font-semibold">Próximas oficinas</h3>
           <ul className="space-y-3 text-sm">{OFICINAS_RESUMO.map((o) => (
-            <li key={o.nome} className="flex items-center justify-between"><span><span className="block font-medium">{o.nome}</span><span className="text-stone-400">{o.data}</span></span><Badge tone="warning">Faltam {o.faltam}</Badge></li>
+            <li key={o.nome} className="flex items-center justify-between"><span><span className="block font-medium">{o.nome}</span><span className="text-[var(--ink-soft)]">{o.data}</span></span><Badge tone="warning">Faltam {o.faltam}</Badge></li>
           ))}</ul>
         </Card>
         <Card className="p-4">
           <h3 className="mb-3 text-sm font-semibold">Pacotes terminando</h3>
           <ul className="space-y-3 text-sm">{VAGAS_INICIAIS.filter((v) => v.status === "ultima" || v.status === "pendente").map((v) => (
-            <li key={v.numero} className="flex items-center justify-between"><span><span className="block font-medium">{v.nome}</span><span className="text-stone-400">{v.aula}/{v.total} aulas</span></span><Badge tone={v.status === "ultima" ? "danger" : "warning"}>{v.aula}/{v.total}</Badge></li>
+            <li key={v.numero} className="flex items-center justify-between"><span><span className="block font-medium">{v.nome}</span><span className="text-[var(--ink-soft)]">{v.aula}/{v.total} aulas</span></span><Badge tone={v.status === "ultima" ? "danger" : "warning"}>{v.aula}/{v.total}</Badge></li>
           ))}</ul>
         </Card>
         <Card className="p-4">
           <h3 className="mb-3 text-sm font-semibold">Solicitações pendentes</h3>
           <ul className="space-y-3 text-sm">{SOLICITACOES_INICIAIS.map((s) => (
-            <li key={s.nome} className="flex items-center justify-between"><span><span className="block font-medium">{s.nome}</span><span className="text-stone-400">{s.tipo}</span></span></li>
+            <li key={s.nome} className="flex items-center justify-between"><span><span className="block font-medium">{s.nome}</span><span className="text-[var(--ink-soft)]">{s.tipo}</span></span></li>
           ))}</ul>
         </Card>
       </div>
@@ -557,7 +571,7 @@ function AgendaSemanaCard({ onAbrirDia, onAbrirOficinas }) {
     <Card className="p-5">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-base font-semibold">Turmas da semana</h3>
-        <button className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-50">Ver calendário completo</button>
+        <button className="border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink)] hover:bg-[var(--cream)]">Ver calendário completo</button>
       </div>
       <div className="flex gap-3 overflow-x-auto pb-1 md:grid md:grid-cols-7 md:overflow-visible md:pb-0">
         {AGENDA_SEMANA.map((d) => {
@@ -575,33 +589,33 @@ function AgendaSemanaCard({ onAbrirDia, onAbrirOficinas }) {
               key={d.dia}
               onClick={clicarDia}
               className={
-                "w-[150px] shrink-0 md:w-auto md:min-w-0 rounded-2xl border p-3 transition-colors " +
-                (isHoje ? "border-orange-300 bg-orange-50/50" : "border-stone-200 bg-stone-50/70") +
-                (clicavel ? " cursor-pointer hover:border-orange-300 hover:bg-orange-50/40" : "")
+                "w-[150px] shrink-0 md:w-auto md:min-w-0 border p-3 transition-colors " +
+                (isHoje ? "border-[var(--ink-soft)] bg-[var(--cream-soft)]/50" : "border-[var(--line)] bg-[var(--cream)]/70") +
+                (clicavel ? " cursor-pointer hover:border-[var(--ink-soft)] hover:bg-[var(--cream-soft)]/40" : "")
               }
             >
               <div className="mb-3 flex items-center justify-between">
-                <span className={"inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-bold tracking-wide " + (isHoje ? "bg-orange-600 text-white" : "bg-white text-stone-500 border border-stone-200")}>
-                  {d.dia} <span className={isHoje ? "font-normal text-orange-100" : "font-normal text-stone-300"}>{d.num}</span>
+                <span className={"inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold tracking-wide " + (isHoje ? "bg-[var(--ink)] text-white" : "bg-white text-[var(--ink-soft)] border border-[var(--line)]")}>
+                  {d.dia} <span className={isHoje ? "font-normal text-[var(--cream)]" : "font-normal text-[var(--line)]"}>{d.num}</span>
                 </span>
               </div>
               <div className="space-y-2.5">
                 {vazio && (
-                  <div className="flex h-20 items-center justify-center rounded-xl border border-dashed border-stone-300 text-center text-[11px] text-stone-400">Sem aulas</div>
+                  <div className="flex h-20 items-center justify-center border border-dashed border-[var(--ink-soft)] text-center text-[11px] text-[var(--ink-soft)]">Sem aulas</div>
                 )}
                 {d.aulas.map((a, i) => a.oficina ? (
-                  <div key={i} className="rounded-xl border border-orange-200 bg-white p-3 shadow-sm">
-                    <div className="text-xs font-bold text-orange-600">{a.hora}</div>
-                    <div className="mt-0.5 text-sm font-semibold text-stone-700">{a.oficina}</div>
-                    <div className="mt-0.5 text-xs text-stone-400">{a.inscritos} inscritos</div>
+                  <div key={i} className="border border-[var(--line)] bg-white p-3">
+                    <div className="text-xs font-bold text-[var(--ink)]">{a.hora}</div>
+                    <div className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{a.oficina}</div>
+                    <div className="mt-0.5 text-xs text-[var(--ink-soft)]">{a.inscritos} inscritos</div>
                   </div>
                 ) : (
-                  <div key={i} className="rounded-xl border border-stone-200 bg-white p-3 shadow-sm">
-                    <div className="text-xs font-bold text-stone-600">{a.hora}</div>
-                    <div className="mt-0.5 text-xs text-stone-400">{a.ocupados}/{a.total} alunos</div>
+                  <div key={i} className="border border-[var(--line)] bg-white p-3">
+                    <div className="text-xs font-bold text-[var(--ink)]">{a.hora}</div>
+                    <div className="mt-0.5 text-xs text-[var(--ink-soft)]">{a.ocupados}/{a.total} alunos</div>
                     <div className="mt-2 flex items-center -space-x-2">
                       {a.nomes.slice(0, 4).map((n) => <Avatar key={n} nome={n} size={26} stacked />)}
-                      {a.nomes.length > 4 && <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-stone-200 text-[10px] font-semibold text-stone-600 ring-2 ring-white">+{a.nomes.length - 4}</span>}
+                      {a.nomes.length > 4 && <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[var(--cream-soft)] text-[10px] font-semibold text-[var(--ink)] ring-2 ring-white">+{a.nomes.length - 4}</span>}
                     </div>
                   </div>
                 ))}
@@ -634,27 +648,27 @@ function KilnMiniCard({ fornada, onDetalhes }) {
   }, [fornada, agora]);
 
   return (
-    <Card className="overflow-hidden border-orange-200 bg-gradient-to-br from-orange-50 to-white">
+    <Card className="overflow-hidden border-[var(--line)] bg-gradient-to-br from-[var(--cream-soft)] to-white">
       <div className="flex items-center justify-between px-5 pt-4">
-        <span className="flex items-center gap-2 text-sm font-semibold text-orange-700"><Flame size={16} />Forno em andamento</span>
-        <button onClick={onDetalhes} className="rounded-xl bg-stone-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-stone-700">Ver forno</button>
+        <span className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]"><Flame size={16} />Forno em andamento</span>
+        <button onClick={onDetalhes} className="bg-[var(--ink)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90">Ver forno</button>
       </div>
       <div className="grid gap-3 px-5 pb-5 pt-3 sm:grid-cols-[1fr_180px]">
         <div>
           <p className="mb-2 text-base font-medium">Queima de {TIPO_LABEL[fornada.tipo]}</p>
           <div className="grid grid-cols-2 gap-3">
-            <div><div className="text-2xl font-semibold">{p.temperatura}°C</div><div className="text-xs text-stone-400">Estimada</div></div>
-            <div><div className="text-base font-semibold">{ETAPA_LABEL[p.etapa]}</div><div className="text-xs text-stone-400">Etapa</div></div>
-            <div><div className="font-mono text-sm">{fmtDuracaoCurta(p.restanteSeg)}</div><div className="text-xs text-stone-400">Restante</div></div>
-            <div><div className="font-mono text-sm">{fmtDuracaoCurta(p.decorridoSeg)}</div><div className="text-xs text-stone-400">Decorrido</div></div>
+            <div><div className="text-2xl font-semibold">{p.temperatura}°C</div><div className="text-xs text-[var(--ink-soft)]">Estimada</div></div>
+            <div><div className="text-base font-semibold">{ETAPA_LABEL[p.etapa]}</div><div className="text-xs text-[var(--ink-soft)]">Etapa</div></div>
+            <div><div className="font-mono text-sm">{fmtDuracaoCurta(p.restanteSeg)}</div><div className="text-xs text-[var(--ink-soft)]">Restante</div></div>
+            <div><div className="font-mono text-sm">{fmtDuracaoCurta(p.decorridoSeg)}</div><div className="text-xs text-[var(--ink-soft)]">Decorrido</div></div>
           </div>
-          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-stone-100"><div className="h-full rounded-full bg-orange-600 transition-all duration-700" style={{ width: p.pct + "%" }} /></div>
+          <div className="mt-3 h-2 w-full overflow-hidden bg-[var(--cream-soft)]"><div className="h-full bg-[var(--ink)] transition-all duration-700" style={{ width: p.pct + "%" }} /></div>
         </div>
         <div className="h-24 sm:h-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={mini}>
-              <Area type="monotone" dataKey="prevista" stroke="#EA9A6B" fill="#FDEDE1" strokeDasharray="3 2" />
-              <Line type="monotone" dataKey="real" stroke="#C2410C" strokeWidth={2} dot={false} />
+              <Area type="monotone" dataKey="prevista" stroke="#B8B2A6" fill="#EDEBE3" strokeDasharray="3 2" />
+              <Line type="monotone" dataKey="real" stroke="#3B3833" strokeWidth={2} dot={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -684,20 +698,20 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
     <div>
       <div className="mb-5 flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Forno</h1>
-          <p className="text-sm text-stone-400">Acompanhe sua fornada em tempo real.</p>
+          <h1 className="text-2xl font-semibold" style={FONT_DISPLAY}>Forno</h1>
+          <p className="text-sm text-[var(--ink-soft)]">Acompanhe sua fornada em tempo real.</p>
         </div>
-        <button onClick={onNovaFornada} className="flex shrink-0 items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-orange-700">
+        <button onClick={onNovaFornada} className="flex shrink-0 items-center gap-1.5 bg-[var(--ink)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">
           <Plus size={16} strokeWidth={2.5} />Nova fornada
         </button>
       </div>
 
       {!ativa ? (
         <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-orange-500"><Flame size={26} /></div>
+          <div className="flex h-14 w-14 items-center justify-center bg-[var(--cream-soft)] text-[var(--ink-soft)]"><Flame size={26} /></div>
           <h2 className="text-lg font-semibold">Nenhuma fornada em andamento</h2>
-          <p className="max-w-sm text-sm text-stone-400">Inicie uma nova fornada para começar o acompanhamento em tempo real da temperatura, etapas e previsões.</p>
-          <button onClick={onNovaFornada} className="mt-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-700">+ Nova fornada</button>
+          <p className="max-w-sm text-sm text-[var(--ink-soft)]">Inicie uma nova fornada para começar o acompanhamento em tempo real da temperatura, etapas e previsões.</p>
+          <button onClick={onNovaFornada} className="mt-2 bg-[var(--ink)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">+ Nova fornada</button>
         </Card>
       ) : (
         <FornadaAtivaPainel
@@ -714,17 +728,17 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
           <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">Histórico de fornadas</h3></div>
           <ul className="space-y-3">
             {historico.map((f) => (
-              <li key={f.id} className="rounded-xl border border-stone-100 p-3 hover:border-stone-200">
+              <li key={f.id} className="border border-[var(--line)] p-3 hover:border-[var(--line)]">
                 <button onClick={() => setModalDetalheHist(f)} className="w-full text-left">
                   <div className="mb-1 flex items-center justify-between">
-                    <span className="text-xs text-stone-400">{fmtDiaHora(f.iniciadoEm)}</span>
+                    <span className="text-xs text-[var(--ink-soft)]">{fmtDiaHora(f.iniciadoEm)}</span>
                     <Badge tone={STATUS_TONE[f.status]}>{STATUS_LABEL[f.status]}</Badge>
                   </div>
                   <div className="text-sm font-medium">{TIPO_LABEL[f.tipo]}{f.tipoDescricao ? ` (${f.tipoDescricao})` : ""}</div>
-                  <div className="text-xs text-stone-400">{f.categorias.map((c) => CATEGORIAS.find((x) => x.id === c)?.label).join(", ") || "—"}</div>
-                  <div className="mt-1 text-xs text-stone-400">Temp. máx: {f.config.temperaturaMaxima}°C</div>
+                  <div className="text-xs text-[var(--ink-soft)]">{f.categorias.map((c) => CATEGORIAS.find((x) => x.id === c)?.label).join(", ") || "—"}</div>
+                  <div className="mt-1 text-xs text-[var(--ink-soft)]">Temp. máx: {f.config.temperaturaMaxima}°C</div>
                 </button>
-                <button onClick={() => onDuplicar(f)} className="mt-2 text-xs font-medium text-orange-700 hover:underline">Duplicar configuração</button>
+                <button onClick={() => onDuplicar(f)} className="mt-2 text-xs font-medium text-[var(--ink)] hover:underline">Duplicar configuração</button>
               </li>
             ))}
           </ul>
@@ -735,11 +749,11 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
         <Modal onClose={() => setModalTemp(false)}>
           <h3 className="mb-3 text-base font-semibold">Atualizar temperatura</h3>
           <form onSubmit={(e) => { e.preventDefault(); const v = parseFloat(inputTemp); if (!isNaN(v)) { onAtualizarTemp(v); setModalTemp(false); setInputTemp(""); } }}>
-            <label className="mb-1 block text-xs font-medium text-stone-500">Temperatura real (°C)</label>
-            <input autoFocus value={inputTemp} onChange={(e) => setInputTemp(e.target.value)} type="number" className="mb-4 w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400" placeholder="Ex: 920" />
+            <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Temperatura real (°C)</label>
+            <input autoFocus value={inputTemp} onChange={(e) => setInputTemp(e.target.value)} type="number" className="mb-4 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="Ex: 920" />
             <div className="flex gap-2">
-              <button type="button" onClick={() => setModalTemp(false)} className="flex-1 rounded-xl border border-stone-200 py-2.5 text-sm font-medium text-stone-600">Cancelar</button>
-              <button type="submit" className="flex-1 rounded-xl bg-orange-600 py-2.5 text-sm font-medium text-white hover:bg-orange-700">Atualizar</button>
+              <button type="button" onClick={() => setModalTemp(false)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
+              <button type="submit" className="flex-1 bg-[var(--ink)] py-2.5 text-sm font-medium text-white hover:opacity-90">Atualizar</button>
             </div>
           </form>
         </Modal>
@@ -749,10 +763,10 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
         <Modal onClose={() => setModalObs(false)}>
           <h3 className="mb-3 text-base font-semibold">Adicionar observação</h3>
           <form onSubmit={(e) => { e.preventDefault(); if (inputObs.trim()) { onAdicionarObs(inputObs.trim()); setModalObs(false); setInputObs(""); } }}>
-            <textarea autoFocus value={inputObs} onChange={(e) => setInputObs(e.target.value)} rows={3} className="mb-4 w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400" placeholder="Ex: Patamar iniciado." />
+            <textarea autoFocus value={inputObs} onChange={(e) => setInputObs(e.target.value)} rows={3} className="mb-4 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="Ex: Patamar iniciado." />
             <div className="flex gap-2">
-              <button type="button" onClick={() => setModalObs(false)} className="flex-1 rounded-xl border border-stone-200 py-2.5 text-sm font-medium text-stone-600">Cancelar</button>
-              <button type="submit" className="flex-1 rounded-xl bg-orange-600 py-2.5 text-sm font-medium text-white hover:bg-orange-700">Adicionar</button>
+              <button type="button" onClick={() => setModalObs(false)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
+              <button type="submit" className="flex-1 bg-[var(--ink)] py-2.5 text-sm font-medium text-white hover:opacity-90">Adicionar</button>
             </div>
           </form>
         </Modal>
@@ -761,10 +775,10 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
       {modalFinalizar && (
         <Modal onClose={() => setModalFinalizar(false)}>
           <h3 className="mb-2 text-base font-semibold">Finalizar fornada?</h3>
-          <p className="mb-5 text-sm text-stone-500">A fornada será marcada como Finalizada e todo o histórico (gráfico, temperaturas, observações e conteúdo) será salvo.</p>
+          <p className="mb-5 text-sm text-[var(--ink-soft)]">A fornada será marcada como Finalizada e todo o histórico (gráfico, temperaturas, observações e conteúdo) será salvo.</p>
           <div className="flex gap-2">
-            <button onClick={() => setModalFinalizar(false)} className="flex-1 rounded-xl border border-stone-200 py-2.5 text-sm font-medium text-stone-600">Cancelar</button>
-            <button onClick={() => { onFinalizar(); setModalFinalizar(false); }} className="flex-1 rounded-xl bg-rose-600 py-2.5 text-sm font-medium text-white hover:bg-rose-700">Finalizar</button>
+            <button onClick={() => setModalFinalizar(false)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
+            <button onClick={() => { onFinalizar(); setModalFinalizar(false); }} className="flex-1 bg-rose-600 py-2.5 text-sm font-medium text-white hover:bg-rose-700">Finalizar</button>
           </div>
         </Modal>
       )}
@@ -775,13 +789,13 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
             <h3 className="text-base font-semibold">{TIPO_LABEL[modalDetalheHist.tipo]}{modalDetalheHist.tipoDescricao ? ` (${modalDetalheHist.tipoDescricao})` : ""}</h3>
             <Badge tone={STATUS_TONE[modalDetalheHist.status]}>{STATUS_LABEL[modalDetalheHist.status]}</Badge>
           </div>
-          <p className="mb-3 text-xs text-stone-400">Iniciada em {fmtDiaHora(modalDetalheHist.iniciadoEm)}{modalDetalheHist.finalizadoEm ? ` · encerrada em ${fmtDiaHora(modalDetalheHist.finalizadoEm)}` : ""}</p>
+          <p className="mb-3 text-xs text-[var(--ink-soft)]">Iniciada em {fmtDiaHora(modalDetalheHist.iniciadoEm)}{modalDetalheHist.finalizadoEm ? ` · encerrada em ${fmtDiaHora(modalDetalheHist.finalizadoEm)}` : ""}</p>
           <dl className="mb-4 grid grid-cols-2 gap-y-2 text-sm">
-            <dt className="text-stone-400">Temp. máxima</dt><dd className="text-right font-medium">{modalDetalheHist.config.temperaturaMaxima}°C</dd>
-            <dt className="text-stone-400">Categorias</dt><dd className="text-right font-medium">{modalDetalheHist.categorias.map((c) => CATEGORIAS.find((x) => x.id === c)?.label).join(", ") || "—"}</dd>
+            <dt className="text-[var(--ink-soft)]">Temp. máxima</dt><dd className="text-right font-medium">{modalDetalheHist.config.temperaturaMaxima}°C</dd>
+            <dt className="text-[var(--ink-soft)]">Categorias</dt><dd className="text-right font-medium">{modalDetalheHist.categorias.map((c) => CATEGORIAS.find((x) => x.id === c)?.label).join(", ") || "—"}</dd>
           </dl>
-          {modalDetalheHist.detalhesConteudo && <p className="mb-4 rounded-xl bg-stone-50 p-3 text-sm text-stone-500">{modalDetalheHist.detalhesConteudo}</p>}
-          <button onClick={() => { onDuplicar(modalDetalheHist); setModalDetalheHist(null); }} className="w-full rounded-xl bg-orange-600 py-2.5 text-sm font-medium text-white hover:bg-orange-700">Duplicar configuração</button>
+          {modalDetalheHist.detalhesConteudo && <p className="mb-4 bg-[var(--cream)] p-3 text-sm text-[var(--ink-soft)]">{modalDetalheHist.detalhesConteudo}</p>}
+          <button onClick={() => { onDuplicar(modalDetalheHist); setModalDetalheHist(null); }} className="w-full bg-[var(--ink)] py-2.5 text-sm font-medium text-white hover:opacity-90">Duplicar configuração</button>
         </Modal>
       )}
     </div>
@@ -814,21 +828,21 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
       <Card className="p-5">
         <div className="grid gap-5 md:grid-cols-[1fr_auto_auto_auto]">
           <div>
-            <div className="mb-1 flex items-center gap-2 text-sm text-stone-400"><Flame size={15} className="text-orange-500" />Temperatura atual (estimada)</div>
-            <div className="text-4xl font-semibold leading-none">{p.temperatura}°C <span className="text-base font-normal text-stone-400">de {fornada.config.temperaturaMaxima}°C</span></div>
-            {ultima && <div className="mt-2 text-sm text-stone-500">Última temperatura informada: <span className="font-medium text-stone-700">{ultima.temp}°C</span> · {fmtRelativo(ultima.em, agora)}</div>}
-            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-stone-100"><div className="h-full rounded-full bg-orange-600 transition-all duration-700" style={{ width: p.pct + "%" }} /></div>
+            <div className="mb-1 flex items-center gap-2 text-sm text-[var(--ink-soft)]"><Flame size={15} className="text-[var(--ink-soft)]" />Temperatura atual (estimada)</div>
+            <div className="text-4xl font-semibold leading-none">{p.temperatura}°C <span className="text-base font-normal text-[var(--ink-soft)]">de {fornada.config.temperaturaMaxima}°C</span></div>
+            {ultima && <div className="mt-2 text-sm text-[var(--ink-soft)]">Última temperatura informada: <span className="font-medium text-[var(--ink)]">{ultima.temp}°C</span> · {fmtRelativo(ultima.em, agora)}</div>}
+            <div className="mt-3 h-2 w-full overflow-hidden bg-[var(--cream-soft)]"><div className="h-full bg-[var(--ink)] transition-all duration-700" style={{ width: p.pct + "%" }} /></div>
           </div>
           <div className="flex flex-col items-start gap-1 md:items-center md:justify-center">
-            <span className="text-xs text-stone-400">Etapa atual</span>
+            <span className="text-xs text-[var(--ink-soft)]">Etapa atual</span>
             <Badge tone="warning">{ETAPA_LABEL[p.etapa]}</Badge>
           </div>
           <div className="flex flex-col gap-0.5 md:items-center md:justify-center">
-            <span className="flex items-center gap-1 text-xs text-stone-400"><Clock size={13} />Previsão temp. máxima</span>
+            <span className="flex items-center gap-1 text-xs text-[var(--ink-soft)]"><Clock size={13} />Previsão temp. máxima</span>
             <span className="text-sm font-semibold">{fmtDiaHora(p.horaMax)}</span>
           </div>
           <div className="flex flex-col gap-0.5 md:items-center md:justify-center">
-            <span className="flex items-center gap-1 text-xs text-stone-400"><ShieldCheck size={13} />Previsão abertura segura</span>
+            <span className="flex items-center gap-1 text-xs text-[var(--ink-soft)]"><ShieldCheck size={13} />Previsão abertura segura</span>
             <span className="text-sm font-semibold">{fmtDiaHora(p.horaSegura)}</span>
           </div>
         </div>
@@ -849,25 +863,25 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
           <div className="flex flex-wrap gap-1.5">
             {fornada.categorias.map((c) => {
               const cat = CATEGORIAS.find((x) => x.id === c);
-              return <span key={c} className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700"><cat.icon size={13} />{cat.label}</span>;
+              return <span key={c} className="inline-flex items-center gap-1 bg-[var(--cream-soft)] px-2.5 py-1 text-xs font-medium text-[var(--ink)]"><cat.icon size={13} />{cat.label}</span>;
             })}
           </div>
-          {fornada.detalhesConteudo && <p className="mt-3 text-sm text-stone-500">{fornada.detalhesConteudo}</p>}
+          {fornada.detalhesConteudo && <p className="mt-3 text-sm text-[var(--ink-soft)]">{fornada.detalhesConteudo}</p>}
         </Card>
 
         <Card className="p-4">
           <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">Observações</h3></div>
           <ul className="max-h-44 space-y-3 overflow-y-auto pr-1 text-sm">
             {[...fornada.observacoes].reverse().map((o, i) => (
-              <li key={i}><span className="mr-2 font-mono text-xs text-stone-400">{fmtHora(o.em)}</span><span className="text-stone-600">{o.texto}</span></li>
+              <li key={i}><span className="mr-2 font-mono text-xs text-[var(--ink-soft)]">{fmtHora(o.em)}</span><span className="text-[var(--ink)]">{o.texto}</span></li>
             ))}
           </ul>
         </Card>
 
         <div className="flex flex-col gap-2.5">
-          <button onClick={onAtualizarTemp} className="flex items-center justify-center gap-2 rounded-xl bg-orange-600 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-700"><Thermometer size={17} />Atualizar temperatura</button>
-          <button onClick={onAdicionarObs} className="flex items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white py-3.5 text-sm font-semibold text-stone-700 hover:bg-stone-50"><MessageCircle size={17} />Adicionar observação</button>
-          <button onClick={onFinalizar} className="flex items-center justify-center gap-2 rounded-xl bg-rose-50 py-3.5 text-sm font-semibold text-rose-600 hover:bg-rose-100">Finalizar fornada</button>
+          <button onClick={onAtualizarTemp} className="flex items-center justify-center gap-2 bg-[var(--ink)] py-3.5 text-sm font-semibold text-white hover:opacity-90"><Thermometer size={17} />Atualizar temperatura</button>
+          <button onClick={onAdicionarObs} className="flex items-center justify-center gap-2 border border-[var(--line)] bg-white py-3.5 text-sm font-semibold text-[var(--ink)] hover:bg-[var(--cream)]"><MessageCircle size={17} />Adicionar observação</button>
+          <button onClick={onFinalizar} className="flex items-center justify-center gap-2 bg-rose-50 py-3.5 text-sm font-semibold text-rose-600 hover:bg-rose-100">Finalizar fornada</button>
         </div>
       </div>
 
@@ -876,15 +890,15 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={grafico}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#EFEBE6" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#DEDAD1" />
               <XAxis dataKey="hora" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} unit="°C" width={54} />
               <Tooltip />
               <Legend />
-              <ReferenceLine y={fornada.config.temperaturaMaxima} stroke="#A8A29E" strokeDasharray="3 3" label={{ value: "Patamar", position: "insideTopLeft", fontSize: 11, fill: "#A8A29E" }} />
+              <ReferenceLine y={fornada.config.temperaturaMaxima} stroke="#8A8479" strokeDasharray="3 3" label={{ value: "Patamar", position: "insideTopLeft", fontSize: 11, fill: "#8A8479" }} />
               <ReferenceLine y={fornada.config.temperaturaSegura} stroke="#60A5FA" strokeDasharray="3 3" label={{ value: "Abertura segura", position: "insideBottomLeft", fontSize: 11, fill: "#60A5FA" }} />
-              <Area type="monotone" dataKey="prevista" name="Curva prevista" stroke="#EA9A6B" fill="#FDEDE1" strokeDasharray="4 3" />
-              <Line type="monotone" dataKey="real" name="Temperatura real" stroke="#C2410C" strokeWidth={2.5} dot={{ r: 3 }} />
+              <Area type="monotone" dataKey="prevista" name="Curva prevista" stroke="#B8B2A6" fill="#EDEBE3" strokeDasharray="4 3" />
+              <Line type="monotone" dataKey="real" name="Temperatura real" stroke="#3B3833" strokeWidth={2.5} dot={{ r: 3 }} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -896,9 +910,9 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
 function StatCard({ icon: Icon, label, value, sub, mono }) {
   return (
     <Card className="p-4">
-      <div className="mb-2 flex items-center gap-1.5 text-stone-400"><Icon size={15} /><span className="text-xs">{label}</span></div>
-      <div className={"text-lg font-semibold text-stone-800 " + (mono ? "font-mono" : "")}>{value}</div>
-      {sub && <div className="text-xs text-stone-400">{sub}</div>}
+      <div className="mb-2 flex items-center gap-1.5 text-[var(--ink-soft)]"><Icon size={15} /><span className="text-xs">{label}</span></div>
+      <div className={"text-lg font-semibold text-[var(--ink)] " + (mono ? "font-mono" : "")}>{value}</div>
+      {sub && <div className="text-xs text-[var(--ink-soft)]">{sub}</div>}
     </Card>
   );
 }
@@ -935,22 +949,22 @@ function NovaFornada({ rascunho, onVoltar, onIniciar }) {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <button onClick={onVoltar} className="mb-4 flex items-center gap-1 text-sm font-medium text-stone-500 hover:text-stone-700"><ChevronLeft size={16} />Voltar</button>
-      <h1 className="mb-1 text-2xl font-semibold">Nova fornada</h1>
-      <p className="mb-6 text-sm text-stone-400">Preencha tudo nesta única tela — sem etapas.</p>
+      <button onClick={onVoltar} className="mb-4 flex items-center gap-1 text-sm font-medium text-[var(--ink-soft)] hover:text-[var(--ink)]"><ChevronLeft size={16} />Voltar</button>
+      <h1 className="mb-1 text-2xl font-semibold" style={FONT_DISPLAY}>Nova fornada</h1>
+      <p className="mb-6 text-sm text-[var(--ink-soft)]">Preencha tudo nesta única tela — sem etapas.</p>
 
       <Card className="p-5">
         <h2 className="mb-3 text-sm font-semibold">Tipo de queima</h2>
         <div className="grid grid-cols-3 gap-3">
           {[["esmalte", "Esmalte"], ["biscoito", "Biscoito"], ["outro", "Outros"]].map(([id, label]) => (
-            <button key={id} onClick={() => selecionarTipo(id)} className={"relative rounded-2xl border-2 px-3 py-6 text-center text-sm font-semibold transition-all " + (tipo === id ? "scale-[1.03] border-orange-500 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-500 hover:border-stone-300")}>
-              {tipo === id && <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-white"><Check size={12} strokeWidth={3} /></span>}
+            <button key={id} onClick={() => selecionarTipo(id)} className={"relative border-2 px-3 py-6 text-center text-sm font-semibold transition-all " + (tipo === id ? "scale-[1.03] border-[var(--ink)] bg-[var(--cream-soft)] text-[var(--ink)]" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--ink-soft)]")}>
+              {tipo === id && <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--ink)] text-white"><Check size={12} strokeWidth={3} /></span>}
               {label}
             </button>
           ))}
         </div>
         {tipo === "outro" && (
-          <input value={tipoDescricao} onChange={(e) => setTipoDescricao(e.target.value)} placeholder="Descreva o tipo de queima" className="mt-4 w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400" />
+          <input value={tipoDescricao} onChange={(e) => setTipoDescricao(e.target.value)} placeholder="Descreva o tipo de queima" className="mt-4 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" />
         )}
       </Card>
 
@@ -960,16 +974,16 @@ function NovaFornada({ rascunho, onVoltar, onIniciar }) {
           {CATEGORIAS.map((c) => {
             const ativo = categorias.includes(c.id);
             return (
-              <button key={c.id} onClick={() => toggleCategoria(c.id)} className={"relative flex flex-col items-center gap-2 rounded-2xl border-2 px-3 py-5 text-center text-xs font-medium transition-all " + (ativo ? "scale-[1.03] border-orange-500 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-500 hover:border-stone-300")}>
-                {ativo && <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-white"><Check size={12} strokeWidth={3} /></span>}
+              <button key={c.id} onClick={() => toggleCategoria(c.id)} className={"relative flex flex-col items-center gap-2 border-2 px-3 py-5 text-center text-xs font-medium transition-all " + (ativo ? "scale-[1.03] border-[var(--ink)] bg-[var(--cream-soft)] text-[var(--ink)]" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--ink-soft)]")}>
+                {ativo && <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--ink)] text-white"><Check size={12} strokeWidth={3} /></span>}
                 <c.icon size={22} />{c.label}
               </button>
             );
           })}
         </div>
         <div className="mt-4">
-          <label className="mb-1 block text-xs font-medium text-stone-500">Detalhes do conteúdo do forno (opcional)</label>
-          <textarea value={detalhes} onChange={(e) => setDetalhes(e.target.value)} rows={2} placeholder="Ex: Peças da turma de terça junto com uma encomenda da Marina." className="w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400" />
+          <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Detalhes do conteúdo do forno (opcional)</label>
+          <textarea value={detalhes} onChange={(e) => setDetalhes(e.target.value)} rows={2} placeholder="Ex: Peças da turma de terça junto com uma encomenda da Marina." className="w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" />
         </div>
       </Card>
 
@@ -984,8 +998,8 @@ function NovaFornada({ rascunho, onVoltar, onIniciar }) {
           <Campo label="Temp. segura (°C)" value={config.temperaturaSegura} onChange={(v) => setCampo("temperaturaSegura", v)} />
         </div>
         <div className="mt-3">
-          <label className="mb-1 block text-xs font-medium text-stone-500">Observações</label>
-          <textarea rows={2} placeholder="Observações gerais sobre esta queima" className="w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400" />
+          <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Observações</label>
+          <textarea rows={2} placeholder="Observações gerais sobre esta queima" className="w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" />
         </div>
       </Card>
 
@@ -993,22 +1007,22 @@ function NovaFornada({ rascunho, onVoltar, onIniciar }) {
         <Card className="mt-5 p-5">
           <h2 className="mb-3 text-sm font-semibold">Revisão</h2>
           <dl className="grid grid-cols-2 gap-y-2.5 text-sm">
-            <dt className="text-stone-400">Tipo</dt><dd className="text-right font-medium">{TIPO_LABEL[tipo]}{tipoDescricao ? ` — ${tipoDescricao}` : ""}</dd>
-            <dt className="text-stone-400">Categorias</dt><dd className="text-right font-medium">{categorias.length ? categorias.map((c) => CATEGORIAS.find((x) => x.id === c)?.label).join(", ") : "nenhuma selecionada"}</dd>
-            {detalhes && (<><dt className="text-stone-400">Detalhes</dt><dd className="text-right font-medium">{detalhes}</dd></>)}
-            <dt className="text-stone-400">Configuração</dt><dd className="text-right font-medium">{config.temperaturaMaxima}°C · {config.velocidadeAquecimento}°C/min</dd>
-            {previsao && (<><dt className="text-stone-400">Previsão máxima</dt><dd className="text-right font-medium">{fmtHora(previsao.horaMax)}</dd></>)}
-            {previsao && (<><dt className="text-stone-400">Previsão abertura segura</dt><dd className="text-right font-medium">{fmtDiaHora(previsao.horaSegura)}</dd></>)}
+            <dt className="text-[var(--ink-soft)]">Tipo</dt><dd className="text-right font-medium">{TIPO_LABEL[tipo]}{tipoDescricao ? ` — ${tipoDescricao}` : ""}</dd>
+            <dt className="text-[var(--ink-soft)]">Categorias</dt><dd className="text-right font-medium">{categorias.length ? categorias.map((c) => CATEGORIAS.find((x) => x.id === c)?.label).join(", ") : "nenhuma selecionada"}</dd>
+            {detalhes && (<><dt className="text-[var(--ink-soft)]">Detalhes</dt><dd className="text-right font-medium">{detalhes}</dd></>)}
+            <dt className="text-[var(--ink-soft)]">Configuração</dt><dd className="text-right font-medium">{config.temperaturaMaxima}°C · {config.velocidadeAquecimento}°C/min</dd>
+            {previsao && (<><dt className="text-[var(--ink-soft)]">Previsão máxima</dt><dd className="text-right font-medium">{fmtHora(previsao.horaMax)}</dd></>)}
+            {previsao && (<><dt className="text-[var(--ink-soft)]">Previsão abertura segura</dt><dd className="text-right font-medium">{fmtDiaHora(previsao.horaSegura)}</dd></>)}
           </dl>
         </Card>
       )}
 
       <div className="mt-6 flex gap-3 pb-6">
-        <button onClick={onVoltar} className="flex-1 rounded-xl border border-stone-200 py-3 text-sm font-semibold text-stone-600 hover:bg-stone-50">← Voltar</button>
+        <button onClick={onVoltar} className="flex-1 border border-[var(--line)] py-3 text-sm font-semibold text-[var(--ink)] hover:bg-[var(--cream)]">← Voltar</button>
         <button
           disabled={!pronto}
           onClick={() => onIniciar({ tipo, tipoDescricao, categorias, detalhesConteudo: detalhes, parametros: config })}
-          className="flex-[2] rounded-xl bg-orange-600 py-3 text-sm font-semibold text-white shadow-sm hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex-[2] bg-[var(--ink)] py-3 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           🔥 Iniciar fornada
         </button>
@@ -1020,8 +1034,8 @@ function NovaFornada({ rascunho, onVoltar, onIniciar }) {
 function Campo({ label, value, onChange }) {
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-stone-500">{label}</label>
-      <input type="number" value={value} onChange={(e) => onChange(parseFloat(e.target.value) || 0)} className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm outline-none focus:border-orange-400" />
+      <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">{label}</label>
+      <input type="number" value={value} onChange={(e) => onChange(parseFloat(e.target.value) || 0)} className="w-full border border-[var(--line)] px-3 py-2 text-sm outline-none focus:border-[var(--ink)]" />
     </div>
   );
 }
@@ -1069,18 +1083,18 @@ function Turmas({ notificar, diaInicial = "ter" }) {
   return (
     <div>
       <div className="mb-5 flex items-start justify-between">
-        <div><h1 className="text-2xl font-semibold">Turmas</h1><p className="text-sm text-stone-400">Gerencie suas turmas, alunos e presenças.</p></div>
-        <button className="hidden rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white sm:block" onClick={() => notificar("Cadastro de nova turma (demo)")}>+ Nova turma</button>
+        <div><h1 className="text-2xl font-semibold" style={FONT_DISPLAY}>Turmas</h1><p className="text-sm text-[var(--ink-soft)]">Gerencie suas turmas, alunos e presenças.</p></div>
+        <button className="hidden bg-[var(--ink)] px-4 py-2 text-sm font-medium text-white sm:block" onClick={() => notificar("Cadastro de nova turma (demo)")}>+ Nova turma</button>
       </div>
       <div className="mb-3 flex gap-2 overflow-x-auto">
         {TURMAS_DIAS.map((d) => (
-          <button key={d.id} onClick={() => selecionarDia(d)} disabled={!d.disponivel} className={"shrink-0 rounded-xl px-4 py-2 text-sm font-medium " + (diaAtivo === d.id ? "bg-orange-600 text-white" : d.disponivel ? "bg-stone-100 text-stone-500" : "bg-stone-50 text-stone-300")}>{d.label}</button>
+          <button key={d.id} onClick={() => selecionarDia(d)} disabled={!d.disponivel} className={"shrink-0 px-4 py-2 text-sm font-medium " + (diaAtivo === d.id ? "bg-[var(--ink)] text-white" : d.disponivel ? "bg-[var(--cream-soft)] text-[var(--ink-soft)]" : "bg-[var(--cream)] text-[var(--line)]")}>{d.label}</button>
         ))}
       </div>
       {diaInfo.turmas.length > 1 && (
         <div className="mb-5 flex gap-2">
           {diaInfo.turmas.map((t) => (
-            <button key={t.id} onClick={() => setTurmaAtiva(t.id)} className={"rounded-lg px-3 py-1.5 text-xs font-medium " + (turmaAtiva === t.id ? "bg-orange-100 text-orange-700" : "bg-stone-100 text-stone-500")}>{t.hora}</button>
+            <button key={t.id} onClick={() => setTurmaAtiva(t.id)} className={"px-3 py-1.5 text-xs font-medium " + (turmaAtiva === t.id ? "bg-[var(--cream-soft)] text-[var(--ink)]" : "bg-[var(--cream-soft)] text-[var(--ink-soft)]")}>{t.hora}</button>
           ))}
         </div>
       )}
@@ -1092,28 +1106,28 @@ function Turmas({ notificar, diaInicial = "ter" }) {
           </Card>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
             {vagas.map((v) => v.nome ? (
-              <div key={v.numero} className={"flex flex-col gap-2 rounded-2xl border p-3 " + (v.status === "ultima" ? "border-rose-200 bg-rose-50/40" : "border-stone-200 bg-white")}>
-                <div className="flex items-start justify-between"><span className="text-xs text-stone-300">{v.numero}</span><MoreVertical size={15} className="text-stone-300" /></div>
+              <div key={v.numero} className={"flex flex-col gap-2 border p-3 " + (v.status === "ultima" ? "border-rose-200 bg-rose-50/40" : "border-[var(--line)] bg-white")}>
+                <div className="flex items-start justify-between"><span className="text-xs text-[var(--line)]">{v.numero}</span><MoreVertical size={15} className="text-[var(--line)]" /></div>
                 <Avatar nome={v.nome} size={44} />
-                <div><div className="truncate text-sm font-medium">{v.nome}</div><div className="text-xs text-stone-400">{v.aula}/{v.total} aulas</div></div>
+                <div><div className="truncate text-sm font-medium">{v.nome}</div><div className="text-xs text-[var(--ink-soft)]">{v.aula}/{v.total} aulas</div></div>
                 <Badge tone={v.status === "confirmado" ? "success" : v.status === "ultima" ? "danger" : "warning"}>{v.status === "confirmado" ? "Confirmado" : v.status === "ultima" ? "Última aula" : "Pendente"}</Badge>
 
-                <button onClick={() => toggleStatusAula(v.numero)} className={"flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium " + (v.statusAula === "confirmado" ? "bg-emerald-50 text-emerald-700" : "bg-rose-100 text-rose-600")}>
+                <button onClick={() => toggleStatusAula(v.numero)} className={"flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium " + (v.statusAula === "confirmado" ? "bg-emerald-50 text-emerald-700" : "bg-rose-100 text-rose-600")}>
                   {v.statusAula === "confirmado" ? "🟢 Confirmado" : "🔴 Ausente"}
                 </button>
 
                 {v.presente ? (
-                  <button onClick={() => marcarPresenca(v.numero)} className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700" title="Toque p/ desfazer">✅ Presente</button>
+                  <button onClick={() => marcarPresenca(v.numero)} className="flex items-center gap-1.5 bg-emerald-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700" title="Toque p/ desfazer">✅ Presente</button>
                 ) : (
-                  <button onClick={() => marcarPresenca(v.numero)} className="flex items-center gap-1.5 rounded-lg border border-stone-200 px-2 py-1.5 text-xs font-medium text-stone-500 hover:bg-stone-50">⬜ Marcar presença</button>
+                  <button onClick={() => marcarPresenca(v.numero)} className="flex items-center gap-1.5 border border-[var(--line)] px-2 py-1.5 text-xs font-medium text-[var(--ink-soft)] hover:bg-[var(--cream)]">⬜ Marcar presença</button>
                 )}
               </div>
             ) : (
-              <button key={v.numero} onClick={() => setModalVaga(v.numero)} className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-stone-200 px-3 py-6 text-center hover:border-orange-300 hover:bg-orange-50/40">
-                <span className="text-xs text-stone-300">{v.numero}</span>
-                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-stone-300 text-stone-300"><Plus size={16} /></span>
-                <span className="text-sm text-stone-400">Vaga disponível</span>
-                <span className="rounded-lg border border-orange-300 px-2 py-1 text-xs font-medium text-orange-700">Cadastrar aluno</span>
+              <button key={v.numero} onClick={() => setModalVaga(v.numero)} className="flex flex-col items-center justify-center gap-2 border border-dashed border-[var(--line)] px-3 py-6 text-center hover:border-[var(--ink-soft)] hover:bg-[var(--cream-soft)]/40">
+                <span className="text-xs text-[var(--line)]">{v.numero}</span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-[var(--ink-soft)] text-[var(--line)]"><Plus size={16} /></span>
+                <span className="text-sm text-[var(--ink-soft)]">Vaga disponível</span>
+                <span className="border border-[var(--ink-soft)] px-2 py-1 text-xs font-medium text-[var(--ink)]">Cadastrar aluno</span>
               </button>
             ))}
           </div>
@@ -1122,10 +1136,10 @@ function Turmas({ notificar, diaInicial = "ter" }) {
           <Card className="p-4">
             <h3 className="mb-3 text-sm font-semibold">Detalhes da turma</h3>
             <dl className="grid grid-cols-2 gap-y-3 text-sm">
-              <dt className="text-stone-400">Dia</dt><dd className="text-right font-medium">{turmaInfo.dia}</dd>
-              <dt className="text-stone-400">Horário</dt><dd className="text-right font-medium">{turmaInfo.hora}</dd>
-              <dt className="text-stone-400">Capacidade</dt><dd className="text-right font-medium">12 alunos</dd>
-              <dt className="text-stone-400">Confirmados</dt><dd className="text-right font-medium">{vagas.filter(v=>v.status==="confirmado").length} alunos</dd>
+              <dt className="text-[var(--ink-soft)]">Dia</dt><dd className="text-right font-medium">{turmaInfo.dia}</dd>
+              <dt className="text-[var(--ink-soft)]">Horário</dt><dd className="text-right font-medium">{turmaInfo.hora}</dd>
+              <dt className="text-[var(--ink-soft)]">Capacidade</dt><dd className="text-right font-medium">12 alunos</dd>
+              <dt className="text-[var(--ink-soft)]">Confirmados</dt><dd className="text-right font-medium">{vagas.filter(v=>v.status==="confirmado").length} alunos</dd>
             </dl>
           </Card>
           <Card className="p-4">
@@ -1133,10 +1147,10 @@ function Turmas({ notificar, diaInicial = "ter" }) {
             <ul className="space-y-3">
               {SOLICITACOES_INICIAIS.slice(0, 2).map((s) => (
                 <li key={s.nome} className="flex items-center justify-between text-sm">
-                  <span><span className="block font-medium">{s.nome}</span><span className="text-stone-400">{s.tipo}</span></span>
+                  <span><span className="block font-medium">{s.nome}</span><span className="text-[var(--ink-soft)]">{s.tipo}</span></span>
                   <div className="flex gap-1.5">
-                    <button onClick={() => resolver(s.nome, true)} className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">Aprovar</button>
-                    <button onClick={() => resolver(s.nome, false)} className="rounded-lg bg-rose-100 px-2 py-1 text-xs font-medium text-rose-600">Recusar</button>
+                    <button onClick={() => resolver(s.nome, true)} className="bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">Aprovar</button>
+                    <button onClick={() => resolver(s.nome, false)} className="bg-rose-100 px-2 py-1 text-xs font-medium text-rose-600">Recusar</button>
                   </div>
                 </li>
               ))}
@@ -1159,17 +1173,17 @@ function ModalCadastrarAluno({ numero, onClose, onSalvar }) {
     <Modal onClose={onClose}>
       <h3 className="mb-3 text-base font-semibold">Cadastrar aluno — vaga {numero}</h3>
       <form onSubmit={(e) => { e.preventDefault(); if (!nome.trim()) return; onSalvar({ nome: nome.trim(), total }); }}>
-        <label className="mb-1 block text-xs font-medium text-stone-500">Nome do aluno</label>
-        <input autoFocus value={nome} onChange={(e) => setNome(e.target.value)} className="mb-3 w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400" placeholder="Nome completo" />
-        <label className="mb-1 block text-xs font-medium text-stone-500">Pacote</label>
+        <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Nome do aluno</label>
+        <input autoFocus value={nome} onChange={(e) => setNome(e.target.value)} className="mb-3 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="Nome completo" />
+        <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Pacote</label>
         <div className="mb-4 flex gap-2">
           {[4, 8, 12].map((n) => (
-            <button type="button" key={n} onClick={() => setTotal(n)} className={"flex-1 rounded-xl border px-3 py-2 text-sm font-medium " + (total === n ? "border-orange-500 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-500")}>{n} aulas</button>
+            <button type="button" key={n} onClick={() => setTotal(n)} className={"flex-1 border px-3 py-2 text-sm font-medium " + (total === n ? "border-[var(--ink)] bg-[var(--cream-soft)] text-[var(--ink)]" : "border-[var(--line)] text-[var(--ink-soft)]")}>{n} aulas</button>
           ))}
         </div>
         <div className="flex gap-2">
-          <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-stone-200 py-2.5 text-sm font-medium text-stone-600">Cancelar</button>
-          <button type="submit" className="flex-1 rounded-xl bg-orange-600 py-2.5 text-sm font-medium text-white hover:bg-orange-700">Cadastrar</button>
+          <button type="button" onClick={onClose} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
+          <button type="submit" className="flex-1 bg-[var(--ink)] py-2.5 text-sm font-medium text-white hover:opacity-90">Cadastrar</button>
         </div>
       </form>
     </Modal>
@@ -1188,22 +1202,22 @@ function Alunos() {
   return (
     <div>
       <div className="mb-5 flex items-start justify-between">
-        <div><h1 className="text-2xl font-semibold">Alunos</h1><p className="text-sm text-stone-400">Cadastro e histórico dos alunos do ateliê.</p></div>
-        <button onClick={() => setModal(true)} className="rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700">+ Cadastrar aluno</button>
+        <div><h1 className="text-2xl font-semibold" style={FONT_DISPLAY}>Alunos</h1><p className="text-sm text-[var(--ink-soft)]">Cadastro e histórico dos alunos do ateliê.</p></div>
+        <button onClick={() => setModal(true)} className="bg-[var(--ink)] px-4 py-2 text-sm font-medium text-white hover:opacity-90">+ Cadastrar aluno</button>
       </div>
 
       {alunos.length === 0 ? (
         <Card className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
-          <GraduationCap size={26} className="text-orange-400" />
+          <GraduationCap size={26} className="text-[var(--ink-soft)]" />
           <h2 className="text-base font-semibold">Nenhum aluno cadastrado ainda</h2>
-          <p className="max-w-xs text-sm text-stone-400">Cadastre seus alunos reais para começar a controlar turmas, pacotes e presenças.</p>
-          <button onClick={() => setModal(true)} className="mt-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-700">+ Cadastrar aluno</button>
+          <p className="max-w-xs text-sm text-[var(--ink-soft)]">Cadastre seus alunos reais para começar a controlar turmas, pacotes e presenças.</p>
+          <button onClick={() => setModal(true)} className="mt-2 bg-[var(--ink)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">+ Cadastrar aluno</button>
         </Card>
       ) : (
-        <Card><ul className="divide-y divide-stone-100">
+        <Card><ul className="divide-y divide-[var(--line)]">
           {alunos.map((a, i) => (
             <li key={i} className="flex items-center justify-between gap-3 px-4 py-3">
-              <div className="flex items-center gap-3"><Avatar nome={a.nome} /><div><div className="text-sm font-medium">{a.nome}</div><div className="text-xs text-stone-400">{a.turma} · {a.tel}</div></div></div>
+              <div className="flex items-center gap-3"><Avatar nome={a.nome} /><div><div className="text-sm font-medium">{a.nome}</div><div className="text-xs text-[var(--ink-soft)]">{a.turma} · {a.tel}</div></div></div>
               <Badge tone="info">{a.pacote}</Badge>
             </li>
           ))}
@@ -1227,23 +1241,23 @@ function FormAluno({ onCancelar, onSalvar }) {
   const [total, setTotal] = useState(4);
   return (
     <form onSubmit={(e) => { e.preventDefault(); if (!nome.trim()) return; onSalvar({ nome: nome.trim(), tel, turma, pacote: `0/${total} aulas` }); }}>
-      <label className="mb-1 block text-xs font-medium text-stone-500">Nome completo</label>
-      <input autoFocus value={nome} onChange={(e) => setNome(e.target.value)} className="mb-3 w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400" placeholder="Nome do aluno" />
-      <label className="mb-1 block text-xs font-medium text-stone-500">Telefone</label>
-      <input value={tel} onChange={(e) => setTel(e.target.value)} className="mb-3 w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400" placeholder="(14) 99999-9999" />
-      <label className="mb-1 block text-xs font-medium text-stone-500">Turma fixa</label>
-      <select value={turma} onChange={(e) => setTurma(e.target.value)} className="mb-3 w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400">
+      <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Nome completo</label>
+      <input autoFocus value={nome} onChange={(e) => setNome(e.target.value)} className="mb-3 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="Nome do aluno" />
+      <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Telefone</label>
+      <input value={tel} onChange={(e) => setTel(e.target.value)} className="mb-3 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="(14) 99999-9999" />
+      <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Turma fixa</label>
+      <select value={turma} onChange={(e) => setTurma(e.target.value)} className="mb-3 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]">
         <option>Terça 18:30</option><option>Quarta 16:30</option><option>Quinta 14:30</option><option>Quinta 18:30</option>
       </select>
-      <label className="mb-1 block text-xs font-medium text-stone-500">Pacote</label>
+      <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Pacote</label>
       <div className="mb-4 flex gap-2">
         {[4, 8, 12].map((n) => (
-          <button type="button" key={n} onClick={() => setTotal(n)} className={"flex-1 rounded-xl border px-3 py-2 text-sm font-medium " + (total === n ? "border-orange-500 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-500")}>{n} aulas</button>
+          <button type="button" key={n} onClick={() => setTotal(n)} className={"flex-1 border px-3 py-2 text-sm font-medium " + (total === n ? "border-[var(--ink)] bg-[var(--cream-soft)] text-[var(--ink)]" : "border-[var(--line)] text-[var(--ink-soft)]")}>{n} aulas</button>
         ))}
       </div>
       <div className="flex gap-2">
-        <button type="button" onClick={onCancelar} className="flex-1 rounded-xl border border-stone-200 py-2.5 text-sm font-medium text-stone-600">Cancelar</button>
-        <button type="submit" className="flex-1 rounded-xl bg-orange-600 py-2.5 text-sm font-medium text-white hover:bg-orange-700">Cadastrar</button>
+        <button type="button" onClick={onCancelar} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
+        <button type="submit" className="flex-1 bg-[var(--ink)] py-2.5 text-sm font-medium text-white hover:opacity-90">Cadastrar</button>
       </div>
     </form>
   );
@@ -1253,23 +1267,23 @@ function Oficinas({ oficinas, onAbrir }) {
   return (
     <div>
       <div className="mb-5 flex items-start justify-between">
-        <div><h1 className="text-2xl font-semibold">Oficinas</h1><p className="text-sm text-stone-400">Eventos avulsos com inscrição e pagamento.</p></div>
-        <button className="rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white">+ Nova oficina</button>
+        <div><h1 className="text-2xl font-semibold" style={FONT_DISPLAY}>Oficinas</h1><p className="text-sm text-[var(--ink-soft)]">Eventos avulsos com inscrição e pagamento.</p></div>
+        <button className="bg-[var(--ink)] px-4 py-2 text-sm font-medium text-white">+ Nova oficina</button>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         {oficinas.map((o) => {
           const ocupadas = o.participantes.filter((p) => p.nome).length;
           return (
             <button key={o.id} onClick={() => onAbrir(o.id)} className="text-left">
-              <Card className="p-4 hover:border-orange-300">
+              <Card className="p-4 hover:border-[var(--ink-soft)]">
                 <div className="mb-2 flex items-start justify-between">
                   <h3 className="font-medium">{o.nome}</h3>
                   <Badge tone="info">{o.status}</Badge>
                 </div>
-                <p className="text-sm text-stone-400">{o.data} · {o.hora}</p>
-                <p className="mt-1 text-sm text-stone-400">R$ {o.valor} por pessoa</p>
-                <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-stone-100"><div className="h-full rounded-full bg-orange-500" style={{ width: (ocupadas / o.vagas) * 100 + "%" }} /></div>
-                <p className="mt-1.5 text-xs text-stone-400">{ocupadas}/{o.vagas} inscritos</p>
+                <p className="text-sm text-[var(--ink-soft)]">{o.data} · {o.hora}</p>
+                <p className="mt-1 text-sm text-[var(--ink-soft)]">R$ {o.valor} por pessoa</p>
+                <div className="mt-3 h-1.5 w-full overflow-hidden bg-[var(--cream-soft)]"><div className="h-full bg-[var(--ink)]" style={{ width: (ocupadas / o.vagas) * 100 + "%" }} /></div>
+                <p className="mt-1.5 text-xs text-[var(--ink-soft)]">{ocupadas}/{o.vagas} inscritos</p>
               </Card>
             </button>
           );
@@ -1305,13 +1319,13 @@ function StatusPecasCard({ status, somenteLeitura, onAlterar }) {
               disabled={!clicavel}
               onClick={() => clicavel && onAlterar(e.id)}
               className={
-                "flex-1 min-w-[140px] rounded-xl border px-3 py-3 text-left text-xs font-medium transition-all " +
-                (atual ? "border-orange-500 bg-orange-50 text-orange-700" : concluida ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-stone-200 bg-stone-50 text-stone-400") +
-                (clicavel ? " hover:border-orange-300 cursor-pointer" : " cursor-default")
+                "flex-1 min-w-[140px] border px-3 py-3 text-left text-xs font-medium transition-all " +
+                (atual ? "border-[var(--ink)] bg-[var(--cream-soft)] text-[var(--ink)]" : concluida ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-[var(--line)] bg-[var(--cream)] text-[var(--ink-soft)]") +
+                (clicavel ? " hover:border-[var(--ink-soft)] cursor-pointer" : " cursor-default")
               }
             >
               <div className="mb-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold "
-                style={{ background: atual ? "#EA580C" : concluida ? "#059669" : "#D6D3D1", color: "#fff" }}>
+                style={{ background: atual ? "#3B3833" : concluida ? "#059669" : "#DEDAD1", color: "#fff" }}>
                 {concluida && !atual ? <Check size={12} /> : i + 1}
               </div>
               {e.label}
@@ -1319,7 +1333,7 @@ function StatusPecasCard({ status, somenteLeitura, onAlterar }) {
           );
         })}
       </div>
-      {somenteLeitura && <p className="mt-2 text-xs text-stone-400">O aluno só visualiza — apenas o administrador altera o status.</p>}
+      {somenteLeitura && <p className="mt-2 text-xs text-[var(--ink-soft)]">O aluno só visualiza — apenas o administrador altera o status.</p>}
     </Card>
   );
 }
@@ -1337,12 +1351,12 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
 
   return (
     <div>
-      <button onClick={onVoltar} className="mb-4 flex items-center gap-1 text-sm font-medium text-stone-500 hover:text-stone-700"><ChevronLeft size={16} />Voltar para oficinas</button>
+      <button onClick={onVoltar} className="mb-4 flex items-center gap-1 text-sm font-medium text-[var(--ink-soft)] hover:text-[var(--ink)]"><ChevronLeft size={16} />Voltar para oficinas</button>
 
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2"><h1 className="text-2xl font-semibold">{oficina.nome}</h1><Badge tone="success">{oficina.status}</Badge></div>
-          <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-stone-500">
+          <div className="flex items-center gap-2"><h1 className="text-2xl font-semibold" style={FONT_DISPLAY}>{oficina.nome}</h1><Badge tone="success">{oficina.status}</Badge></div>
+          <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-[var(--ink-soft)]">
             <span className="flex items-center gap-1.5"><CalendarDays size={14} />{oficina.data}</span>
             <span className="flex items-center gap-1.5"><Clock size={14} />{oficina.hora}</span>
             <span className="flex items-center gap-1.5"><CreditCard size={14} />R$ {oficina.valor} por pessoa</span>
@@ -1350,12 +1364,12 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
           </div>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
-          <label className="flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-xs font-medium text-stone-500">
+          <label className="flex items-center gap-1.5 border border-[var(--line)] bg-white px-3 py-2.5 text-xs font-medium text-[var(--ink-soft)]">
             <input type="checkbox" checked={verComoAluno} onChange={(e) => setVerComoAluno(e.target.checked)} />
             Ver como aluno
           </label>
-          <button className="flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50">Editar oficina</button>
-          <button onClick={() => notificar("Lembrete enviado via WhatsApp (demo).")} className="flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-700">Enviar lembrete</button>
+          <button className="flex items-center gap-1.5 border border-[var(--line)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]">Editar oficina</button>
+          <button onClick={() => notificar("Lembrete enviado via WhatsApp (demo).")} className="flex items-center gap-1.5 bg-[var(--ink)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">Enviar lembrete</button>
         </div>
       </div>
 
@@ -1371,19 +1385,19 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
       <div className="mb-5 grid gap-4 lg:grid-cols-3">
         <Card className="p-4">
           <h3 className="mb-2 text-sm font-semibold">Sobre a oficina</h3>
-          <p className="text-sm text-stone-500">{oficina.descricao}</p>
+          <p className="text-sm text-[var(--ink-soft)]">{oficina.descricao}</p>
         </Card>
         <Card className="p-4">
           <h3 className="mb-2 text-sm font-semibold">Receita da oficina</h3>
           <ul className="space-y-1.5 text-sm">
             {oficina.receita.map((r) => (
-              <li key={r.item} className="flex items-center justify-between"><span className="text-stone-600">{r.item}</span><span className="text-stone-400">{r.peso}</span></li>
+              <li key={r.item} className="flex items-center justify-between"><span className="text-[var(--ink)]">{r.item}</span><span className="text-[var(--ink-soft)]">{r.peso}</span></li>
             ))}
           </ul>
         </Card>
-        <Card className="border-orange-100 bg-orange-50/40 p-4">
-          <h3 className="mb-2 text-sm font-semibold text-orange-700">Observações</h3>
-          <p className="text-sm text-stone-600">{oficina.observacoes || "Nenhuma observação registrada."}</p>
+        <Card className="border-[var(--line)] bg-[var(--cream-soft)]/40 p-4">
+          <h3 className="mb-2 text-sm font-semibold text-[var(--ink)]">Observações</h3>
+          <p className="text-sm text-[var(--ink)]">{oficina.observacoes || "Nenhuma observação registrada."}</p>
         </Card>
       </div>
 
@@ -1391,22 +1405,22 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
         {oficina.participantes.map((p) => p.nome ? (
           <Card key={p.numero} className="flex flex-col gap-2 p-3">
-            <span className="text-xs text-stone-300">{p.numero}</span>
+            <span className="text-xs text-[var(--line)]">{p.numero}</span>
             <Avatar nome={p.nome} size={44} />
             <div className="truncate text-sm font-medium">{p.nome}</div>
-            <span className="text-xs text-stone-400">{p.tipo === "dupla" ? (p.duplaCom ? `Dupla com ${p.duplaCom}` : "Dupla") : "Individual"}</span>
+            <span className="text-xs text-[var(--ink-soft)]">{p.tipo === "dupla" ? (p.duplaCom ? `Dupla com ${p.duplaCom}` : "Dupla") : "Individual"}</span>
             <Badge tone={p.pagamento === "pago" ? "success" : "warning"}>{p.pagamento === "pago" ? "✓ Pago" : "Pendente"}</Badge>
           </Card>
         ) : (
-          <button key={p.numero} onClick={() => setModalNumero(p.numero)} className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-stone-200 px-3 py-6 text-center hover:border-orange-300 hover:bg-orange-50/40">
-            <span className="text-xs text-stone-300">{p.numero}</span>
-            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-stone-300 text-stone-300"><Plus size={16} /></span>
-            <span className="text-sm text-stone-400">Cadastrar participante</span>
+          <button key={p.numero} onClick={() => setModalNumero(p.numero)} className="flex flex-col items-center justify-center gap-2 border border-dashed border-[var(--line)] px-3 py-6 text-center hover:border-[var(--ink-soft)] hover:bg-[var(--cream-soft)]/40">
+            <span className="text-xs text-[var(--line)]">{p.numero}</span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-[var(--ink-soft)] text-[var(--line)]"><Plus size={16} /></span>
+            <span className="text-sm text-[var(--ink-soft)]">Cadastrar participante</span>
           </button>
         ))}
       </div>
 
-      <div className="mt-4 flex items-center gap-2 rounded-xl bg-stone-50 px-3 py-2.5 text-sm text-stone-500">
+      <div className="mt-4 flex items-center gap-2 bg-[var(--cream)] px-3 py-2.5 text-sm text-[var(--ink-soft)]">
         Os lembretes serão enviados via WhatsApp um dia antes da oficina.
       </div>
 
@@ -1432,36 +1446,36 @@ function ModalCadastrarParticipante({ numero, opcoesDupla, onClose, onSalvar }) 
     <Modal onClose={onClose}>
       <h3 className="mb-3 text-base font-semibold">Cadastrar participante — vaga {numero}</h3>
       <form onSubmit={(e) => { e.preventDefault(); if (!nome.trim()) return; onSalvar({ nome: nome.trim(), tipo, duplaCom: tipo === "dupla" ? duplaCom || null : null, pagamento }); }}>
-        <label className="mb-1 block text-xs font-medium text-stone-500">Nome</label>
-        <input autoFocus value={nome} onChange={(e) => setNome(e.target.value)} className="mb-3 w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400" placeholder="Nome do participante" />
+        <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Nome</label>
+        <input autoFocus value={nome} onChange={(e) => setNome(e.target.value)} className="mb-3 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="Nome do participante" />
 
-        <label className="mb-1 block text-xs font-medium text-stone-500">Tipo</label>
+        <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Tipo</label>
         <div className="mb-3 flex gap-2">
           {["individual", "dupla"].map((t) => (
-            <button type="button" key={t} onClick={() => setTipo(t)} className={"flex-1 rounded-xl border px-3 py-2 text-sm font-medium capitalize " + (tipo === t ? "border-orange-500 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-500")}>{t}</button>
+            <button type="button" key={t} onClick={() => setTipo(t)} className={"flex-1 border px-3 py-2 text-sm font-medium capitalize " + (tipo === t ? "border-[var(--ink)] bg-[var(--cream-soft)] text-[var(--ink)]" : "border-[var(--line)] text-[var(--ink-soft)]")}>{t}</button>
           ))}
         </div>
 
         {tipo === "dupla" && opcoesDupla.length > 0 && (
           <div className="mb-3">
-            <label className="mb-1 block text-xs font-medium text-stone-500">Dupla com (opcional)</label>
-            <select value={duplaCom} onChange={(e) => setDuplaCom(e.target.value)} className="w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm outline-none focus:border-orange-400">
+            <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Dupla com (opcional)</label>
+            <select value={duplaCom} onChange={(e) => setDuplaCom(e.target.value)} className="w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]">
               <option value="">Selecionar...</option>
               {opcoesDupla.map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           </div>
         )}
 
-        <label className="mb-1 block text-xs font-medium text-stone-500">Pagamento</label>
+        <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Pagamento</label>
         <div className="mb-4 flex gap-2">
           {[["pendente", "Pendente"], ["pago", "Pago"]].map(([id, label]) => (
-            <button type="button" key={id} onClick={() => setPagamento(id)} className={"flex-1 rounded-xl border px-3 py-2 text-sm font-medium " + (pagamento === id ? "border-orange-500 bg-orange-50 text-orange-700" : "border-stone-200 text-stone-500")}>{label}</button>
+            <button type="button" key={id} onClick={() => setPagamento(id)} className={"flex-1 border px-3 py-2 text-sm font-medium " + (pagamento === id ? "border-[var(--ink)] bg-[var(--cream-soft)] text-[var(--ink)]" : "border-[var(--line)] text-[var(--ink-soft)]")}>{label}</button>
           ))}
         </div>
 
         <div className="flex gap-2">
-          <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-stone-200 py-2.5 text-sm font-medium text-stone-600">Cancelar</button>
-          <button type="submit" className="flex-1 rounded-xl bg-orange-600 py-2.5 text-sm font-medium text-white hover:bg-orange-700">Cadastrar</button>
+          <button type="button" onClick={onClose} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
+          <button type="submit" className="flex-1 bg-[var(--ink)] py-2.5 text-sm font-medium text-white hover:opacity-90">Cadastrar</button>
         </div>
       </form>
     </Modal>
@@ -1471,15 +1485,15 @@ function ModalCadastrarParticipante({ numero, opcoesDupla, onClose, onSalvar }) 
 function Solicitacoes({ notificar }) {
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-semibold">Solicitações</h1>
-      <p className="mb-5 text-sm text-stone-400">Vagas e reposições aguardando aprovação.</p>
-      <Card><ul className="divide-y divide-stone-100">
+      <h1 className="mb-1 text-2xl font-semibold" style={FONT_DISPLAY}>Solicitações</h1>
+      <p className="mb-5 text-sm text-[var(--ink-soft)]">Vagas e reposições aguardando aprovação.</p>
+      <Card><ul className="divide-y divide-[var(--line)]">
         {SOLICITACOES_INICIAIS.map((s) => (
           <li key={s.nome} className="flex items-center justify-between gap-3 px-4 py-3">
-            <div className="flex items-center gap-3"><Avatar nome={s.nome} /><div><div className="text-sm font-medium">{s.nome}</div><div className="text-xs text-stone-400">{s.tipo} · {s.quando}</div></div></div>
+            <div className="flex items-center gap-3"><Avatar nome={s.nome} /><div><div className="text-sm font-medium">{s.nome}</div><div className="text-xs text-[var(--ink-soft)]">{s.tipo} · {s.quando}</div></div></div>
             <div className="flex gap-1.5">
-              <button onClick={() => notificar(`Aprovado: ${s.nome}`)} className="rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700">Aprovar</button>
-              <button onClick={() => notificar(`Recusado: ${s.nome}`)} className="rounded-lg bg-rose-100 px-2.5 py-1.5 text-xs font-medium text-rose-600">Recusar</button>
+              <button onClick={() => notificar(`Aprovado: ${s.nome}`)} className="bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700">Aprovar</button>
+              <button onClick={() => notificar(`Recusado: ${s.nome}`)} className="bg-rose-100 px-2.5 py-1.5 text-xs font-medium text-rose-600">Recusar</button>
             </div>
           </li>
         ))}
@@ -1506,8 +1520,8 @@ function Pagamentos() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-semibold">Pagamentos</h1>
-      <p className="mb-5 text-sm text-stone-400">Histórico de pacotes e aulas avulsas, cobranças pendentes.</p>
+      <h1 className="mb-1 text-2xl font-semibold" style={FONT_DISPLAY}>Pagamentos</h1>
+      <p className="mb-5 text-sm text-[var(--ink-soft)]">Histórico de pacotes e aulas avulsas, cobranças pendentes.</p>
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard icon={CreditCard} label="Pendente" value={"R$ " + totalPendente} sub={pendentes.length + " cobranças"} />
@@ -1518,19 +1532,19 @@ function Pagamentos() {
 
       <Card className="mb-5 p-4">
         <h3 className="mb-3 text-sm font-semibold">Pendentes — cobrar</h3>
-        <ul className="divide-y divide-stone-100">
+        <ul className="divide-y divide-[var(--line)]">
           {pendentes.map((p) => (
             <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
               <div className="flex items-center gap-3">
                 <Avatar nome={p.nome} />
                 <div>
                   <div className="text-sm font-medium">{p.nome}</div>
-                  <div className="text-xs text-stone-400">{p.tipo} · R$ {p.valor} · {p.motivo}</div>
+                  <div className="text-xs text-[var(--ink-soft)]">{p.tipo} · R$ {p.valor} · {p.motivo}</div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Badge tone="warning">Pendente</Badge>
-                <button onClick={() => setModal(p)} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">Cobrar no WhatsApp</button>
+                <button onClick={() => setModal(p)} className="bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">Cobrar no WhatsApp</button>
               </div>
             </li>
           ))}
@@ -1539,18 +1553,18 @@ function Pagamentos() {
 
       <Card className="p-4">
         <h3 className="mb-3 text-sm font-semibold">Histórico</h3>
-        <ul className="divide-y divide-stone-100">
+        <ul className="divide-y divide-[var(--line)]">
           {pagamentos.map((p) => (
             <li key={p.id} className="flex items-center justify-between gap-2 py-2.5 text-sm">
               <div className="flex items-center gap-3">
                 <Avatar nome={p.nome} size={30} />
                 <div>
                   <div className="font-medium">{p.nome}</div>
-                  <div className="text-xs text-stone-400">{p.tipo} · {p.data}</div>
+                  <div className="text-xs text-[var(--ink-soft)]">{p.tipo} · {p.data}</div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-stone-500">R$ {p.valor}</span>
+                <span className="text-[var(--ink-soft)]">R$ {p.valor}</span>
                 <Badge tone={p.status === "pago" ? "success" : "warning"}>{p.status === "pago" ? "Pago" : "Pendente"}</Badge>
               </div>
             </li>
@@ -1561,10 +1575,10 @@ function Pagamentos() {
       {modal && (
         <Modal onClose={() => setModal(null)}>
           <h3 className="mb-3 text-base font-semibold">Cobrar {modal.nome.split(" ")[0]}</h3>
-          <div className="mb-4 rounded-xl bg-stone-50 p-3 text-sm text-stone-600">{mensagem(modal)}</div>
+          <div className="mb-4 bg-[var(--cream)] p-3 text-sm text-[var(--ink)]">{mensagem(modal)}</div>
           <div className="flex gap-2">
-            <button onClick={() => setModal(null)} className="flex-1 rounded-xl border border-stone-200 py-2.5 text-sm font-medium text-stone-600">Cancelar</button>
-            <button onClick={() => { enviarWhatsApp(modal); setModal(null); }} className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700">Enviar no WhatsApp</button>
+            <button onClick={() => setModal(null)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
+            <button onClick={() => { enviarWhatsApp(modal); setModal(null); }} className="flex-1 bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700">Enviar no WhatsApp</button>
           </div>
         </Modal>
       )}
@@ -1576,9 +1590,9 @@ function EmBreve({ tela }) {
   const nomes = { pagamentos: "Pagamentos", relatorios: "Relatórios", config: "Configurações" };
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-600"><ChevronDown size={22} /></div>
+      <div className="mb-3 flex h-12 w-12 items-center justify-center bg-[var(--cream-soft)] text-[var(--ink)]"><ChevronDown size={22} /></div>
       <h2 className="text-lg font-semibold">{nomes[tela]}</h2>
-      <p className="mt-1 max-w-xs text-sm text-stone-400">Tela ainda não implementada nesta demo — mesma arquitetura das demais.</p>
+      <p className="mt-1 max-w-xs text-sm text-[var(--ink-soft)]">Tela ainda não implementada nesta demo — mesma arquitetura das demais.</p>
     </div>
   );
 }

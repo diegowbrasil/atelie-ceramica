@@ -242,11 +242,74 @@ função com outro parâmetro.
   `<main>` foi removido de propósito; não reintroduzir.
 - **Nada de "Olá, Camila" nem "Ateliê de Cerâmica"** nos headers — só o
   ícone do vaso (`VaseMark`).
-- Referências visuais: Apple, Linear, Notion, Stripe Dashboard. Muito espaço
-  em branco, tipografia refinada, cards arredondados, animações suaves,
-  áreas clicáveis grandes. "Software premium, não sistema administrativo."
 - Prioridade mobile, desktop completo e confortável.
-- Paleta: terracota/argila (`orange-600` acento) sobre neutros `stone`.
+
+### 6.1 Sistema visual (redesign de 2026-09-15 — substitui a paleta antiga)
+
+**Decisão do Diego**: visual alinhado ao site novo do MTCST
+(`mtcst-ceramics`, hoje em `http://192.168.1.180:3000` na rede local dele —
+IP muda, pedir de novo se não responder) e à inspiração dele, vigashoes.com
+(marca VIGA). **Não é mais** a paleta terracota/`orange-600` nem os cantos
+arredondados Apple/Linear/Stripe do brief original — isso foi
+explicitamente substituído. Se reabrir o assunto com o cliente, é só pra
+confirmar ajustes, não pra voltar ao estilo antigo.
+
+Tokens exatos, medidos direto do CSS computado do site novo (não são
+aproximação — `getComputedStyle` no site real):
+```css
+--cream: #F2F2EB;       /* fundo da página */
+--cream-soft: #E7E4DA;  /* superfícies suaves, hover, badges neutros */
+--line: #DEDAD1;        /* bordas */
+--ink: #3B3833;         /* texto principal e cor de ação — não é preto puro */
+--ink-soft: #8A8479;    /* texto secundário/muted */
+```
+Definidos como CSS custom properties dentro do `<style>` dentro do JSX do
+`AtelieDemo` (não em Tailwind config — o ambiente de artifact não permite
+config customizado). Usados via sintaxe arbitrária do Tailwind:
+`bg-[var(--cream)]`, `text-[var(--ink-soft)]`, etc.
+
+- **Sem cor de acento de marca.** O site real do MTCST não usa nenhuma cor
+  de destaque — nem laranja, nem bordô. É cru + o marrom-quase-preto do
+  texto; quem dá cor é a fotografia do produto. Botões primários, estado
+  ativo do menu, avatares: tudo em `--ink` sólido (não gradiente, não tint).
+- **Cores semânticas de status continuam** (`emerald`/`amber`/`rose` do
+  Tailwind) — success/warning/danger em badges, "Cobrar no WhatsApp"
+  (verde, ligado à marca do WhatsApp), etapa "Aquecendo" do forno (âmbar).
+  Isso é informação de estado, não identidade visual — não confundir com o
+  "sem acento de marca" acima.
+- **Tipografia: duas fontes**, carregadas via `@import` do Google Fonts
+  dentro do `<style>` do componente:
+  - `IBM Plex Mono` (peso 500) — tudo: nav, rótulos, corpo de texto,
+    botões, preços. Maiúsculo + `tracking-wide` em nav/labels/badges.
+  - `Space Grotesk` — só os títulos grandes de página (`<h1>` "Forno",
+    "Turmas" etc.). Aplicado via `style={FONT_DISPLAY}`
+    (`{ fontFamily: "var(--font-display)" }`), não por classe Tailwind —
+    mais confiável no ambiente de artifact do que arbitrary value de
+    `font-family`.
+- **Cantos retos em tudo** — `border-radius: 0` confirmado no site real
+  (botão, card, imagem). `rounded-xl`/`rounded-2xl`/`rounded-lg` foram
+  removidos do arquivo inteiro. **Exceção deliberada**: elementos
+  circulares pequenos e funcionais continuam redondos —
+  `Avatar`/iniciais, o badge "+N" de avatares empilhados, os círculos de
+  check/seleção (NovaFornada) e os círculos de ícone "+" em vagas vazias.
+  Isso segue o próprio vigashoes, que mantém botões flutuantes em pílula
+  mesmo com o resto totalmente reto.
+- **Sem sombra em elementos no fluxo da página** (cards, botões) —
+  `shadow-sm` removido. Sombra só sobrevive em elementos genuinamente
+  flutuantes sobre o conteúdo: `Modal`, menu mobile (drawer), toast.
+- Gráfico do forno (Recharts): curva "real" em `--ink` sólido (era laranja
+  escuro), curva "prevista" em cinza-amarronzado claro `#B8B2A6`/`#EDEBE3`
+  (era laranja claro), grid e linha de referência "Patamar" nos tons
+  neutros do sistema nesse tom. Linha de referência "Abertura segura"
+  **continua azul** (`#60A5FA`) — é a única cor "extra" no gráfico,
+  mantida de propósito por ser um marcador funcional (não é acento de
+  marca), pra não perder a distinção visual entre curva prevista, real, e
+  os dois marcadores de referência.
+
+**Ainda não migrado para este sistema**: o projeto Next.js (§2B) —
+continua com o Tailwind config antigo (`tailwind.config.ts`,
+`globals.css`), fora do escopo enquanto o demo for o principal (ver
+decisão no início da §2).
 
 ---
 
@@ -287,3 +350,12 @@ função com outro parâmetro.
   reportar como concluído.
 - Não reabrir decisões já tomadas listadas em §5/§6 com o cliente sem
   motivo novo.
+- **`resize_window` (viewport mobile) e `computer{screenshot}` ficaram
+  instáveis** no navegador embutido em 2026-09-15 durante uma sessão longa
+  (o viewport real não batia com o solicitado, screenshots vinham em branco
+  ou davam timeout, mesmo com o app renderizando certo). Parece limitação
+  pontual do ambiente/sessão, não algo consertável no código. Se acontecer
+  de novo: confirmar o layout por `get_page_text`,
+  `read_console_messages` e `javascript_tool`
+  (`getBoundingClientRect`/`getComputedStyle`) antes de concluir que há um
+  bug real — só then vale insistir em screenshot.

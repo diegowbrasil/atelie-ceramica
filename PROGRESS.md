@@ -9,34 +9,37 @@
 
 ## Onde continuar agora
 
-**Última sessão:** 2026-09-15 — retomada do projeto + correção de bug de
-mobile no dashboard. **Área do Aluno começada e pausada no meio** (ver
-abaixo) — não está terminada, não deixar o usuário achar que está.
+**Última sessão:** 2026-09-15 — retomada do projeto, correção de bug de
+mobile, **e redesign visual completo do demo** (concluído). **Área do
+Aluno continua começada e pausada no meio** (ver backlog abaixo) — não
+terminada, não deixar o usuário achar que está.
 
 **Decisão do Diego:** o demo (`demo/AtelieDemo.jsx`) é oficialmente o
 principal — ver CLAUDE.md §2. Next.js fica parado sem investimento até
-pedido explícito. Preview local agora é permanente: `npm run preview:demo`
+pedido explícito. Preview local é permanente: `npm run preview:demo`
 (porta 5183), pasta `preview/` versionada no repo, lê o demo direto sem
-cópia — ver CLAUDE.md seção de preview.
+cópia.
 
-**Redesign visual pendente de resposta** (perguntei, ele ainda não
-respondeu — não iniciar sem essas respostas):
-1. Ele está projetando um novo site do MTCST inspirado em vigashoes.com
-   (marca VIGA — bolsas/calçados de couro: fundo cru/off-white, quase tudo
-   preto, acento bordô escuro, tipografia monoespaçada maiúscula, cantos
-   RETOS na maioria dos elementos — oposto do visual atual do app, que é
-   arredondado/terracota). Preciso saber se ele vai mandar o link/print do
-   site MTCST de verdade, ou se é pra basear só no vigashoes.
-2. Preciso saber se mantém o acento terracota (temático com cerâmica) ou
-   vai tudo pro preto/bordô monocromático como o vigashoes.
+**Redesign visual: concluído nesta sessão.** As duas perguntas em aberto
+foram respondidas com dados reais, não suposição — o Diego mandou o IP da
+rede local onde o site novo do MTCST já está rodando
+(`http://192.168.1.180:3000`, pode mudar — pedir de novo se não
+responder), então os tokens de cor/fonte/raio foram lidos direto do CSS
+computado do site de verdade (via `javascript_tool`/`getComputedStyle`),
+não estimados a partir do vigashoes. Detalhes completos do sistema visual
+novo: **CLAUDE.md §6.1**. Resumo: sem cor de acento de marca (só
+cru `#F2F2EB` + marrom-quase-preto `#3B3833`), tipografia IBM Plex Mono +
+Space Grotesk, cantos retos em quase tudo, sem sombra fora de elementos
+flutuantes. Cores semânticas (verde/âmbar/vermelho de status) mantidas.
 
 **Ambiente:** durante esta sessão também rodou `npx claude-mem install`
 (ferramenta de memória de terceiros) — apareceu nas ferramentas/skills
-disponíveis, instalado fora do meu controle direto (eu tinha perguntado e
-fiquei sem resposta clara). Não interfere no projeto em si, só registrando.
-Também corrigi o `npm run dev` do Next.js (node_modules nunca tinha sido
-instalado + `.claude/launch.json` apontava pro script errado) — funciona em
-`:3000` se precisar, mas não é prioridade dado a decisão acima.
+disponíveis, instalado fora do meu controle direto. A busca dele
+(`mcp__plugin_claude-mem_mcp-search__search`) testou e deu erro de conexão
+com o worker — não está funcional no momento, não depender dele. Também
+corrigi o `npm run dev` do Next.js (node_modules nunca tinha sido instalado
++ `.claude/launch.json` apontava pro script errado) — funciona em `:3000`
+se precisar, mas não é prioridade dado a decisão acima.
 
 **Estado:**
 - Sistema de memória criado (este arquivo + CLAUDE.md).
@@ -50,6 +53,16 @@ instalado + `.claude/launch.json` apontava pro script errado) — funciona em
   grupo de botões do cabeçalho de `OficinaDetalhe` (checkbox "Ver como
   aluno" + "Editar oficina" + "Enviar lembrete"), que corria risco de
   estourar a largura em telas estreitas.
+- **Redesign visual completo** — ver detalhes logo acima e em CLAUDE.md
+  §6.1. Aplicado no arquivo inteiro: variáveis CSS de cor
+  (`--cream`/`--cream-soft`/`--line`/`--ink`/`--ink-soft`), fontes (IBM
+  Plex Mono + Space Grotesk via Google Fonts), cantos retos, sombras só em
+  elementos flutuantes, cores do gráfico do forno. Testado em Dashboard,
+  Turmas, Forno (painel + gráfico), Oficinas/OficinaDetalhe/status das
+  peças, Pagamentos + modal de cobrança — tudo renderizando certo, sem
+  erro de console novo (só avisos pré-existentes do Recharts,
+  `defaultProps` deprecation, sem relação com esta mudança). Validado por
+  esbuild a cada etapa.
 - **Início da Área do Aluno** (backlog #1): comecei a preparar o terreno —
   troquei a constante `SOLICITACOES` por `SOLICITACOES_INICIAIS` (vai virar
   `useState` na App, hoje ainda é só a constante renomeada nos 3 lugares que
@@ -280,5 +293,117 @@ introduzidos pelas edições desta sessão.
   estável) que o calendário do dashboard não estoura mais a tela.
 - Aviso de React em `Turmas` (setState durante render) — não investigado.
 - Área do Aluno — só o primeiro passo dos 8 foi feito.
+
+**Próximos passos:** ver "Onde continuar agora" no topo deste arquivo.
+
+---
+
+### 2026-09-15 (continuação 2) — Redesign visual completo do demo
+
+**Contexto:** o Diego pediu pra mudar o visual do app pra ficar parecido
+com o novo site do MTCST que ele está projetando, inspirado no vigashoes.com.
+Duas perguntas ficaram em aberto na sessão anterior (link do site novo? /
+manter terracota ou não?) — ele respondeu passando o IP da rede local onde
+o site novo já está rodando (`http://192.168.1.180:3000`), o que permitiu
+ler os valores reais de design (cor, fonte, raio de borda) direto do CSS
+computado do site, em vez de estimar a partir do vigashoes.
+
+**O que foi feito:**
+- Visitado `vigashoes.com` (marca VIGA, bolsas/calçados de couro) e
+  `http://192.168.1.180:3000` (site novo "MTCST Ceramics", já com loja de
+  peças, mesmo endereço em Bauru-SP que já aparecia nos dados fictícios do
+  demo — confirma que é o mesmo negócio). Extraídos os tokens reais via
+  `javascript_tool`/`getComputedStyle` do site novo: fundo `#F2F2EB`,
+  texto `#3B3833`, fonte `IBM Plex Mono` (nav/corpo/preços, maiúsculo,
+  peso 500) + `Space Grotesk` (títulos grandes), `border-radius: 0` em
+  botão/card/imagem, **nenhuma cor de acento de marca** (nem laranja nem
+  bordô — só cru + o marrom escuro do texto, a cor vem da foto do
+  produto).
+- Aplicado em `demo/AtelieDemo.jsx` inteiro:
+  - Variáveis CSS (`--cream`, `--cream-soft`, `--line`, `--ink`,
+    `--ink-soft`, `--font-mono`, `--font-display`) + `@import` das duas
+    fontes do Google Fonts, tudo dentro do `<style>` já existente no JSX
+    (sem tocar em `tailwind.config`, que não existe nesse ambiente).
+  - Reescritos os componentes-base (`Card`, `Badge`, `Avatar`, `VaseMark`,
+    `Modal`) e todo o chrome (sidebar, menu mobile, header, tab bar
+    inferior, toast) pro novo sistema.
+  - **Troca em massa de cor/canto**: em vez de editar uma por uma, escrito
+    um script Node (`scratchpad/recolor.mjs`, descartável, não faz parte
+    do repo) que aplicou ~35 regras de substituição de string
+    (`bg-orange-600` → `bg-[var(--ink)]`, `text-stone-400` →
+    `text-[var(--ink-soft)]`, remoção de `rounded-xl`/`rounded-2xl`/
+    `rounded-lg`, etc.) no arquivo inteiro — mais de 300 ocorrências em uma
+    passada. Único cuidado necessário: `bg-orange-50` é prefixo de
+    `bg-orange-500` como string, então a regra de `orange-500` teve que
+    rodar antes da de `orange-50` pra não corromper o token (documentado
+    no próprio script).
+  - `rounded-full` **não** foi removido em massa — tratado caso a caso:
+    mantido em `Avatar`, no badge "+N" de avatares empilhados, nos círculos
+    de check/seleção do NovaFornada e nos ícones "+" de vaga vazia (são
+    elementos pequenos e funcionais, mesmo padrão que o próprio vigashoes
+    usa pros botões flutuantes dele); removido das barras de progresso e
+    dos chips de categoria do forno.
+  - Cores hardcoded em hex que o script não pegava (por estarem em
+    `style={{}}` do JS, não em `className`) corrigidas à mão: o indicador
+    de etapa do `StatusPecasCard` e as cores das linhas/área do gráfico
+    Recharts (curva "real" → `--ink` sólido, curva "prevista" → cinza-
+    amarronzado claro, grid/"Patamar" → tons neutros do sistema). A linha
+    de referência "Abertura segura" do gráfico **continua azul**
+    (`#60A5FA`) de propósito — é um marcador funcional, não acento de
+    marca, e o gráfico perderia legibilidade sem ela se distinguir das
+    outras linhas.
+  - `style={FONT_DISPLAY}` aplicado nos 9 `<h1>` de título de página
+    (Painel geral, Forno, Turmas, Alunos, Oficinas, nome da oficina,
+    Nova fornada, Solicitações, Pagamentos).
+  - `shadow-sm` removido de botões e cards no fluxo da página (o site real
+    não usa sombra nenhuma); mantido só em `Modal`/drawer/toast, que são
+    elementos flutuantes de verdade.
+- Cores semânticas de status (`emerald`/`amber`/`rose` do Tailwind, e o
+  verde do botão "Cobrar no WhatsApp") **não foram tocadas** — continuam
+  comunicando estado (confirmado/pendente/atrasado), isso é informação,
+  não identidade de marca.
+
+**Testes realizados:**
+- `esbuild` depois de cada etapa (script em massa, ajustes manuais, fontes
+  nos títulos) — sempre passou.
+- Verificação de cor por `getComputedStyle` via `javascript_tool` (não só
+  visual) confirmando que os 4 ícones de KPI do dashboard batem exatamente
+  com os tokens esperados (um deles virou `--cream-soft`, os outros três
+  continuam emerald/amber/rose).
+- Navegação clicando em Dashboard, Turmas (grid de 12 vagas), Forno
+  (painel + gráfico), Oficinas → detalhe de oficina → Status das peças,
+  Pagamentos + modal "Cobrar no WhatsApp" — tudo renderizando com o layout
+  certo, sem crash.
+- `read_console_messages`: só os avisos pré-existentes do Recharts
+  (`defaultProps` deprecation, warning de versão antiga da lib), sem
+  nenhum erro novo introduzido.
+- Um screenshot do Forno saiu com um "buraco" vazio grande entre seções —
+  investigado com `getBoundingClientRect` em cada card via JS, que provou
+  que os elementos estão exatamente onde deveriam (sem gap real no DOM).
+  Concluído que era falha pontual de captura de tela do navegador embutido
+  desta sessão (mesmo ambiente que já tinha dado problema de viewport
+  mobile antes) — não um bug de layout. Screenshots seguintes saíram
+  normais.
+
+**Decisões tomadas:**
+- Basear o redesign no CSS **medido do site real**, não em suposição a
+  partir do vigashoes — o vigashoes é só a inspiração dele, o site dele é
+  a fonte de verdade.
+- Manter cores semânticas de status separadas de "acento de marca" — são
+  conceitos diferentes, uma reforça usabilidade, a outra é identidade
+  visual, e só a segunda foi removida.
+- Manter pequenos elementos circulares funcionais (avatar, ícones de
+  seleção) mesmo com o resto do app em cantos retos — segue o próprio
+  vigashoes, que faz a mesma exceção.
+- Preferir um script de substituição em massa a dezenas de edições manuais
+  — mais rápido e, com as strings certas, mais seguro (menos chance de
+  esquecer uma ocorrência no meio de 1600 linhas).
+
+**Problemas pendentes:**
+- Next.js (§2B) não foi tocado — continua com o Tailwind config antigo,
+  fora de escopo enquanto o demo for o principal.
+- Área do Aluno continua no passo 1 de 8 (ver "Onde continuar agora").
+- Vale o Diego conferir o resultado publicando o artifact de verdade, já
+  que a checagem desta sessão foi toda via preview local.
 
 **Próximos passos:** ver "Onde continuar agora" no topo deste arquivo.
