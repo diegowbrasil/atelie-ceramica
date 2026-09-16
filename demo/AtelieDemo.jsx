@@ -260,7 +260,7 @@ function fmtRelativo(d, agora) {
 const FONT_DISPLAY = { fontFamily: "var(--font-display)" };
 
 function Card({ className = "", children }) {
-  return <div className={"min-w-0 border border-[var(--line)] bg-white " + className}>{children}</div>;
+  return <div className={"min-w-0 rounded-2xl border border-[var(--line)] bg-white shadow-sm " + className}>{children}</div>;
 }
 function Badge({ tone = "neutral", children }) {
   const tones = {
@@ -269,7 +269,7 @@ function Badge({ tone = "neutral", children }) {
     info: "border border-[var(--ink)] text-[var(--ink)]",
     neutral: "bg-[var(--cream-soft)] text-[var(--ink-soft)]",
   };
-  return <span className={"inline-flex max-w-full items-center whitespace-normal break-words px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide " + tones[tone]}>{children}</span>;
+  return <span className={"inline-flex max-w-full items-center whitespace-normal break-words rounded-full px-2.5 py-1 text-xs font-medium " + tones[tone]}>{children}</span>;
 }
 function Avatar({ nome, size = 40, stacked }) {
   const iniciais = nome ? nome.split(" ").slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") : "?";
@@ -306,7 +306,7 @@ function Modal({ children, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-[var(--ink)]/40" onClick={onClose} />
-      <div className="relative w-full max-w-sm border border-[var(--line)] bg-white p-5 shadow-xl animate-in">{children}</div>
+      <div className="relative w-full max-w-sm rounded-3xl border border-[var(--line)] bg-white p-5 shadow-xl animate-in">{children}</div>
     </div>
   );
 }
@@ -402,13 +402,16 @@ export default function AtelieDemo() {
         }
         @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
         .animate-in{animation:fadeUp .2s ease-out both}
+        /* Apple-ish default: soft rounding on every button/field unless a
+           utility class (e.g. rounded-full on Toggle/Avatar) wins on specificity. */
+        button, input, textarea, select { border-radius: 0.75rem; }
       `}</style>
 
       <aside className="hidden md:flex md:w-32 md:shrink-0 md:flex-col md:border-r md:border-[var(--line)] md:bg-[var(--cream)] md:px-1.5 md:py-5">
         <div className="mb-6 flex justify-center px-1"><VaseMark /></div>
         <nav className="flex-1 space-y-0.5">
           {NAV.map((item) => (
-            <button key={item.id} onClick={() => ir(item.id)} title={item.label} className={"relative flex w-full flex-col items-center gap-0.5 border-l-2 px-1 py-2 text-[10px] font-medium uppercase tracking-wide leading-tight transition-colors " + ((tela === item.id || (item.id === "forno" && tela === "fornoNova") || (item.id === "oficinas" && tela === "oficinaDetalhe")) ? "border-[var(--accent)] bg-white text-[var(--accent)]" : "border-transparent text-[var(--ink-soft)] hover:bg-white/60")}>
+            <button key={item.id} onClick={() => ir(item.id)} title={item.label} className={"relative flex w-full flex-col items-center gap-0.5 rounded-2xl px-1 py-2 text-[10px] font-medium leading-tight transition-colors " + ((tela === item.id || (item.id === "forno" && tela === "fornoNova") || (item.id === "oficinas" && tela === "oficinaDetalhe")) ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--ink-soft)] hover:bg-white/60")}>
               <item.icon size={16} />
               <span className="truncate w-full text-center">{item.label}</span>
               {!!item.badge && <span className="absolute right-1 top-1 flex h-3.5 w-3.5 items-center justify-center bg-[var(--accent)] text-[9px] font-semibold text-white">{item.badge}</span>}
@@ -425,7 +428,7 @@ export default function AtelieDemo() {
             <div className="mb-6 flex items-center justify-between"><VaseMark /><button onClick={() => setMenuAberto(false)}><X size={20} /></button></div>
             <nav className="space-y-1">
               {NAV.map((item) => (
-                <button key={item.id} onClick={() => ir(item.id)} className={"flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium uppercase tracking-wide " + (tela === item.id ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--ink-soft)]")}>
+                <button key={item.id} onClick={() => ir(item.id)} className={"flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-medium " + (tela === item.id ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--ink-soft)]")}>
                   <item.icon size={17} />{item.label}
                   {!!item.badge && <span className="ml-auto bg-[var(--accent)] px-1.5 py-0.5 text-[11px] font-semibold text-white">{item.badge}</span>}
                 </button>
@@ -488,12 +491,12 @@ export default function AtelieDemo() {
           const item = NAV.find((n) => n.id === id);
           const ativoTab = tela === id || (id === "forno" && tela === "fornoNova");
           return (
-            <button key={id} onClick={() => ir(id)} className={"flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] font-medium uppercase tracking-wide " + (ativoTab ? "text-[var(--accent)]" : "text-[var(--ink-soft)]")}>
+            <button key={id} onClick={() => ir(id)} className={"flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] font-medium " + (ativoTab ? "text-[var(--accent)]" : "text-[var(--ink-soft)]")}>
               <item.icon size={20} strokeWidth={ativoTab ? 2.4 : 1.8} />{item.label}
             </button>
           );
         })}
-        <button onClick={() => setMenuAberto(true)} className="flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--ink-soft)]"><Menu size={20} />Mais</button>
+        <button onClick={() => setMenuAberto(true)} className="flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] font-medium text-[var(--ink-soft)]"><Menu size={20} />Mais</button>
       </nav>
 
       {toast && <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 bg-[var(--ink)] px-4 py-2.5 text-sm text-[var(--cream)] shadow-lg md:bottom-6">{toast}</div>}
@@ -1141,7 +1144,7 @@ function Turmas({ notificar, diaInicial = "ter" }) {
           <Card className="mb-4 flex flex-wrap items-center justify-between gap-2 px-4 py-3">
             <div><div className="text-sm font-semibold">{turmaInfo.dia} · {turmaInfo.hora}</div><div className="mt-1 flex gap-2"><Badge tone="success">{ocupadas}/12 alunos</Badge><Badge tone="info">Turma fixa</Badge></div></div>
           </Card>
-          <div className="w-full min-w-0 divide-y divide-[var(--line)] border border-[var(--line)] bg-white">
+          <div className="w-full min-w-0 divide-y divide-[var(--line)] overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
             {vagas.map((v) => v.nome ? (
               <div key={v.numero} className="flex w-full min-w-0 items-center gap-3 p-3">
                 <Avatar nome={v.nome} size={40} />
@@ -1438,7 +1441,7 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
       </div>
 
       <h3 className="mb-3 text-sm font-semibold">Participantes ({oficina.vagas} vagas)</h3>
-      <div className="w-full min-w-0 divide-y divide-[var(--line)] border border-[var(--line)] bg-white">
+      <div className="w-full min-w-0 divide-y divide-[var(--line)] overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
         {oficina.participantes.map((p) => p.nome ? (
           <div key={p.numero} className="flex w-full min-w-0 items-center gap-3 p-3">
             <Avatar nome={p.nome} size={40} />
