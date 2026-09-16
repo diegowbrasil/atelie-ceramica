@@ -1146,19 +1146,17 @@ function Turmas({ notificar, diaInicial = "ter" }) {
                 <Avatar nome={v.nome} size={40} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <button
+                      onClick={() => toggleStatusAula(v.numero)}
+                      title={v.statusAula === "confirmado" ? "Confirmado p/ próxima aula — toque p/ marcar ausente" : "Ausente na próxima aula — toque p/ confirmar"}
+                      className={"h-2.5 w-2.5 shrink-0 rounded-full " + (v.statusAula === "confirmado" ? "bg-emerald-500" : "bg-rose-500")}
+                    />
                     <span className="truncate text-sm font-medium">{v.nome}</span>
                     {v.status !== "confirmado" && <Badge tone={v.status === "ultima" ? "danger" : "warning"}>{v.status === "ultima" ? "Renovar" : "Pendente"}</Badge>}
                   </div>
                   <div className="text-xs text-[var(--ink-soft)]">{v.aula}/{v.total} aulas</div>
                 </div>
-                <button
-                  onClick={() => marcarPresenca(v.numero)}
-                  title={v.presente ? "Presente — toque para desfazer" : "Marcar presença"}
-                  className={"flex h-7 w-7 shrink-0 items-center justify-center border " + (v.presente ? "border-emerald-600 bg-emerald-600 text-white" : "border-[var(--line)] text-transparent hover:border-[var(--ink-soft)]")}
-                >
-                  <Check size={14} />
-                </button>
-                <Toggle checked={v.statusAula === "confirmado"} onChange={() => toggleStatusAula(v.numero)} title={v.statusAula === "confirmado" ? "Confirmado p/ próxima aula — toque p/ marcar ausente" : "Ausente — toque p/ confirmar"} />
+                <Toggle checked={v.presente} onChange={() => marcarPresenca(v.numero)} title={v.presente ? "Presente — toque para desfazer" : "Marcar presença"} />
               </div>
             ) : (
               <button key={v.numero} onClick={() => setModalVaga(v.numero)} className="flex w-full items-center gap-3 p-3 text-left hover:bg-[var(--cream)]">
@@ -1439,20 +1437,21 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
       </div>
 
       <h3 className="mb-3 text-sm font-semibold">Participantes ({oficina.vagas} vagas)</h3>
-      <div className="[&>*]:min-w-0 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+      <div className="divide-y divide-[var(--line)] border border-[var(--line)] bg-white">
         {oficina.participantes.map((p) => p.nome ? (
-          <Card key={p.numero} className="flex min-w-0 flex-col gap-2 p-3">
-            <span className="text-xs text-[var(--line)]">{p.numero}</span>
-            <Avatar nome={p.nome} size={44} />
-            <div className="truncate text-sm font-medium">{p.nome}</div>
-            <span className="text-xs text-[var(--ink-soft)]">{p.tipo === "dupla" ? (p.duplaCom ? `Dupla com ${p.duplaCom}` : "Dupla") : "Individual"}</span>
-            <Badge tone={p.pagamento === "pago" ? "success" : "warning"}>{p.pagamento === "pago" ? "✓ Pago" : "Pendente"}</Badge>
-          </Card>
+          <div key={p.numero} className="flex items-center gap-3 p-3">
+            <Avatar nome={p.nome} size={40} />
+            <div className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium">{p.nome}</span>
+              <span className="text-xs text-[var(--ink-soft)]">{p.tipo === "dupla" ? (p.duplaCom ? `Dupla com ${p.duplaCom}` : "Dupla") : "Individual"}</span>
+            </div>
+            <Badge tone={p.pagamento === "pago" ? "success" : "warning"}>{p.pagamento === "pago" ? "Pago" : "Pendente"}</Badge>
+          </div>
         ) : (
-          <button key={p.numero} onClick={() => setModalNumero(p.numero)} className="flex min-w-0 flex-col items-center justify-center gap-2 border border-dashed border-[var(--line)] px-3 py-6 text-center hover:border-[var(--ink-soft)] hover:bg-[var(--cream-soft)]/40">
-            <span className="text-xs text-[var(--line)]">{p.numero}</span>
-            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-[var(--ink-soft)] text-[var(--line)]"><Plus size={16} /></span>
-            <span className="text-sm text-[var(--ink-soft)]">Cadastrar participante</span>
+          <button key={p.numero} onClick={() => setModalNumero(p.numero)} className="flex w-full items-center gap-3 p-3 text-left hover:bg-[var(--cream)]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed border-[var(--ink-soft)] text-[var(--ink-soft)]"><Plus size={16} /></span>
+            <span className="min-w-0 flex-1 text-sm text-[var(--ink-soft)]">Vaga {p.numero} disponível</span>
+            <span className="shrink-0 border border-[var(--ink-soft)] px-2 py-1 text-xs font-medium text-[var(--ink)]">Cadastrar participante</span>
           </button>
         ))}
       </div>
