@@ -363,6 +363,22 @@ decisão no início da §2).
 
 ## 8. Armadilhas conhecidas — cuidado ao editar
 
+- **Overflow horizontal no mobile: cheque `min-w-0` no shell do App primeiro,
+  não só no componente que parece afetado.** Isso já consumiu várias rodadas
+  de correção numa sessão (2026-09-16): cada fix (grid de vagas, `Card`,
+  `StatCard`, containers de gráfico, `[&>*]:min-w-0` em ~19 grids) resolvia o
+  sintoma na tela testada e reaparecia em outra. A causa raiz real era UMA
+  linha: `<div className="flex-1 pb-20 md:pb-0">` — o wrapper direto do
+  conteúdo dentro do shell flex do `AtelieDemo` — nunca tinha `min-w-0`. Como
+  item flex com `min-width: auto` (padrão), o piso dele é o maior
+  min-content de QUALQUER conteúdo em QUALQUER tela do app — corrigir uma
+  tela só empurra o sintoma pra outra. Isso também causava a barra de
+  navegação inferior (`position: fixed`) sumir em telas altas (o navegador
+  recalcula `fixed` de forma estranha contra um documento mais largo que o
+  viewport). Teste real: `document.documentElement.scrollWidth ===
+  document.documentElement.clientWidth` deve ser verdadeiro em toda tela —
+  se não for, procure `min-w-0` faltando subindo a árvore a partir do
+  elemento largo, não só nele.
 - **Edições no `demo/AtelieDemo.jsx` já quebraram a sintaxe 3×**, sempre por
   `str_replace`/edição que engoliu uma linha de declaração (`const X = [`
   sumindo) ou fechamento de `.map()`. **Rodar o esbuild (§3) sempre antes de

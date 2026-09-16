@@ -10,11 +10,35 @@
 ## Onde continuar agora
 
 **Última sessão:** 2026-09-16 (virou o dia no meio da sessão) — retomada do
-projeto, redesign visual completo, correção de bug de overflow mobile (4
-rodadas até achar a causa real), e **início de um redesign estrutural
-mobile-first** (Turmas virou lista, Forno ganhou mostrador circular). **Área
-do Aluno continua começada e pausada no meio** (ver backlog abaixo) — não
-terminada, não deixar o usuário achar que está.
+projeto, redesign visual completo, **overflow mobile resolvido de vez
+(causa raiz achada e confirmada por medição)**, início de um redesign
+estrutural mobile-first (Turmas virou lista, Forno ganhou mostrador
+circular), e **uma segunda virada de direção visual em andamento — de mono
+retos (site MTCST) pra algo "parecido com Apple"** (cantos arredondados,
+sans-serif, profundidade suave), pausada no meio quando o bug de overflow
+voltou a aparecer. **Área do Aluno continua começada e pausada no meio**
+(ver backlog abaixo) — não terminada, não deixar o usuário achar que está.
+
+**Overflow mobile: causa raiz encontrada e corrigida (não é mais "correção
+pontual").** Ver CLAUDE.md §8 pro detalhe técnico completo. Resumo: faltava
+`min-w-0` numa única linha (`<div className="flex-1 pb-20 md:pb-0">`, o
+wrapper de conteúdo do shell do App) — isso explicava os dois sintomas
+relatados ao mesmo tempo (corte lateral E barra de navegação sumindo).
+Confirmado com medição real (`scrollWidth === clientWidth`), não só
+screenshot.
+
+**Direção visual: segunda virada em andamento.** Depois do redesign
+MTCST-mono-cantos-retos (ver acima na sessão), o Diego pediu através do
+`/impeccable` pra ir "parecido com Apple" de verdade — perguntei se era só
+nível de acabamento ou o estilo visual mesmo, ele confirmou **o estilo
+visual mesmo**: cantos arredondados de volta, tipografia sans-serif
+(`-apple-system`/Inter) em vez de mono em quase tudo, profundidade suave.
+Mono (`IBM Plex Mono`) fica só onde é medição de verdade (cronômetro do
+forno). **Só a parte de tokens (cor/fonte no `:root` + os 4 usos de
+`font-mono`) foi feita — ainda falta**: trazer `rounded-*` de volta em
+`Card`/`Badge`/`Modal`/botões/inputs em todo o arquivo (removi tudo isso no
+redesign anterior), sombra suave em vez de zero, revisar `uppercase
+tracking-wide` do nav (não é muito "Apple"). Continuar por aqui.
 
 **Decisão do Diego (2026-09-16): "pense em uma nova interface, primeiro
 pensando no mobile, então refaça todas as ferramentas pensando na
