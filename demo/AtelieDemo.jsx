@@ -282,6 +282,18 @@ function Avatar({ nome, size = 40, stacked }) {
     </div>
   );
 }
+function Toggle({ checked, onChange, title }) {
+  return (
+    <button
+      onClick={onChange}
+      title={title}
+      aria-pressed={checked}
+      className={"relative h-6 w-11 shrink-0 rounded-full transition-colors " + (checked ? "bg-emerald-500" : "bg-[var(--line)]")}
+    >
+      <span className={"absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform " + (checked ? "translate-x-[22px]" : "translate-x-0.5")} />
+    </button>
+  );
+}
 function VaseMark() {
   return (
     <svg width="24" height="24" viewBox="0 0 26 26" fill="none" className="text-[var(--ink)] shrink-0">
@@ -803,6 +815,29 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
   );
 }
 
+function TempGauge({ pct, temp, max, size = 176 }) {
+  const stroke = 12;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (Math.min(Math.max(pct, 0), 100) / 100) * circumference;
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} strokeWidth={stroke} className="fill-none stroke-[var(--cream-soft)]" />
+        <circle
+          cx={size / 2} cy={size / 2} r={radius} strokeWidth={stroke}
+          strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
+          className="fill-none stroke-[var(--accent)] transition-[stroke-dashoffset] duration-700 ease-out"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div className="text-4xl font-semibold leading-none text-[var(--ink)]">{temp}°</div>
+        <div className="mt-1.5 text-xs text-[var(--ink-soft)]">de {max}°C</div>
+      </div>
+    </div>
+  );
+}
+
 function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, onFinalizar }) {
   const ultima = fornada.leituras[fornada.leituras.length - 1] || null;
   const p = calcularPrevisao(fornada.config, fornada.iniciadoEm, agora, ultima);
@@ -827,24 +862,24 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
   return (
     <>
       <Card className="p-5">
-        <div className="[&>*]:min-w-0 grid gap-5 md:grid-cols-[1fr_auto_auto_auto]">
-          <div>
-            <div className="mb-1 flex items-center gap-2 text-sm text-[var(--ink-soft)]"><Flame size={15} className="text-[var(--ink-soft)]" />Temperatura atual (estimada)</div>
-            <div className="text-4xl font-semibold leading-none">{p.temperatura}°C <span className="text-base font-normal text-[var(--ink-soft)]">de {fornada.config.temperaturaMaxima}°C</span></div>
-            {ultima && <div className="mt-2 text-sm text-[var(--ink-soft)]">Última temperatura informada: <span className="font-medium text-[var(--ink)]">{ultima.temp}°C</span> · {fmtRelativo(ultima.em, agora)}</div>}
-            <div className="mt-3 h-2 w-full overflow-hidden bg-[var(--cream-soft)]"><div className="h-full bg-[var(--accent)] transition-all duration-700" style={{ width: p.pct + "%" }} /></div>
+        <div className="[&>*]:min-w-0 flex flex-col items-center gap-6 sm:flex-row sm:items-center">
+          <div className="flex flex-col items-center gap-2">
+            <TempGauge pct={p.pct} temp={p.temperatura} max={fornada.config.temperaturaMaxima} />
+            {ultima && <div className="text-center text-xs text-[var(--ink-soft)]">Última informada: <span className="font-medium text-[var(--ink)]">{ultima.temp}°C</span> · {fmtRelativo(ultima.em, agora)}</div>}
           </div>
-          <div className="flex flex-col items-start gap-1 md:items-center md:justify-center">
-            <span className="text-xs text-[var(--ink-soft)]">Etapa atual</span>
-            <Badge tone="warning">{ETAPA_LABEL[p.etapa]}</Badge>
-          </div>
-          <div className="flex flex-col gap-0.5 md:items-center md:justify-center">
-            <span className="flex items-center gap-1 text-xs text-[var(--ink-soft)]"><Clock size={13} />Previsão temp. máxima</span>
-            <span className="text-sm font-semibold">{fmtDiaHora(p.horaMax)}</span>
-          </div>
-          <div className="flex flex-col gap-0.5 md:items-center md:justify-center">
-            <span className="flex items-center gap-1 text-xs text-[var(--ink-soft)]"><ShieldCheck size={13} />Previsão abertura segura</span>
-            <span className="text-sm font-semibold">{fmtDiaHora(p.horaSegura)}</span>
+          <div className="[&>*]:min-w-0 grid w-full flex-1 grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="flex flex-col items-center gap-1 sm:items-start">
+              <span className="flex items-center gap-1 text-xs text-[var(--ink-soft)]"><Flame size={13} />Etapa atual</span>
+              <Badge tone="warning">{ETAPA_LABEL[p.etapa]}</Badge>
+            </div>
+            <div className="flex flex-col items-center gap-0.5 sm:items-start">
+              <span className="flex items-center gap-1 text-xs text-[var(--ink-soft)]"><Clock size={13} />Previsão temp. máxima</span>
+              <span className="text-sm font-semibold">{fmtDiaHora(p.horaMax)}</span>
+            </div>
+            <div className="flex flex-col items-center gap-0.5 sm:items-start">
+              <span className="flex items-center gap-1 text-xs text-[var(--ink-soft)]"><ShieldCheck size={13} />Previsão abertura segura</span>
+              <span className="text-sm font-semibold">{fmtDiaHora(p.horaSegura)}</span>
+            </div>
           </div>
         </div>
       </Card>
@@ -1105,30 +1140,31 @@ function Turmas({ notificar, diaInicial = "ter" }) {
           <Card className="mb-4 flex flex-wrap items-center justify-between gap-2 px-4 py-3">
             <div><div className="text-sm font-semibold">{turmaInfo.dia} · {turmaInfo.hora}</div><div className="mt-1 flex gap-2"><Badge tone="success">{ocupadas}/12 alunos</Badge><Badge tone="info">Turma fixa</Badge></div></div>
           </Card>
-          <div className="[&>*]:min-w-0 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+          <div className="divide-y divide-[var(--line)] border border-[var(--line)] bg-white">
             {vagas.map((v) => v.nome ? (
-              <div key={v.numero} className={"flex min-w-0 flex-col gap-2 border p-3 " + (v.status === "ultima" ? "border-rose-200 bg-rose-50/40" : "border-[var(--line)] bg-white")}>
-                <div className="flex items-start justify-between"><span className="text-xs text-[var(--line)]">{v.numero}</span><MoreVertical size={15} className="text-[var(--line)]" /></div>
-                <Avatar nome={v.nome} size={44} />
-                <div><div className="truncate text-sm font-medium">{v.nome}</div><div className="text-xs text-[var(--ink-soft)]">{v.aula}/{v.total} aulas</div></div>
-                {v.status !== "confirmado" && <Badge tone={v.status === "ultima" ? "danger" : "warning"}>{v.status === "ultima" ? "Renovar" : "Pendente"}</Badge>}
-
-                <button onClick={() => toggleStatusAula(v.numero)} className={"flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium " + (v.statusAula === "confirmado" ? "bg-emerald-50 text-emerald-700" : "bg-rose-100 text-rose-600")}>
-                  {v.statusAula === "confirmado" ? "🟢 Confirmado" : "🔴 Ausente"}
+              <div key={v.numero} className="flex items-center gap-3 p-3">
+                <Avatar nome={v.nome} size={40} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="truncate text-sm font-medium">{v.nome}</span>
+                    {v.status !== "confirmado" && <Badge tone={v.status === "ultima" ? "danger" : "warning"}>{v.status === "ultima" ? "Renovar" : "Pendente"}</Badge>}
+                  </div>
+                  <div className="text-xs text-[var(--ink-soft)]">{v.aula}/{v.total} aulas</div>
+                </div>
+                <button
+                  onClick={() => marcarPresenca(v.numero)}
+                  title={v.presente ? "Presente — toque para desfazer" : "Marcar presença"}
+                  className={"flex h-7 w-7 shrink-0 items-center justify-center border " + (v.presente ? "border-emerald-600 bg-emerald-600 text-white" : "border-[var(--line)] text-transparent hover:border-[var(--ink-soft)]")}
+                >
+                  <Check size={14} />
                 </button>
-
-                {v.presente ? (
-                  <button onClick={() => marcarPresenca(v.numero)} className="flex items-center gap-1.5 bg-emerald-600 px-2 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700" title="Toque p/ desfazer">✅ Presente</button>
-                ) : (
-                  <button onClick={() => marcarPresenca(v.numero)} className="flex items-center gap-1.5 border border-[var(--line)] px-2 py-1.5 text-xs font-medium text-[var(--ink-soft)] hover:bg-[var(--cream)]">⬜ Marcar presença</button>
-                )}
+                <Toggle checked={v.statusAula === "confirmado"} onChange={() => toggleStatusAula(v.numero)} title={v.statusAula === "confirmado" ? "Confirmado p/ próxima aula — toque p/ marcar ausente" : "Ausente — toque p/ confirmar"} />
               </div>
             ) : (
-              <button key={v.numero} onClick={() => setModalVaga(v.numero)} className="flex min-w-0 flex-col items-center justify-center gap-2 border border-dashed border-[var(--line)] px-3 py-6 text-center hover:border-[var(--ink-soft)] hover:bg-[var(--cream-soft)]/40">
-                <span className="text-xs text-[var(--line)]">{v.numero}</span>
-                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-[var(--ink-soft)] text-[var(--line)]"><Plus size={16} /></span>
-                <span className="text-sm text-[var(--ink-soft)]">Vaga disponível</span>
-                <span className="border border-[var(--ink-soft)] px-2 py-1 text-xs font-medium text-[var(--ink)]">Cadastrar aluno</span>
+              <button key={v.numero} onClick={() => setModalVaga(v.numero)} className="flex w-full items-center gap-3 p-3 text-left hover:bg-[var(--cream)]">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed border-[var(--ink-soft)] text-[var(--ink-soft)]"><Plus size={16} /></span>
+                <span className="min-w-0 flex-1 text-sm text-[var(--ink-soft)]">Vaga {v.numero} disponível</span>
+                <span className="shrink-0 border border-[var(--ink-soft)] px-2 py-1 text-xs font-medium text-[var(--ink)]">Cadastrar aluno</span>
               </button>
             ))}
           </div>
