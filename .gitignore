@@ -2,3 +2,9 @@ node_modules/
 .next/
 .env.local
 *.log
+
+# Personal Claude Code tooling (skills/agents/local settings) — not app source,
+# specific to whoever's machine is driving the session, not the ateliê project.
+.claude/skills/
+.claude/agents/
+.claude/settings.local.json
