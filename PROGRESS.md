@@ -9,10 +9,27 @@
 
 ## Onde continuar agora
 
-**Última sessão:** 2026-09-15 — retomada do projeto, correção de bug de
-mobile, **e redesign visual completo do demo** (concluído). **Área do
-Aluno continua começada e pausada no meio** (ver backlog abaixo) — não
+**Última sessão:** 2026-09-16 (virou o dia no meio da sessão) — retomada do
+projeto, redesign visual completo, correção de bug de overflow mobile (4
+rodadas até achar a causa real), e **início de um redesign estrutural
+mobile-first** (Turmas virou lista, Forno ganhou mostrador circular). **Área
+do Aluno continua começada e pausada no meio** (ver backlog abaixo) — não
 terminada, não deixar o usuário achar que está.
+
+**Decisão do Diego (2026-09-16): "pense em uma nova interface, primeiro
+pensando no mobile, então refaça todas as ferramentas pensando na
+facilidade do mobile".** Depois de 4 rodadas de correção pontual de CSS que
+não resolviam de vez o corte de tela no celular (confirmado com prints do
+celular real dele), ele pediu pra parar de remendar e redesenhar as telas
+de verdade pensando em mobile primeiro. Padrão validado até agora (ver
+CLAUDE.md §6.1 e histórico de sessão abaixo): **lista de uma coluna em vez
+de grid de cards** pra qualquer "lista de pessoas" (resolve o overflow de
+raiz, não só com CSS) + **toggle switch de verdade** pra ações on/off +
+**mostrador circular** (SVG progress ring) pro número mais importante de
+uma tela. Aplicado em Turmas; **Oficinas (participantes) tem a mesma
+estrutura de card-grid e é a próxima candidata óbvia** pro mesmo tratamento
+— ainda não feito. As outras telas (Pagamentos, Alunos, Dashboard) ainda
+não foram revistas sob essa ótica.
 
 **Decisão do Diego:** o demo (`demo/AtelieDemo.jsx`) é oficialmente o
 principal — ver CLAUDE.md §2. Next.js fica parado sem investimento até
