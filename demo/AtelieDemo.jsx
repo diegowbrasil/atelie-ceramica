@@ -389,15 +389,16 @@ export default function AtelieDemo() {
   function abrirDiaTurmas(diaId) { setDiaTurmaAlvo(diaId); ir("turmas"); }
 
   return (
-    <div className="flex min-h-screen w-full bg-[var(--cream)] text-[var(--ink)]" style={{ fontFamily: "var(--font-mono)" }}>
+    <div className="flex min-h-screen w-full bg-[var(--cream)] text-[var(--ink)]" style={{ fontFamily: "var(--font-sans)" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700&display=swap');
         :root {
           --cream: #F2F2EB; --cream-soft: #E7E4DA; --line: #DEDAD1;
           --ink: #3B3833; --ink-soft: #8A8479;
           --accent: #C2410C; --accent-hover: #9A3412; --accent-soft: #F3E1D6;
+          --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', ui-sans-serif, system-ui, sans-serif;
           --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
-          --font-display: 'Space Grotesk', ui-sans-serif, sans-serif;
+          --font-display: var(--font-sans);
         }
         @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
         .animate-in{animation:fadeUp .2s ease-out both}
@@ -434,7 +435,7 @@ export default function AtelieDemo() {
         </div>
       )}
 
-      <div className="flex-1 pb-20 md:pb-0">
+      <div className="min-w-0 flex-1 pb-20 md:pb-0">
         <header className="flex items-center justify-between border-b border-[var(--line)] bg-white px-4 py-3 md:hidden">
           <button onClick={() => setMenuAberto(true)}><Menu size={22} /></button>
           <VaseMark />
@@ -672,8 +673,8 @@ function KilnMiniCard({ fornada, onDetalhes }) {
           <div className="[&>*]:min-w-0 grid grid-cols-2 gap-3">
             <div><div className="text-2xl font-semibold">{p.temperatura}°C</div><div className="text-xs text-[var(--ink-soft)]">Estimada</div></div>
             <div><div className="text-base font-semibold">{ETAPA_LABEL[p.etapa]}</div><div className="text-xs text-[var(--ink-soft)]">Etapa</div></div>
-            <div><div className="font-mono text-sm">{fmtDuracaoCurta(p.restanteSeg)}</div><div className="text-xs text-[var(--ink-soft)]">Restante</div></div>
-            <div><div className="font-mono text-sm">{fmtDuracaoCurta(p.decorridoSeg)}</div><div className="text-xs text-[var(--ink-soft)]">Decorrido</div></div>
+            <div><div className="text-sm font-[family-name:var(--font-mono)]">{fmtDuracaoCurta(p.restanteSeg)}</div><div className="text-xs text-[var(--ink-soft)]">Restante</div></div>
+            <div><div className="text-sm font-[family-name:var(--font-mono)]">{fmtDuracaoCurta(p.decorridoSeg)}</div><div className="text-xs text-[var(--ink-soft)]">Decorrido</div></div>
           </div>
           <div className="mt-3 h-2 w-full overflow-hidden bg-[var(--cream-soft)]"><div className="h-full bg-[var(--accent)] transition-all duration-700" style={{ width: p.pct + "%" }} /></div>
         </div>
@@ -909,7 +910,7 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
           <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">Observações</h3></div>
           <ul className="max-h-44 space-y-3 overflow-y-auto pr-1 text-sm">
             {[...fornada.observacoes].reverse().map((o, i) => (
-              <li key={i}><span className="mr-2 font-mono text-xs text-[var(--ink-soft)]">{fmtHora(o.em)}</span><span className="text-[var(--ink)]">{o.texto}</span></li>
+              <li key={i}><span className="mr-2 text-xs text-[var(--ink-soft)] font-[family-name:var(--font-mono)]">{fmtHora(o.em)}</span><span className="text-[var(--ink)]">{o.texto}</span></li>
             ))}
           </ul>
         </Card>
@@ -1136,13 +1137,13 @@ function Turmas({ notificar, diaInicial = "ter" }) {
       )}
       {diaInfo.turmas.length <= 1 && <div className="mb-5" />}
       <div className="[&>*]:min-w-0 grid gap-5 lg:grid-cols-[1fr_300px]">
-        <div>
+        <div className="w-full min-w-0">
           <Card className="mb-4 flex flex-wrap items-center justify-between gap-2 px-4 py-3">
             <div><div className="text-sm font-semibold">{turmaInfo.dia} · {turmaInfo.hora}</div><div className="mt-1 flex gap-2"><Badge tone="success">{ocupadas}/12 alunos</Badge><Badge tone="info">Turma fixa</Badge></div></div>
           </Card>
-          <div className="divide-y divide-[var(--line)] border border-[var(--line)] bg-white">
+          <div className="w-full min-w-0 divide-y divide-[var(--line)] border border-[var(--line)] bg-white">
             {vagas.map((v) => v.nome ? (
-              <div key={v.numero} className="flex items-center gap-3 p-3">
+              <div key={v.numero} className="flex w-full min-w-0 items-center gap-3 p-3">
                 <Avatar nome={v.nome} size={40} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -1437,9 +1438,9 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
       </div>
 
       <h3 className="mb-3 text-sm font-semibold">Participantes ({oficina.vagas} vagas)</h3>
-      <div className="divide-y divide-[var(--line)] border border-[var(--line)] bg-white">
+      <div className="w-full min-w-0 divide-y divide-[var(--line)] border border-[var(--line)] bg-white">
         {oficina.participantes.map((p) => p.nome ? (
-          <div key={p.numero} className="flex items-center gap-3 p-3">
+          <div key={p.numero} className="flex w-full min-w-0 items-center gap-3 p-3">
             <Avatar nome={p.nome} size={40} />
             <div className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium">{p.nome}</span>
