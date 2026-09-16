@@ -9,6 +9,7 @@ export default defineConfig({
   server: {
     port: 5183,
     strictPort: true,
+    host: true,
     fs: { allow: [".."] },
   },
 });

@@ -269,7 +269,7 @@ function Badge({ tone = "neutral", children }) {
     info: "border border-[var(--ink)] text-[var(--ink)]",
     neutral: "bg-[var(--cream-soft)] text-[var(--ink-soft)]",
   };
-  return <span className={"inline-flex items-center px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide " + tones[tone]}>{children}</span>;
+  return <span className={"inline-flex max-w-full items-center whitespace-normal break-words px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide " + tones[tone]}>{children}</span>;
 }
 function Avatar({ nome, size = 40, stacked }) {
   const iniciais = nome ? nome.split(" ").slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") : "?";
@@ -519,9 +519,9 @@ function Dashboard({ ir, ativa, onAbrirDia, onAbrirOficinas }) {
         <p className="text-sm text-[var(--ink-soft)]">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })} · dados de demonstração</p>
       </div>
       <div className="grid min-w-0 gap-3 lg:grid-cols-[300px_1fr]">
-        <div className="grid min-w-0 grid-cols-2 gap-2">
+        <div className="[&>*]:min-w-0 grid min-w-0 grid-cols-2 gap-2">
           {kpis.map((k) => (
-            <button key={k.label} onClick={() => ir(k.tela)} className="text-left">
+            <button key={k.label} onClick={() => ir(k.tela)} className="min-w-0 text-left">
               <Card className="flex items-center gap-2 p-2.5 hover:border-[var(--ink-soft)]">
                 <div className={"flex h-8 w-8 shrink-0 items-center justify-center " + k.tone}><k.icon size={14} /></div>
                 <div className="min-w-0">
@@ -540,7 +540,7 @@ function Dashboard({ ir, ativa, onAbrirDia, onAbrirOficinas }) {
 
       <AgendaSemanaCard onAbrirDia={onAbrirDia} onAbrirOficinas={onAbrirOficinas} />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="[&>*]:min-w-0 grid gap-4 md:grid-cols-3">
         <Card className="p-4">
           <h3 className="mb-3 text-sm font-semibold">Próximas oficinas</h3>
           <ul className="space-y-3 text-sm">{OFICINAS_RESUMO.map((o) => (
@@ -657,7 +657,7 @@ function KilnMiniCard({ fornada, onDetalhes }) {
       <div className="grid gap-3 px-5 pb-5 pt-3 sm:grid-cols-[1fr_180px]">
         <div>
           <p className="mb-2 text-base font-medium">Queima de {TIPO_LABEL[fornada.tipo]}</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="[&>*]:min-w-0 grid grid-cols-2 gap-3">
             <div><div className="text-2xl font-semibold">{p.temperatura}°C</div><div className="text-xs text-[var(--ink-soft)]">Estimada</div></div>
             <div><div className="text-base font-semibold">{ETAPA_LABEL[p.etapa]}</div><div className="text-xs text-[var(--ink-soft)]">Etapa</div></div>
             <div><div className="font-mono text-sm">{fmtDuracaoCurta(p.restanteSeg)}</div><div className="text-xs text-[var(--ink-soft)]">Restante</div></div>
@@ -723,7 +723,7 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
         />
       )}
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_320px]">
+      <div className="[&>*]:min-w-0 mt-5 grid gap-5 lg:grid-cols-[1fr_320px]">
         <div />
         <Card className="p-4 lg:col-start-2">
           <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">Histórico de fornadas</h3></div>
@@ -791,7 +791,7 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
             <Badge tone={STATUS_TONE[modalDetalheHist.status]}>{STATUS_LABEL[modalDetalheHist.status]}</Badge>
           </div>
           <p className="mb-3 text-xs text-[var(--ink-soft)]">Iniciada em {fmtDiaHora(modalDetalheHist.iniciadoEm)}{modalDetalheHist.finalizadoEm ? ` · encerrada em ${fmtDiaHora(modalDetalheHist.finalizadoEm)}` : ""}</p>
-          <dl className="mb-4 grid grid-cols-2 gap-y-2 text-sm">
+          <dl className="[&>*]:min-w-0 mb-4 grid grid-cols-2 gap-y-2 text-sm">
             <dt className="text-[var(--ink-soft)]">Temp. máxima</dt><dd className="text-right font-medium">{modalDetalheHist.config.temperaturaMaxima}°C</dd>
             <dt className="text-[var(--ink-soft)]">Categorias</dt><dd className="text-right font-medium">{modalDetalheHist.categorias.map((c) => CATEGORIAS.find((x) => x.id === c)?.label).join(", ") || "—"}</dd>
           </dl>
@@ -827,7 +827,7 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
   return (
     <>
       <Card className="p-5">
-        <div className="grid gap-5 md:grid-cols-[1fr_auto_auto_auto]">
+        <div className="[&>*]:min-w-0 grid gap-5 md:grid-cols-[1fr_auto_auto_auto]">
           <div>
             <div className="mb-1 flex items-center gap-2 text-sm text-[var(--ink-soft)]"><Flame size={15} className="text-[var(--ink-soft)]" />Temperatura atual (estimada)</div>
             <div className="text-4xl font-semibold leading-none">{p.temperatura}°C <span className="text-base font-normal text-[var(--ink-soft)]">de {fornada.config.temperaturaMaxima}°C</span></div>
@@ -849,7 +849,7 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
         </div>
       </Card>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="[&>*]:min-w-0 mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard icon={Clock} label="Tempo decorrido" value={fmtDuracao(p.decorridoSeg)} mono />
         <StatCard icon={Thermometer} label="Temp. máxima" value={fornada.config.temperaturaMaxima + "°C"} />
         <StatCard icon={Clock} label="Tempo restante" value={fmtDuracao(p.restanteSeg)} mono />
@@ -858,7 +858,7 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
         <StatCard icon={Flag} label="Etapa atual" value={ETAPA_LABEL[p.etapa]} />
       </div>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1fr_280px]">
+      <div className="[&>*]:min-w-0 mt-5 grid gap-5 lg:grid-cols-[1fr_1fr_280px]">
         <Card className="p-4">
           <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">Conteúdo do forno</h3></div>
           <div className="flex flex-wrap gap-1.5">
@@ -956,7 +956,7 @@ function NovaFornada({ rascunho, onVoltar, onIniciar }) {
 
       <Card className="p-5">
         <h2 className="mb-3 text-sm font-semibold">Tipo de queima</h2>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="[&>*]:min-w-0 grid grid-cols-3 gap-3">
           {[["esmalte", "Esmalte"], ["biscoito", "Biscoito"], ["outro", "Outros"]].map(([id, label]) => (
             <button key={id} onClick={() => selecionarTipo(id)} className={"relative border-2 px-3 py-6 text-center text-sm font-semibold transition-all " + (tipo === id ? "scale-[1.03] border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--ink-soft)]")}>
               {tipo === id && <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)] text-white"><Check size={12} strokeWidth={3} /></span>}
@@ -971,7 +971,7 @@ function NovaFornada({ rascunho, onVoltar, onIniciar }) {
 
       <Card className="mt-5 p-5">
         <h2 className="mb-3 text-sm font-semibold">Conteúdo do forno</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="[&>*]:min-w-0 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {CATEGORIAS.map((c) => {
             const ativo = categorias.includes(c.id);
             return (
@@ -990,7 +990,7 @@ function NovaFornada({ rascunho, onVoltar, onIniciar }) {
 
       <Card className="mt-5 p-5">
         <h2 className="mb-3 text-sm font-semibold">Configuração</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="[&>*]:min-w-0 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Campo label="Temp. inicial (°C)" value={config.temperaturaInicial} onChange={(v) => setCampo("temperaturaInicial", v)} />
           <Campo label="Temp. máxima (°C)" value={config.temperaturaMaxima} onChange={(v) => setCampo("temperaturaMaxima", v)} />
           <Campo label="Vel. aquecimento (°C/min)" value={config.velocidadeAquecimento} onChange={(v) => setCampo("velocidadeAquecimento", v)} />
@@ -1007,7 +1007,7 @@ function NovaFornada({ rascunho, onVoltar, onIniciar }) {
       {tipo && (
         <Card className="mt-5 p-5">
           <h2 className="mb-3 text-sm font-semibold">Revisão</h2>
-          <dl className="grid grid-cols-2 gap-y-2.5 text-sm">
+          <dl className="[&>*]:min-w-0 grid grid-cols-2 gap-y-2.5 text-sm">
             <dt className="text-[var(--ink-soft)]">Tipo</dt><dd className="text-right font-medium">{TIPO_LABEL[tipo]}{tipoDescricao ? ` — ${tipoDescricao}` : ""}</dd>
             <dt className="text-[var(--ink-soft)]">Categorias</dt><dd className="text-right font-medium">{categorias.length ? categorias.map((c) => CATEGORIAS.find((x) => x.id === c)?.label).join(", ") : "nenhuma selecionada"}</dd>
             {detalhes && (<><dt className="text-[var(--ink-soft)]">Detalhes</dt><dd className="text-right font-medium">{detalhes}</dd></>)}
@@ -1100,18 +1100,18 @@ function Turmas({ notificar, diaInicial = "ter" }) {
         </div>
       )}
       {diaInfo.turmas.length <= 1 && <div className="mb-5" />}
-      <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
+      <div className="[&>*]:min-w-0 grid gap-5 lg:grid-cols-[1fr_300px]">
         <div>
           <Card className="mb-4 flex flex-wrap items-center justify-between gap-2 px-4 py-3">
             <div><div className="text-sm font-semibold">{turmaInfo.dia} · {turmaInfo.hora}</div><div className="mt-1 flex gap-2"><Badge tone="success">{ocupadas}/12 alunos</Badge><Badge tone="info">Turma fixa</Badge></div></div>
           </Card>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+          <div className="[&>*]:min-w-0 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
             {vagas.map((v) => v.nome ? (
               <div key={v.numero} className={"flex min-w-0 flex-col gap-2 border p-3 " + (v.status === "ultima" ? "border-rose-200 bg-rose-50/40" : "border-[var(--line)] bg-white")}>
                 <div className="flex items-start justify-between"><span className="text-xs text-[var(--line)]">{v.numero}</span><MoreVertical size={15} className="text-[var(--line)]" /></div>
                 <Avatar nome={v.nome} size={44} />
                 <div><div className="truncate text-sm font-medium">{v.nome}</div><div className="text-xs text-[var(--ink-soft)]">{v.aula}/{v.total} aulas</div></div>
-                {v.status !== "confirmado" && <Badge tone={v.status === "ultima" ? "danger" : "warning"}>{v.status === "ultima" ? "Última aula — renovar" : "Pacote pendente"}</Badge>}
+                {v.status !== "confirmado" && <Badge tone={v.status === "ultima" ? "danger" : "warning"}>{v.status === "ultima" ? "Renovar" : "Pendente"}</Badge>}
 
                 <button onClick={() => toggleStatusAula(v.numero)} className={"flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium " + (v.statusAula === "confirmado" ? "bg-emerald-50 text-emerald-700" : "bg-rose-100 text-rose-600")}>
                   {v.statusAula === "confirmado" ? "🟢 Confirmado" : "🔴 Ausente"}
@@ -1136,7 +1136,7 @@ function Turmas({ notificar, diaInicial = "ter" }) {
         <div className="space-y-4">
           <Card className="p-4">
             <h3 className="mb-3 text-sm font-semibold">Detalhes da turma</h3>
-            <dl className="grid grid-cols-2 gap-y-3 text-sm">
+            <dl className="[&>*]:min-w-0 grid grid-cols-2 gap-y-3 text-sm">
               <dt className="text-[var(--ink-soft)]">Dia</dt><dd className="text-right font-medium">{turmaInfo.dia}</dd>
               <dt className="text-[var(--ink-soft)]">Horário</dt><dd className="text-right font-medium">{turmaInfo.hora}</dd>
               <dt className="text-[var(--ink-soft)]">Capacidade</dt><dd className="text-right font-medium">12 alunos</dd>
@@ -1376,14 +1376,14 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
 
       <StatusPecasCard status={oficina.statusPecas} somenteLeitura={verComoAluno} onAlterar={onAtualizarStatusPecas} />
 
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="[&>*]:min-w-0 mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard icon={Users} label="Participantes" value={`${preenchidos.length} / ${oficina.vagas}`} sub="inscritos" />
         <StatCard icon={Check} label="Pagos" value={pagos} sub="confirmados" />
         <StatCard icon={Clock} label="Pendentes" value={pendentes} sub="aguardando" />
         <StatCard icon={Users} label="Duplas" value={duplas} sub="participantes em dupla" />
       </div>
 
-      <div className="mb-5 grid gap-4 lg:grid-cols-3">
+      <div className="[&>*]:min-w-0 mb-5 grid gap-4 lg:grid-cols-3">
         <Card className="p-4">
           <h3 className="mb-2 text-sm font-semibold">Sobre a oficina</h3>
           <p className="text-sm text-[var(--ink-soft)]">{oficina.descricao}</p>
@@ -1403,7 +1403,7 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
       </div>
 
       <h3 className="mb-3 text-sm font-semibold">Participantes ({oficina.vagas} vagas)</h3>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+      <div className="[&>*]:min-w-0 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
         {oficina.participantes.map((p) => p.nome ? (
           <Card key={p.numero} className="flex min-w-0 flex-col gap-2 p-3">
             <span className="text-xs text-[var(--line)]">{p.numero}</span>
@@ -1524,7 +1524,7 @@ function Pagamentos() {
       <h1 className="mb-1 text-2xl font-semibold" style={FONT_DISPLAY}>Pagamentos</h1>
       <p className="mb-5 text-sm text-[var(--ink-soft)]">Histórico de pacotes e aulas avulsas, cobranças pendentes.</p>
 
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="[&>*]:min-w-0 mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard icon={CreditCard} label="Pendente" value={"R$ " + totalPendente} sub={pendentes.length + " cobranças"} />
         <StatCard icon={Check} label="Recebido" value={"R$ " + totalRecebido} sub={pagos.length + " pagamentos"} />
         <StatCard icon={Users} label="Alunos" value={pagamentos.length} sub="no período" />
