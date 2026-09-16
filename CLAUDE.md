@@ -244,25 +244,31 @@ função com outro parâmetro.
   ícone do vaso (`VaseMark`).
 - Prioridade mobile, desktop completo e confortável.
 
-### 6.1 Sistema visual (redesign de 2026-09-15 — substitui a paleta antiga)
+### 6.1 Sistema visual (revisado 2026-09-15/16 — 3 rodadas no mesmo período,
+ver histórico completo em PROGRESS.md)
 
-**Decisão do Diego**: visual alinhado ao site novo do MTCST
-(`mtcst-ceramics`, hoje em `http://192.168.1.180:3000` na rede local dele —
-IP muda, pedir de novo se não responder) e à inspiração dele, vigashoes.com
-(marca VIGA). **Não é mais** a paleta terracota/`orange-600` original nem
-os cantos arredondados Apple/Linear/Stripe do brief inicial — isso foi
-explicitamente substituído. Se reabrir o assunto com o cliente, é só pra
-confirmar ajustes, não pra voltar ao estilo do brief original.
+**Estado atual (vale como fonte de verdade — as rodadas anteriores abaixo
+são só contexto histórico do "porquê"):**
+1. **v1**: copiou o site novo do MTCST (`mtcst-ceramics`, hoje em
+   `http://192.168.1.180:3000` na rede local do Diego — IP muda, pedir de
+   novo se não responder) e a inspiração dele, vigashoes.com, ao pé da
+   letra: cru/tinta, mono, cantos retos, **sem cor de acento nenhuma**.
+2. **v2**: o Diego testou e achou "pobre, sem cara de app" — sem acento
+   nada se destacava. Voltou um acento terracota, só que usado com critério
+   (ação/navegação/status ao vivo), não espalhado feito no brief pré-MTCST.
+3. **v3 (atual)**: o Diego pediu, via `/impeccable`, "algo parecido com
+   Apple" — confirmou que queria o **estilo visual mesmo**, não só nível de
+   acabamento. Trouxe de volta cantos arredondados e sombra suave,
+   **trocou a tipografia de mono-em-tudo pra sans-serif** (mono só
+   sobrevive em leituras de medição de verdade — cronômetro do forno).
+   **Não é retrocesso pro brief pré-MTCST original** (Apple/Linear/Notion/
+   Stripe) — é uma direção nova, deliberada, que mantém a paleta
+   cru+terracota do MTCST mas com a linguagem de superfície da Apple.
 
-⚠️ **Segunda rodada no mesmo dia**: a primeira versão deste redesign copiou
-o site de referência ao pé da letra e **removeu toda cor de acento**
-(o site do MTCST é uma loja — a cor vem da foto do produto, não da UI). O
-Diego testou e achou "pobre visualmente", sem cara de aplicativo, botões
-não se destacando. Correção aplicada na hora: **um acento terracota
-voltou**, mas usado com critério (só ação/navegação/status "ao vivo"), não
-espalhado por tudo como no brief original. Não repetir o erro de tirar o
-acento por completo achando que fica "mais fiel ao site" — já foi testado
-e rejeitado.
+⚠️ Se pedirem pra mexer no visual de novo, **confirme qual desses 3 estados
+é a base** antes de editar — já rodou nos três nesta sessão e cada um tinha
+justificativa própria. Não presuma que "mais fiel ao site MTCST" ou "mais
+retro/tecnológico" é automaticamente a direção certa sem perguntar.
 
 Tokens exatos — cream/ink medidos direto do CSS computado do site novo
 (`getComputedStyle`, não é aproximação); accent é decisão de design desta
