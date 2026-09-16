@@ -9,78 +9,112 @@
 
 ## Onde continuar agora
 
-**Última sessão:** 2026-09-16 (virou o dia no meio da sessão) — retomada do
-projeto, redesign visual completo, **overflow mobile resolvido de vez
-(causa raiz achada e confirmada por medição)**, início de um redesign
-estrutural mobile-first (Turmas virou lista, Forno ganhou mostrador
-circular), e **uma segunda virada de direção visual em andamento — de mono
-retos (site MTCST) pra algo "parecido com Apple"** (cantos arredondados,
-sans-serif, profundidade suave), pausada no meio quando o bug de overflow
-voltou a aparecer. **Área do Aluno continua começada e pausada no meio**
-(ver backlog abaixo) — não terminada, não deixar o usuário achar que está.
+**Última sessão:** 2026-09-16 (mesma sessão, bem longa, atravessou virada de
+dia e um reset de limite de uso do Diego no meio). Estado agora: as 3
+rodadas de direção visual (v1 MTCST-literal → v2 acento de volta → v3
+Apple) **estão concluídas**, o overflow mobile **está resolvido de vez**
+(causa raiz confirmada por medição), o redesign estrutural mobile-first
+(Turmas e Oficinas viraram lista de uma coluna, Forno ganhou mostrador
+circular) **está concluído**, e agora o trabalho ativo é um redesign
+completo e formal pedido pelo Diego usando o skill `/impeccable` em 5
+fases (INIT → CRITIQUE → SHAPE → CRAFT → POLISH) — ver "Fase atual"
+abaixo. **Área do Aluno continua começada e pausada no meio** (ver backlog
+no fim desta seção) — não é o foco agora, não terminada, não deixar o
+usuário achar que está.
 
-**Overflow mobile: causa raiz encontrada e corrigida (não é mais "correção
-pontual").** Ver CLAUDE.md §8 pro detalhe técnico completo. Resumo: faltava
-`min-w-0` numa única linha (`<div className="flex-1 pb-20 md:pb-0">`, o
-wrapper de conteúdo do shell do App) — isso explicava os dois sintomas
-relatados ao mesmo tempo (corte lateral E barra de navegação sumindo).
-Confirmado com medição real (`scrollWidth === clientWidth`), não só
-screenshot.
+**Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
+`npx impeccable install` — a instalação anterior via `npx mdskills
+install` só trouxe um `SKILL.md` parcial, sem os scripts/reference
+completos). Fica em `.claude/skills/impeccable/` (gitignored — ferramenta
+de tooling, não código do produto). Instala também hooks
+(`PostToolUse`/`Stop` em `.claude/settings.local.json`, também gitignored)
+que rodam `impeccable hook` depois de editar UI e no fim da sessão,
+sinalizando achados de design automaticamente.
 
-**Direção visual: segunda virada em andamento.** Depois do redesign
-MTCST-mono-cantos-retos (ver acima na sessão), o Diego pediu através do
-`/impeccable` pra ir "parecido com Apple" de verdade — perguntei se era só
-nível de acabamento ou o estilo visual mesmo, ele confirmou **o estilo
-visual mesmo**: cantos arredondados de volta, tipografia sans-serif
-(`-apple-system`/Inter) em vez de mono em quase tudo, profundidade suave.
-Mono (`IBM Plex Mono`) fica só onde é medição de verdade (cronômetro do
-forno). **Só a parte de tokens (cor/fonte no `:root` + os 4 usos de
-`font-mono`) foi feita — ainda falta**: trazer `rounded-*` de volta em
-`Card`/`Badge`/`Modal`/botões/inputs em todo o arquivo (removi tudo isso no
-redesign anterior), sombra suave em vez de zero, revisar `uppercase
-tracking-wide` do nav (não é muito "Apple"). Continuar por aqui.
+**`PRODUCT.md` criado nesta sessão** via `/impeccable init` — documento de
+verdade de produto (usuários, propósito, posicionamento, contexto de uso,
+capacidades/restrições, compromissos de marca, princípios). Por desenho do
+próprio skill, **não contém direção visual/paleta/tipografia** (isso é
+`DESIGN.md`, que nasce na fase SHAPE, ainda não criado). Registra também a
+decisão de arquitetura abaixo.
 
-**Decisão do Diego (2026-09-16): "pense em uma nova interface, primeiro
-pensando no mobile, então refaça todas as ferramentas pensando na
-facilidade do mobile".** Depois de 4 rodadas de correção pontual de CSS que
-não resolviam de vez o corte de tela no celular (confirmado com prints do
-celular real dele), ele pediu pra parar de remendar e redesenhar as telas
-de verdade pensando em mobile primeiro. Padrão validado até agora (ver
-CLAUDE.md §6.1 e histórico de sessão abaixo): **lista de uma coluna em vez
-de grid de cards** pra qualquer "lista de pessoas" (resolve o overflow de
-raiz, não só com CSS) + **toggle switch de verdade** pra ações on/off +
-**mostrador circular** (SVG progress ring) pro número mais importante de
-uma tela. Aplicado em Turmas; **Oficinas (participantes) tem a mesma
-estrutura de card-grid e é a próxima candidata óbvia** pro mesmo tratamento
-— ainda não feito. As outras telas (Pagamentos, Alunos, Dashboard) ainda
-não foram revistas sob essa ótica.
+**Decisão confirmada (2026-09-16): arquitetura do redesign mantém arquivo
+único.** O pedido do Diego (ver "Fase atual") incluía reorganizar o código
+em pastas (`components/screens/hooks/...`). Isso conflita com a restrição
+que mantém `demo/AtelieDemo.jsx` publicável como artifact do Claude.ai
+(sem bundler, sem resolução de import local). Perguntei antes de começar a
+fase CRAFT; resposta: **manter arquivo único**, organizar por dentro
+(seções claras, componentes reutilizados, zero duplicação), sem separar em
+pastas de verdade. Registrado em `PRODUCT.md` no fim do arquivo.
+
+### Fase atual: CRITIQUE (fase 1 de 5 do pedido formal do Diego)
+
+Pedido verbatim do Diego: reescrever/redesenhar o app inteiro com o
+`/impeccable`, em etapas, preservando toda funcionalidade e dado existente.
+Direção de produto pro redesign: **é um app mobile, não um site
+responsivo**; VigaShoes pra linguagem estética; Apple pra clareza/
+acabamento; interface limpa e premium mas com **cor usada com inteligência**
+(não tudo branco com texto) — cada turma/oficina deve poder ter cor de
+identidade própria (card/botão/tag/ícone/nav); fugir de cara de
+template/IA-genérica; preservar identidade MTCST. Também pediu princípios
+de performance/arquitetura (leve, componentes reutilizáveis, zero
+duplicação, evitar libs pesadas sem necessidade, assets otimizados,
+estrutura fácil de crescer).
+
+- ✅ **INIT** — `PRODUCT.md` criado (ver acima).
+- 🔄 **CRITIQUE — em andamento.** Rodando pelo processo formal do skill
+  (`.claude/skills/impeccable/reference/critique.md`): Assessment A (design
+  review qualitativo — heurísticas de Nielsen, carga cognitiva, personas,
+  issues P0-P3) e Assessment B (scan determinístico `impeccable detect` +
+  overlay via injeção no navegador), como dois sub-agentes isolados, sem se
+  verem.
+  - **Assessment B: concluída.** `impeccable detect --json demo/AtelieDemo.jsx`
+    achou 1 finding (`overused-font`, Inter, linha ~394). Overlay via
+    navegador rodou limpo em 4 telas (Dashboard 82 achados/63 elementos,
+    Turmas 33/33, Forno 27/27, detalhe de Oficina 24/23) — maioria
+    `low-contrast`/`undersized-ui-text`, mais um padrão de `text-occlusion`
+    em avatares empilhados (provável falso positivo) e headings pulados
+    repetidos. Achado real e sistêmico: **contraste de `--ink-soft` (texto
+    secundário) ~3.7:1, abaixo do WCAG AA (4.5:1)** — vale revisar o token
+    em si. Confirmou ao vivo que a tipografia do pivô Apple está
+    renderizando certo (Inter/sans em tudo, mono só onde devia). Uma
+    observação da IA sobre "border-radius contradiz a regra de cantos
+    retos documentada" **não é bug** — é ela comparando contra o texto
+    antigo do CLAUDE.md §6.1 (v1/v2), que eu já reescrevi pra documentar a
+    v3 (Apple, cantos arredondados) como estado atual — não deixar isso
+    entrar no relatório final como problema real.
+  - **Assessment A: refeita.** A primeira tentativa foi cortada no meio por
+    rate limit do Diego (parou sem produzir achado nenhum, só uma frase).
+    Relançada como um sub-agente novo e independente depois do reset do
+    limite — resultado ainda não chegou nesta entrada do PROGRESS (ver
+    conversa/sessão pra status mais recente; se estiver lendo isso numa
+    sessão nova e a fase CRITIQUE não tiver relatório final registrado em
+    `.impeccable/critique/`, ela ainda não terminou — retomar por ali, não
+    reiniciar do zero).
+  - Depois que as duas terminarem: sintetizar num relatório único (formato
+    exigido pelo critique.md — tabela de heurísticas, veredito de
+    especificidade de design, issues P0-P3, personas, observações
+    menores), persistir em `.impeccable/critique/`, e fechar com perguntas
+    direcionadas pro Diego antes de avançar pra fase SHAPE.
+- ⬜ **SHAPE** — não iniciada. Vai repensar nav/home/lista de turma/detalhe/
+  participantes/estados/ações, com identidade própria MTCST entre
+  VigaShoes e Apple (não cópia literal de nenhum), incluindo o sistema de
+  cor de identidade por turma/oficina.
+- ⬜ **CRAFT** — não iniciada. Implementar preservando dado/função,
+  respeitando a decisão de arquivo único (ver acima).
+- ⬜ **POLISH** — não iniciada.
+
+**Histórico completo das 3 rodadas de direção visual e da causa raiz do
+overflow mobile**: ver CLAUDE.md §6.1 e §8 (fonte de verdade permanente) —
+não duplicado mais aqui pra essa seção não acumular texto desatualizado a
+cada sessão (ela é sobrescrita, não é log). O log sessão-a-sessão completo
+continua abaixo em "Histórico de sessões".
 
 **Decisão do Diego:** o demo (`demo/AtelieDemo.jsx`) é oficialmente o
 principal — ver CLAUDE.md §2. Next.js fica parado sem investimento até
 pedido explícito. Preview local é permanente: `npm run preview:demo`
 (porta 5183), pasta `preview/` versionada no repo, lê o demo direto sem
 cópia.
-
-**Redesign visual: concluído nesta sessão.** As duas perguntas em aberto
-foram respondidas com dados reais, não suposição — o Diego mandou o IP da
-rede local onde o site novo do MTCST já está rodando
-(`http://192.168.1.180:3000`, pode mudar — pedir de novo se não
-responder), então os tokens de cor/fonte/raio foram lidos direto do CSS
-computado do site de verdade (via `javascript_tool`/`getComputedStyle`),
-não estimados a partir do vigashoes. Detalhes completos do sistema visual
-novo: **CLAUDE.md §6.1**. Resumo: cru `#F2F2EB` + marrom-quase-preto
-`#3B3833` de base, tipografia IBM Plex Mono + Space Grotesk, cantos retos
-em quase tudo, sem sombra fora de elementos flutuantes. Cores semânticas
-(verde/âmbar/vermelho de status) mantidas.
-
-**Correção no mesmo dia**: a primeira versão copiou o site de referência
-sem nenhuma cor de acento (fiel ao site, que é uma loja — lá a cor vem da
-foto do produto). O Diego testou e achou pobre/sem cara de app, botões não
-se destacando. Corrigido na hora: acento terracota (`--accent: #C2410C`)
-de volta, só que usado com critério — botões, navegação ativa, indicadores
-"ao vivo" (progresso do forno, curva real do gráfico) — não espalhado por
-tudo feito no brief original. Ver CLAUDE.md §6.1 pro critério completo de
-onde usar/não usar.
 
 **Ambiente:** durante esta sessão também rodou `npx claude-mem install`
 (ferramenta de memória de terceiros) — apareceu nas ferramentas/skills
@@ -568,5 +602,127 @@ entendida.
   (ela é a mais alta/complexa do app: KPIs + card do forno com gráfico +
   calendário da semana + 3 cards de resumo) interagindo com o navegador
   real do celular, não algo óbvio no código da própria barra.
+
+**Próximos passos:** ver "Onde continuar agora" no topo deste arquivo.
+
+---
+
+### 2026-09-16 (continuação) — Causa raiz do overflow, redesign estrutural mobile-first, pivô visual Apple, e início do processo formal `/impeccable`
+
+**Contexto:** sessão longa e contínua depois da entrada anterior. O Diego
+confirmou com um screenshot de iPhone real que o corte ainda existia
+mesmo depois das correções pontuais, e pediu explicitamente pra parar de
+remendar e "pensar numa nova interface, primeiro pensando no mobile".
+Isso levou a 4 desenvolvimentos sequenciais antes do pedido mais recente
+(processo formal de redesign via `/impeccable`, que é a fase ativa agora
+— ver "Fase atual" em "Onde continuar agora" no topo).
+
+**1) Causa raiz real do overflow encontrada e corrigida.** Todas as
+correções pontuais anteriores (grid de vagas, `Card`, `StatCard`,
+containers de gráfico, depois `[&>*]:min-w-0` em ~19 grids) reduziam o
+sintoma mas ele reaparecia em outra tela. Causa raiz: **uma linha só**,
+`<div className="flex-1 pb-20 md:pb-0">` (wrapper de conteúdo do shell
+flex do `AtelieDemo`) nunca tinha `min-w-0` — como item flex, o piso dele
+era o maior min-content de QUALQUER tela do app, então corrigir uma tela
+só empurrava o problema pra outra. Isso também explicava a barra de
+navegação inferior sumindo (cálculo de `position: fixed` contra documento
+mais largo que o viewport). Corrigido com uma linha; confirmado com
+`scrollWidth === clientWidth` (375=375), não só screenshot. Detalhe
+técnico completo e permanente: **CLAUDE.md §8**.
+
+**2) Redesign estrutural mobile-first** (pedido explícito: card-grid de
+pessoas vira lista de uma coluna, redundância entre chip de status e
+botão de presença removida):
+- **Turmas** (lista de vagas ocupadas): de grid de cards pra lista
+  `divide-y` de uma coluna — avatar + nome + bolinha colorida (RSVP pra
+  próxima aula, toggle com `toggleStatusAula`) + toggle switch real (
+  `Toggle`, componente novo) pra "Marcar presença" (`marcarPresenca`,
+  incrementa pacote, reversível — regra já fechada, não mexida). Corrigido
+  depois de feedback do Diego com screenshot anotado: o checkbox antigo e
+  o toggle faziam "o mesmo trabalho" visualmente — checkbox removido,
+  bolinha nova assumiu só o RSVP, toggle assumiu só a presença de verdade.
+  Badge de status (Pendente/Renovar) só aparece na exceção agora (antes
+  duplicava a palavra "Confirmado" de um jeito que confundiu o Diego —
+  perguntou 2x o que significava antes de eu esconder o badge no caso
+  normal).
+- **Oficinas** (lista de participantes): mesmo tratamento de lista
+  aplicado no `OficinaDetalhe` (estava pendente desde a entrada anterior
+  deste log, "próxima candidata óbvia" — feito nesta sessão).
+- **Forno**: novo componente `TempGauge` — mostrador circular SVG
+  (progress ring), reaproveitando a matemática de
+  `src/components/ui/ProgressRing.tsx` (Next.js, já existia, só
+  portado pro demo) — substitui o texto plano + barra linear de
+  "Temperatura atual" no `FornadaAtivaPainel`. Pedido com referência
+  visual (screenshot de um dial escuro circular).
+
+**3) Segunda virada de direção visual: pivô "Apple".** Depois do redesign
+MTCST-literal (v1) e da correção de acento (v2, ambos já documentados na
+entrada anterior/CLAUDE.md §6.1), o Diego pediu via `/impeccable` "algo
+parecido com Apple" — perguntei se era nível de acabamento ou estilo
+visual mesmo, confirmou **estilo visual mesmo**. v3 (atual): cantos
+arredondados e sombra suave de volta, tipografia trocada de mono-em-tudo
+pra sans-serif (`-apple-system`/Inter; mono sobrevive só em leituras de
+medição real — cronômetro do forno). Tokens e critério completo de onde
+cada coisa se aplica: **CLAUDE.md §6.1** (reescrito nesta sessão pra
+documentar as 3 rodadas como histórico deliberado, não como texto
+substituído).
+
+**4) Instalação correta do skill `/impeccable`.** A primeira tentativa
+(`npx mdskills install pbakaus/impeccable`) só trouxe um `SKILL.md`
+parcial, sem `scripts/`/`reference/`. Instalador correto, referenciado
+dentro do próprio SKILL.md parcial: `npx impeccable install` (precisou
+`echo "y" |` pra passar do prompt interativo `(Y/n)` que trava a ferramenta
+Bash não-interativa). Instalação completa v4.3.1 em
+`.claude/skills/impeccable/`, mais hooks `PostToolUse`/`Stop` em
+`.claude/settings.local.json` (ambos gitignored — tooling, não código do
+produto). Também limpou 2 inconsistências que o próprio skill sinalizou
+via `craft-floor.md`: "🔥 Iniciar fornada" e "← Voltar" eram emoji/glyph
+soltos inconsistentes com o resto do app (que usa só `lucide-react`) —
+trocados por ícones de verdade (`Flame`).
+
+**5) Pedido formal do Diego: redesign completo em 5 fases via
+`/impeccable`** (INIT → CRITIQUE → SHAPE → CRAFT → POLISH), preservando
+toda funcionalidade/dado existente. Brief completo com direção de produto
+(app mobile de verdade, não site responsivo; VigaShoes + Apple como
+referência sem copiar nenhuma literalmente; cor com inteligência, inclusive
+identidade própria por turma/oficina; fugir de cara genérica/IA) e
+princípios de arquitetura (leve, reutilizável, sem duplicação, sem lib
+pesada desnecessária, estrutura fácil de crescer — inclusive pedido de
+reorganizar em pastas "quando fizer sentido").
+- **INIT**: `PRODUCT.md` criado (verdade de produto — usuários, propósito,
+  posicionamento, contexto, capacidades/restrições, marca, princípios;
+  **sem** direção visual, por desenho do próprio skill — isso é
+  `DESIGN.md`, ainda não criado, nasce na fase SHAPE).
+- Durante o INIT, identifiquei o conflito real entre "reorganizar em
+  pastas" e a restrição de arquivo único (`demo/AtelieDemo.jsx` publicado
+  como artifact do Claude.ai, sem bundler). Perguntei ao Diego antes de
+  seguir pra fase CRAFT: **resposta — manter arquivo único**, organizar só
+  por dentro (seções/componentes bem definidos, zero duplicação). Registrado
+  no fim do `PRODUCT.md`.
+- **CRITIQUE**: iniciada seguindo `critique.md` à risca — dois sub-agentes
+  isolados (Assessment A qualitativa + Assessment B determinística).
+  Assessment B concluiu de primeira (detector: 1 finding `overused-font`;
+  overlay via navegador em 4 telas, achado real de contraste em
+  `--ink-soft` ~3.7:1 abaixo do WCAG AA). Assessment A foi cortada no meio
+  por rate limit do Diego (resolveu sozinho depois que o limite de uso
+  dele resetou) e foi **relançada do zero como um sub-agente novo** — ver
+  "Fase atual" no topo deste arquivo pro status mais atual; se o relatório
+  final da fase CRITIQUE ainda não estiver em `.impeccable/critique/`
+  numa sessão futura, essa fase não terminou, retomar por ali.
+
+**Testes realizados:** `esbuild` a cada edição de UI (regra fixa do
+projeto). Fix do overflow confirmado por medição JS
+(`scrollWidth`/`clientWidth`), não só screenshot — ver CLAUDE.md §8 pro
+porquê disso importar (a ferramenta de navegador desta sessão já mostrou
+medidas inconsistentes antes). Redesign estrutural e pivô visual testados
+via preview local (`localhost:5183`) e, em pelo menos uma rodada, direto
+no celular real do Diego pela rede local.
+
+**Decisões tomadas:**
+- Arquivo único é definitivo pro redesign atual (não uma pendência em
+  aberto) — ver PRODUCT.md.
+- As 3 rodadas de direção visual não são indecisão — cada uma teve
+  motivo próprio e ficou documentada como tal (CLAUDE.md §6.1), pra não
+  reabrir a pergunta "qual estilo" sem necessidade numa sessão futura.
 
 **Próximos passos:** ver "Onde continuar agora" no topo deste arquivo.
