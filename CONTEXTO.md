@@ -149,7 +149,7 @@ separada de "recalcular".
   Ele pediu redução 3x.
 - **Sem margem à direita** no conteúdo — deve ir até a borda. O `mx-auto` no
   `<main>` foi removido justamente por isso; não reintroduza.
-- Nada de "Olá, Camila" nem o texto "Ateliê de Cerâmica" nos headers — só o
+- Nada de "Olá, Hanna" nem o texto "Ateliê de Cerâmica" nos headers — só o
   ícone do vaso.
 - Referências visuais: Apple, Linear, Notion, Stripe Dashboard. Muito espaço
   em branco, tipografia refinada, cards arredondados, animações suaves,

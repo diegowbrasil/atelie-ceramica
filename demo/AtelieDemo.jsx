@@ -421,7 +421,7 @@ export default function AtelieDemo() {
             </button>
           ))}
         </nav>
-        <div className="mt-3 flex justify-center"><Avatar nome="Camila Rodrigues" size={28} /></div>
+        <div className="mt-3 flex justify-center"><Avatar nome="Hanna" size={28} /></div>
       </aside>
 
       {menuAberto && (

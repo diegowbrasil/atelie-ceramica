@@ -14,7 +14,7 @@ import { GraduationCap, Users, RotateCcw, CreditCard, CalendarDays } from "lucid
 // const { data: queimaAtiva } = await supabase.from("queimas").select("*").neq("etapa_atual", "finalizada").maybeSingle();
 
 export default async function DashboardPage() {
-  const nomeAdmin = "Camila";
+  const nomeAdmin = "Hanna";
   const hoje = new Date();
 
   const kpis = [

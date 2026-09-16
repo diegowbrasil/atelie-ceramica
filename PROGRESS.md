@@ -842,3 +842,45 @@ turma/detalhe/participantes/estados/ações com identidade própria MTCST,
 endereçando o veredito central da CRITIQUE (telas fora do Forno parecem
 CRM genérico) e o sistema de cor de identidade por turma/oficina pedido
 no brief original. Ver "Onde continuar agora" no topo deste arquivo.
+
+---
+
+### 2026-09-16 (continuação) — Correção de fato: o nome da dona do ateliê é Hanna, não Camila
+
+**Contexto:** o Diego corrigiu no chat, sem mais explicação: "uma correção
+não existe Camila, o nome é Hanna". "Camila" vinha do pacote de handoff
+original (`COMECE-AQUI.md`/`CONTEXTO.md`, de antes desta sessão) e tinha
+sido repetido em todo lugar que descreve a dona do ateliê desde então —
+era informação errada desde o início do projeto, não uma mudança de
+decisão.
+
+**O que foi corrigido** (toda menção à dona do ateliê como pessoa real,
+não dado fictício de demo): `CLAUDE.md` (§1 "dona do ateliê", §1 "quem
+vai usar no dia a dia", §6 exemplo "Nada de 'Olá, X'"), `PRODUCT.md`
+(Users, Product Purpose, Positioning, Operating Context, Brand
+Commitments — 7 ocorrências), `CONTEXTO.md` (mesmo exemplo de header do
+CLAUDE.md — mantido em sincronia por ainda circular como cópia do
+mesmo conteúdo), `demo/AtelieDemo.jsx` (avatar da sidebar desktop, era
+`nome="Camila Rodrigues"`, virou `nome="Hanna"`), e no lado Next.js
+pausado (`src/app/(admin)/layout.tsx` `userName`, `dashboard/page.tsx`
+`nomeAdmin`) — corrigido mesmo pausado, pra não deixar um dado errado
+esperando confundir uma sessão futura.
+
+**O que NÃO foi mexido, de propósito**: a participante fictícia de
+oficina "Camila Rocha" (dado de demo, não a dona) e o relatório já
+persistido da fase CRITIQUE (`.impeccable/critique/...md`) — é um
+retrato congelado do que foi avaliado naquele momento, com a informação
+que existia então; reescrever citações dentro dele seria adulterar um
+registro, não corrigir um fato vivo.
+
+**Pendência:** o avatar da Hanna no app hoje é só o primeiro nome —
+`Avatar` tira iniciais de até 2 palavras (`nome.split(" ").slice(0,2)`),
+então "Hanna" sozinho vira só "H" (1 letra), diferente de todos os
+outros avatares do app (2 letras). Perguntei o sobrenome pro Diego no
+chat; se ele responder, é só trocar a string na linha do `Avatar` da
+sidebar — 1 linha, nenhum outro impacto.
+
+**Testes realizados:** `esbuild` depois da leva de edições — limpo.
+
+**Próximos passos:** confirmar sobrenome da Hanna (opcional, cosmético) e
+seguir com a fase SHAPE — ver acima.

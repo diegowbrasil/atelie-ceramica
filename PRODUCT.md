@@ -24,7 +24,7 @@ sem investimento (decisão do Diego) — não é o alvo deste redesign.
 ## Users
 
 Dois perfis, um ateliê de cerâmica só:
-- **Administradora** (Camila, dona do ateliê) — usa o app no dia a dia pra
+- **Administradora** (Hanna, dona do ateliê) — usa o app no dia a dia pra
   gerir turmas fixas, presença, pacotes, oficinas avulsas, pagamentos e
   acompanhar o forno em tempo real. É quem mais abre o app, no celular.
 - **Aluno** — perfil planejado, ainda não implementado de verdade (só um
@@ -41,7 +41,7 @@ Ferramenta de gestão interna pro ateliê de cerâmica: turmas fixas com
 controle de vagas/presença, pacotes de aulas, oficinas avulsas, pagamentos,
 e o **Forno** — acompanhamento de queima em tempo real, descrito pelo
 cliente como "o coração do ateliê" e que deve ser a ferramenta mais bonita
-e completa do app. Sucesso = Camila consegue rodar o dia a dia do ateliê
+e completa do app. Sucesso = Hanna consegue rodar o dia a dia do ateliê
 (marcar presença, ver quem precisa renovar pacote, acompanhar uma queima,
 cobrar pagamento pendente) inteiramente pelo celular, rápido, sem fricção.
 
@@ -49,7 +49,7 @@ cobrar pagamento pendente) inteiramente pelo celular, rápido, sem fricção.
 
 Não é um produto de mercado disputando usuários — é uma ferramenta interna
 de um negócio, encomendada sob medida. O "concorrente" real não é outro
-software de gestão, é a alternativa de Camila continuar no caderno/planilha
+software de gestão, é a alternativa de Hanna continuar no caderno/planilha
 ou WhatsApp solto. A vara de comparação que o Diego trouxe é de qualidade
 de experiência (Apple) e de linguagem visual editorial (VigaShoes), não de
 feature-parity com outro gestor de ateliês.
@@ -67,7 +67,7 @@ feature-parity com outro gestor de ateliês.
   (temperatura estimada vs. real, etapas, previsão de abertura segura).
 - Cobrança hoje é manual via Pix + WhatsApp (`wa.me` com mensagem
   pré-pronta), sem gateway de pagamento integrado.
-- Camila testa o demo no próprio celular; Diego publica atualizações.
+- Hanna testa o demo no próprio celular; Diego publica atualizações.
 
 ## Capabilities and Constraints
 
@@ -89,7 +89,7 @@ Pagamentos, Alunos, Dashboard. Restrições técnicas que valem pro redesign:
 
 ## Brand Commitments
 
-- Nome do produto/marca: **MTCST**. Ateliê de cerâmica, dona Camila.
+- Nome do produto/marca: **MTCST**. Ateliê de cerâmica, dona Hanna.
 - Paleta base já fixada nesta sessão a partir do CSS real do site novo do
   MTCST (`mtcst-ceramics`): cru `#F2F2EB` + tinta `#3B3833`, acento
   terracota `#C2410C` (ligado a argila/cerâmica).
@@ -99,7 +99,7 @@ Pagamentos, Alunos, Dashboard. Restrições técnicas que valem pro redesign:
   "não copie literalmente nenhuma das duas — crie identidade própria do
   MTCST."
 - Ícone de marca: o vaso (`VaseMark`, SVG próprio) — sem nome escrito nem
-  saudação ("Olá, Camila") nos headers, decisão já cobrada 2× pelo
+  saudação ("Olá, Hanna") nos headers, decisão já cobrada 2× pelo
   cliente.
 
 ## Evidence on Hand
@@ -150,4 +150,4 @@ que mantém `demo/AtelieDemo.jsx` publicável como artifact do Claude.ai.
 **Resposta: manter arquivo único.** O código é organizado POR DENTRO do
 mesmo arquivo — seções claras, componentes bem definidos e reutilizados,
 zero duplicação — mas sem separar em pastas de verdade. O canal de
-publicação pro Claude.ai continua sendo o principal pra Camila testar.
+publicação pro Claude.ai continua sendo o principal pra Hanna testar.

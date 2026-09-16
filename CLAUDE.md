@@ -9,7 +9,7 @@
 
 ## 1. Objetivo geral
 
-Sistema de gestão para um **ateliê de cerâmica** (dona do ateliê: Camila). Dois
+Sistema de gestão para um **ateliê de cerâmica** (dona do ateliê: Hanna). Dois
 perfis apenas: **Administrador** e **Aluno**. Cobre turmas fixas (vagas e
 presença), pacotes de aulas, oficinas avulsas, pagamentos, e a ferramenta
 central — o **Forno**, que acompanha queimas em tempo real. O cliente descreve
@@ -17,7 +17,7 @@ o forno como "o coração do ateliê"; deve ser a ferramenta mais bonita e
 completa do app.
 
 Quem conduz o projeto do lado do cliente é o **Diego** — não é necessariamente
-quem vai usar o sistema no dia a dia (isso é a Camila), mas é quem aprova
+quem vai usar o sistema no dia a dia (isso é a Hanna), mas é quem aprova
 decisões de produto e testa/publica o demo.
 
 ---
@@ -240,7 +240,7 @@ função com outro parâmetro.
   pediu redução 3×. Não alargar.
 - **Sem margem à direita** no conteúdo — vai até a borda. `mx-auto` no
   `<main>` foi removido de propósito; não reintroduzir.
-- **Nada de "Olá, Camila" nem "Ateliê de Cerâmica"** nos headers — só o
+- **Nada de "Olá, Hanna" nem "Ateliê de Cerâmica"** nos headers — só o
   ícone do vaso (`VaseMark`).
 - Prioridade mobile, desktop completo e confortável.
 
