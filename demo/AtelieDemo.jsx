@@ -1111,7 +1111,7 @@ function Turmas({ notificar, diaInicial = "ter" }) {
                 <div className="flex items-start justify-between"><span className="text-xs text-[var(--line)]">{v.numero}</span><MoreVertical size={15} className="text-[var(--line)]" /></div>
                 <Avatar nome={v.nome} size={44} />
                 <div><div className="truncate text-sm font-medium">{v.nome}</div><div className="text-xs text-[var(--ink-soft)]">{v.aula}/{v.total} aulas</div></div>
-                <Badge tone={v.status === "confirmado" ? "success" : v.status === "ultima" ? "danger" : "warning"}>{v.status === "confirmado" ? "Confirmado" : v.status === "ultima" ? "Última aula" : "Pendente"}</Badge>
+                {v.status !== "confirmado" && <Badge tone={v.status === "ultima" ? "danger" : "warning"}>{v.status === "ultima" ? "Última aula — renovar" : "Pacote pendente"}</Badge>}
 
                 <button onClick={() => toggleStatusAula(v.numero)} className={"flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium " + (v.statusAula === "confirmado" ? "bg-emerald-50 text-emerald-700" : "bg-rose-100 text-rose-600")}>
                   {v.statusAula === "confirmado" ? "🟢 Confirmado" : "🔴 Ausente"}
