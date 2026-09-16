@@ -1054,13 +1054,13 @@ function NovaFornada({ rascunho, onVoltar, onIniciar }) {
       )}
 
       <div className="mt-6 flex gap-3 pb-6">
-        <button onClick={onVoltar} className="flex-1 border border-[var(--line)] py-3 text-sm font-semibold text-[var(--ink)] hover:bg-[var(--cream)]">← Voltar</button>
+        <button onClick={onVoltar} className="flex-1 border border-[var(--line)] py-3 text-sm font-semibold text-[var(--ink)] hover:bg-[var(--cream)]">Voltar</button>
         <button
           disabled={!pronto}
           onClick={() => onIniciar({ tipo, tipoDescricao, categorias, detalhesConteudo: detalhes, parametros: config })}
-          className="flex-[2] bg-[var(--accent)] py-3 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex-[2] flex items-center justify-center gap-2 bg-[var(--accent)] py-3 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          🔥 Iniciar fornada
+          <Flame size={16} />Iniciar fornada
         </button>
       </div>
     </div>
