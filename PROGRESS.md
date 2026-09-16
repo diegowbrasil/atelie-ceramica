@@ -27,10 +27,19 @@ rede local onde o site novo do MTCST já está rodando
 responder), então os tokens de cor/fonte/raio foram lidos direto do CSS
 computado do site de verdade (via `javascript_tool`/`getComputedStyle`),
 não estimados a partir do vigashoes. Detalhes completos do sistema visual
-novo: **CLAUDE.md §6.1**. Resumo: sem cor de acento de marca (só
-cru `#F2F2EB` + marrom-quase-preto `#3B3833`), tipografia IBM Plex Mono +
-Space Grotesk, cantos retos em quase tudo, sem sombra fora de elementos
-flutuantes. Cores semânticas (verde/âmbar/vermelho de status) mantidas.
+novo: **CLAUDE.md §6.1**. Resumo: cru `#F2F2EB` + marrom-quase-preto
+`#3B3833` de base, tipografia IBM Plex Mono + Space Grotesk, cantos retos
+em quase tudo, sem sombra fora de elementos flutuantes. Cores semânticas
+(verde/âmbar/vermelho de status) mantidas.
+
+**Correção no mesmo dia**: a primeira versão copiou o site de referência
+sem nenhuma cor de acento (fiel ao site, que é uma loja — lá a cor vem da
+foto do produto). O Diego testou e achou pobre/sem cara de app, botões não
+se destacando. Corrigido na hora: acento terracota (`--accent: #C2410C`)
+de volta, só que usado com critério — botões, navegação ativa, indicadores
+"ao vivo" (progresso do forno, curva real do gráfico) — não espalhado por
+tudo feito no brief original. Ver CLAUDE.md §6.1 pro critério completo de
+onde usar/não usar.
 
 **Ambiente:** durante esta sessão também rodou `npx claude-mem install`
 (ferramenta de memória de terceiros) — apareceu nas ferramentas/skills
@@ -405,5 +414,57 @@ computado do site, em vez de estimar a partir do vigashoes.
 - Área do Aluno continua no passo 1 de 8 (ver "Onde continuar agora").
 - Vale o Diego conferir o resultado publicando o artifact de verdade, já
   que a checagem desta sessão foi toda via preview local.
+
+**Próximos passos:** ver "Onde continuar agora" no topo deste arquivo.
+
+---
+
+### 2026-09-15 (continuação 3) — Correção: trouxe o acento de cor de volta
+
+**Contexto:** minutos depois de reportar o redesign como concluído, o
+Diego testou e voltou com feedback direto: "está muito pobre visualmente,
+quero que fique com uma cara mais aplicativo, com botões mais destacados,
+ficou tudo muito a mesma cor". A versão sem acento nenhum seguiu o site de
+referência à risca, mas esse site é uma **loja** (a cor vem da foto do
+produto); o app é uma **ferramenta**, sem fotografia pra carregar
+interesse visual — precisa de hierarquia própria.
+
+**O que foi feito:**
+- Adicionadas 3 variáveis novas: `--accent: #C2410C` (o mesmo tom de
+  terracota — `orange-700` — que o app já usava antes do redesign, escolha
+  deliberada por já ser testado e por ligar tematicamente com argila),
+  `--accent-hover: #9A3412`, `--accent-soft: #F3E1D6`.
+- Script (`scratchpad/accent.mjs`, descartável): converteu em massa todo
+  `bg-[var(--ink)]` → `bg-[var(--accent)]` e `hover:opacity-90` →
+  `hover:bg-[var(--accent-hover)]`, depois reverteu manualmente as 4
+  exceções que deviam continuar neutras (`Avatar`, overlay do `Modal`,
+  overlay do menu mobile, `toast`) — mesma técnica "converte tudo, depois
+  reverte exceção" do redesign original.
+- Ajustes manuais adicionais pro acento cobrir também: estado ativo do
+  menu (sidebar, menu mobile, tab bar — antes só um fundo branco/cinza sem
+  graça, agora borda/texto/fundo em accent), dia atual e aba de dia
+  selecionada no calendário/Turmas (volta a bater com a regra original do
+  CONTEXTO.md: "dia atual em laranja"), linha "temperatura real" do
+  gráfico do forno (era ink, virou accent — é o dado mais importante da
+  tela), etapa atual do Status das peças, cards de seleção do Nova
+  Fornada (tipo/categoria escolhidos).
+- Critério documentado em CLAUDE.md §6.1 pra não perder a régua depois:
+  accent = ação ou dado "ao vivo" mais importante da tela; tudo o resto
+  (texto, cards, tags informativas, avatar) continua neutro. Isso evita
+  cair de novo em nenhum dos dois extremos (tudo colorido como o brief
+  original, ou nada colorido como a v1 deste redesign).
+
+**Testes realizados:** esbuild após o script + após cada ajuste manual;
+navegação por Dashboard, Turmas e Forno confirmando visualmente (screenshot
+funcionou desta vez) que menu ativo, dia atual, botões primários e barra
+de progresso agora saltam aos olhos contra o fundo neutro.
+
+**Decisões tomadas:**
+- Reintroduzir cor de acento é a correção certa, não um retrocesso — o
+  "sem acento" da v1 era fidelidade excessiva a uma referência que não é
+  do mesmo tipo de produto (loja vs. ferramenta de gestão).
+- Manter o critério de uso restrito ("só ação/dado ao vivo") em vez de
+  simplesmente devolver o laranja pra tudo como era antes — é isso que dá
+  hierarquia, não a cor em si.
 
 **Próximos passos:** ver "Onde continuar agora" no topo deste arquivo.

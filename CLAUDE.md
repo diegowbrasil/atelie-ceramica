@@ -249,29 +249,55 @@ função com outro parâmetro.
 **Decisão do Diego**: visual alinhado ao site novo do MTCST
 (`mtcst-ceramics`, hoje em `http://192.168.1.180:3000` na rede local dele —
 IP muda, pedir de novo se não responder) e à inspiração dele, vigashoes.com
-(marca VIGA). **Não é mais** a paleta terracota/`orange-600` nem os cantos
-arredondados Apple/Linear/Stripe do brief original — isso foi
+(marca VIGA). **Não é mais** a paleta terracota/`orange-600` original nem
+os cantos arredondados Apple/Linear/Stripe do brief inicial — isso foi
 explicitamente substituído. Se reabrir o assunto com o cliente, é só pra
-confirmar ajustes, não pra voltar ao estilo antigo.
+confirmar ajustes, não pra voltar ao estilo do brief original.
 
-Tokens exatos, medidos direto do CSS computado do site novo (não são
-aproximação — `getComputedStyle` no site real):
+⚠️ **Segunda rodada no mesmo dia**: a primeira versão deste redesign copiou
+o site de referência ao pé da letra e **removeu toda cor de acento**
+(o site do MTCST é uma loja — a cor vem da foto do produto, não da UI). O
+Diego testou e achou "pobre visualmente", sem cara de aplicativo, botões
+não se destacando. Correção aplicada na hora: **um acento terracota
+voltou**, mas usado com critério (só ação/navegação/status "ao vivo"), não
+espalhado por tudo como no brief original. Não repetir o erro de tirar o
+acento por completo achando que fica "mais fiel ao site" — já foi testado
+e rejeitado.
+
+Tokens exatos — cream/ink medidos direto do CSS computado do site novo
+(`getComputedStyle`, não é aproximação); accent é decisão de design desta
+sessão (retomou o tom do `orange-700` que o app já usava antes, por ser
+tematicamente ligado a argila/cerâmica):
 ```css
---cream: #F2F2EB;       /* fundo da página */
---cream-soft: #E7E4DA;  /* superfícies suaves, hover, badges neutros */
---line: #DEDAD1;        /* bordas */
---ink: #3B3833;         /* texto principal e cor de ação — não é preto puro */
---ink-soft: #8A8479;    /* texto secundário/muted */
+--cream: #F2F2EB;         /* fundo da página */
+--cream-soft: #E7E4DA;    /* superfícies suaves, hover, badges neutros */
+--line: #DEDAD1;          /* bordas */
+--ink: #3B3833;           /* texto principal — não é preto puro */
+--ink-soft: #8A8479;      /* texto secundário/muted */
+--accent: #C2410C;        /* AÇÃO: botão primário, nav ativo, "hoje", progresso, dado ao vivo */
+--accent-hover: #9A3412;  /* hover dos botões de acento */
+--accent-soft: #F3E1D6;   /* fundo tingido leve p/ estado ativo (ex: item de menu selecionado) */
 ```
 Definidos como CSS custom properties dentro do `<style>` dentro do JSX do
 `AtelieDemo` (não em Tailwind config — o ambiente de artifact não permite
 config customizado). Usados via sintaxe arbitrária do Tailwind:
-`bg-[var(--cream)]`, `text-[var(--ink-soft)]`, etc.
+`bg-[var(--cream)]`, `text-[var(--accent)]`, etc.
 
-- **Sem cor de acento de marca.** O site real do MTCST não usa nenhuma cor
-  de destaque — nem laranja, nem bordô. É cru + o marrom-quase-preto do
-  texto; quem dá cor é a fotografia do produto. Botões primários, estado
-  ativo do menu, avatares: tudo em `--ink` sólido (não gradiente, não tint).
+- **Onde usar `--accent`** (critério: "isto é uma ação, ou é o dado mais
+  importante da tela agora?"): botões primários (fundo sólido
+  `bg-[var(--accent)] hover:bg-[var(--accent-hover)]`), item de menu ativo
+  (borda esquerda + texto, ou fundo `--accent-soft` no menu mobile), dia
+  atual no calendário/aba de dia selecionada, badge de contagem
+  (Solicitações pendentes), barra de progresso do forno, linha "temperatura
+  real" do gráfico (era `--ink`, virou `--accent` — é o dado ao vivo mais
+  importante da tela), etapa atual do "Status das peças", cards de seleção
+  do Nova Fornada (tipo/categoria escolhidos).
+- **Onde NÃO usar** — mantém neutro (`--ink`/`--cream-soft`): `Avatar`
+  (identidade de pessoa, não ação), overlay de modal/drawer, toast (aviso
+  neutro do sistema), tags informativas que só exibem dado sem ser
+  clicável (ex: chips de "Conteúdo do forno"), badge "info" do componente
+  `Badge` (contorno em `--ink`, não `--accent` — reservar accent pra não
+  perder força quando usado).
 - **Cores semânticas de status continuam** (`emerald`/`amber`/`rose` do
   Tailwind) — success/warning/danger em badges, "Cobrar no WhatsApp"
   (verde, ligado à marca do WhatsApp), etapa "Aquecendo" do forno (âmbar).
@@ -297,14 +323,16 @@ config customizado). Usados via sintaxe arbitrária do Tailwind:
 - **Sem sombra em elementos no fluxo da página** (cards, botões) —
   `shadow-sm` removido. Sombra só sobrevive em elementos genuinamente
   flutuantes sobre o conteúdo: `Modal`, menu mobile (drawer), toast.
-- Gráfico do forno (Recharts): curva "real" em `--ink` sólido (era laranja
-  escuro), curva "prevista" em cinza-amarronzado claro `#B8B2A6`/`#EDEBE3`
-  (era laranja claro), grid e linha de referência "Patamar" nos tons
-  neutros do sistema nesse tom. Linha de referência "Abertura segura"
-  **continua azul** (`#60A5FA`) — é a única cor "extra" no gráfico,
-  mantida de propósito por ser um marcador funcional (não é acento de
-  marca), pra não perder a distinção visual entre curva prevista, real, e
-  os dois marcadores de referência.
+- Gráfico do forno (Recharts): curva "real" em `--accent` sólido (`#C2410C`
+  — é o dado ao vivo, tem que saltar aos olhos), curva "prevista" em
+  cinza-amarronzado claro `#B8B2A6`/`#EDEBE3` (discreta, é só referência),
+  grid e linha de referência "Patamar" nos tons neutros do sistema. Linha
+  de referência "Abertura segura" **continua azul** (`#60A5FA`) — marcador
+  funcional (não é acento de marca nem confundir com o dado ao vivo), pra
+  não perder a distinção visual entre curva prevista, real, e os dois
+  marcadores de referência. Cores do gráfico são hex literal (`stroke=`),
+  não `var()` — Recharts/SVG e CSS custom properties nem sempre combinam
+  bem, mais seguro usar o valor direto.
 
 **Ainda não migrado para este sistema**: o projeto Next.js (§2B) —
 continua com o Tailwind config antigo (`tailwind.config.ts`,

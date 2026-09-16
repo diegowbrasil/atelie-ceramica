@@ -383,6 +383,7 @@ export default function AtelieDemo() {
         :root {
           --cream: #F2F2EB; --cream-soft: #E7E4DA; --line: #DEDAD1;
           --ink: #3B3833; --ink-soft: #8A8479;
+          --accent: #C2410C; --accent-hover: #9A3412; --accent-soft: #F3E1D6;
           --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
           --font-display: 'Space Grotesk', ui-sans-serif, sans-serif;
         }
@@ -394,10 +395,10 @@ export default function AtelieDemo() {
         <div className="mb-6 flex justify-center px-1"><VaseMark /></div>
         <nav className="flex-1 space-y-0.5">
           {NAV.map((item) => (
-            <button key={item.id} onClick={() => ir(item.id)} title={item.label} className={"relative flex w-full flex-col items-center gap-0.5 px-1 py-2 text-[10px] font-medium uppercase tracking-wide leading-tight transition-colors " + ((tela === item.id || (item.id === "forno" && tela === "fornoNova") || (item.id === "oficinas" && tela === "oficinaDetalhe")) ? "bg-white text-[var(--ink)]" : "text-[var(--ink-soft)] hover:bg-white/60")}>
+            <button key={item.id} onClick={() => ir(item.id)} title={item.label} className={"relative flex w-full flex-col items-center gap-0.5 border-l-2 px-1 py-2 text-[10px] font-medium uppercase tracking-wide leading-tight transition-colors " + ((tela === item.id || (item.id === "forno" && tela === "fornoNova") || (item.id === "oficinas" && tela === "oficinaDetalhe")) ? "border-[var(--accent)] bg-white text-[var(--accent)]" : "border-transparent text-[var(--ink-soft)] hover:bg-white/60")}>
               <item.icon size={16} />
               <span className="truncate w-full text-center">{item.label}</span>
-              {!!item.badge && <span className="absolute right-1 top-1 flex h-3.5 w-3.5 items-center justify-center bg-[var(--ink)] text-[9px] font-semibold text-[var(--cream)]">{item.badge}</span>}
+              {!!item.badge && <span className="absolute right-1 top-1 flex h-3.5 w-3.5 items-center justify-center bg-[var(--accent)] text-[9px] font-semibold text-white">{item.badge}</span>}
             </button>
           ))}
         </nav>
@@ -411,9 +412,9 @@ export default function AtelieDemo() {
             <div className="mb-6 flex items-center justify-between"><VaseMark /><button onClick={() => setMenuAberto(false)}><X size={20} /></button></div>
             <nav className="space-y-1">
               {NAV.map((item) => (
-                <button key={item.id} onClick={() => ir(item.id)} className={"flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium uppercase tracking-wide " + (tela === item.id ? "bg-[var(--cream-soft)] text-[var(--ink)]" : "text-[var(--ink-soft)]")}>
+                <button key={item.id} onClick={() => ir(item.id)} className={"flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium uppercase tracking-wide " + (tela === item.id ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--ink-soft)]")}>
                   <item.icon size={17} />{item.label}
-                  {!!item.badge && <span className="ml-auto bg-[var(--ink)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--cream)]">{item.badge}</span>}
+                  {!!item.badge && <span className="ml-auto bg-[var(--accent)] px-1.5 py-0.5 text-[11px] font-semibold text-white">{item.badge}</span>}
                 </button>
               ))}
             </nav>
@@ -474,7 +475,7 @@ export default function AtelieDemo() {
           const item = NAV.find((n) => n.id === id);
           const ativoTab = tela === id || (id === "forno" && tela === "fornoNova");
           return (
-            <button key={id} onClick={() => ir(id)} className={"flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] font-medium uppercase tracking-wide " + (ativoTab ? "text-[var(--ink)]" : "text-[var(--ink-soft)]")}>
+            <button key={id} onClick={() => ir(id)} className={"flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] font-medium uppercase tracking-wide " + (ativoTab ? "text-[var(--accent)]" : "text-[var(--ink-soft)]")}>
               <item.icon size={20} strokeWidth={ativoTab ? 2.4 : 1.8} />{item.label}
             </button>
           );
@@ -492,7 +493,7 @@ export default function AtelieDemo() {
           </p>
           <div className="flex gap-2">
             <button onClick={() => setModalConflito(false)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]">Cancelar</button>
-            <button onClick={confirmarSalvarEIniciarNova} className="flex-1 bg-[var(--ink)] py-2.5 text-sm font-medium text-white hover:opacity-90">Salvar e criar nova</button>
+            <button onClick={confirmarSalvarEIniciarNova} className="flex-1 bg-[var(--accent)] py-2.5 text-sm font-medium text-white hover:bg-[var(--accent-hover)]">Salvar e criar nova</button>
           </div>
         </Modal>
       )}
@@ -595,7 +596,7 @@ function AgendaSemanaCard({ onAbrirDia, onAbrirOficinas }) {
               }
             >
               <div className="mb-3 flex items-center justify-between">
-                <span className={"inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold tracking-wide " + (isHoje ? "bg-[var(--ink)] text-white" : "bg-white text-[var(--ink-soft)] border border-[var(--line)]")}>
+                <span className={"inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold tracking-wide " + (isHoje ? "bg-[var(--accent)] text-white" : "bg-white text-[var(--ink-soft)] border border-[var(--line)]")}>
                   {d.dia} <span className={isHoje ? "font-normal text-[var(--cream)]" : "font-normal text-[var(--line)]"}>{d.num}</span>
                 </span>
               </div>
@@ -651,7 +652,7 @@ function KilnMiniCard({ fornada, onDetalhes }) {
     <Card className="overflow-hidden border-[var(--line)] bg-gradient-to-br from-[var(--cream-soft)] to-white">
       <div className="flex items-center justify-between px-5 pt-4">
         <span className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]"><Flame size={16} />Forno em andamento</span>
-        <button onClick={onDetalhes} className="bg-[var(--ink)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90">Ver forno</button>
+        <button onClick={onDetalhes} className="bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--accent-hover)]">Ver forno</button>
       </div>
       <div className="grid gap-3 px-5 pb-5 pt-3 sm:grid-cols-[1fr_180px]">
         <div>
@@ -662,13 +663,13 @@ function KilnMiniCard({ fornada, onDetalhes }) {
             <div><div className="font-mono text-sm">{fmtDuracaoCurta(p.restanteSeg)}</div><div className="text-xs text-[var(--ink-soft)]">Restante</div></div>
             <div><div className="font-mono text-sm">{fmtDuracaoCurta(p.decorridoSeg)}</div><div className="text-xs text-[var(--ink-soft)]">Decorrido</div></div>
           </div>
-          <div className="mt-3 h-2 w-full overflow-hidden bg-[var(--cream-soft)]"><div className="h-full bg-[var(--ink)] transition-all duration-700" style={{ width: p.pct + "%" }} /></div>
+          <div className="mt-3 h-2 w-full overflow-hidden bg-[var(--cream-soft)]"><div className="h-full bg-[var(--accent)] transition-all duration-700" style={{ width: p.pct + "%" }} /></div>
         </div>
         <div className="h-24 sm:h-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={mini}>
               <Area type="monotone" dataKey="prevista" stroke="#B8B2A6" fill="#EDEBE3" strokeDasharray="3 2" />
-              <Line type="monotone" dataKey="real" stroke="#3B3833" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="real" stroke="#C2410C" strokeWidth={2} dot={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -701,7 +702,7 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
           <h1 className="text-2xl font-semibold" style={FONT_DISPLAY}>Forno</h1>
           <p className="text-sm text-[var(--ink-soft)]">Acompanhe sua fornada em tempo real.</p>
         </div>
-        <button onClick={onNovaFornada} className="flex shrink-0 items-center gap-1.5 bg-[var(--ink)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">
+        <button onClick={onNovaFornada} className="flex shrink-0 items-center gap-1.5 bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--accent-hover)]">
           <Plus size={16} strokeWidth={2.5} />Nova fornada
         </button>
       </div>
@@ -711,7 +712,7 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
           <div className="flex h-14 w-14 items-center justify-center bg-[var(--cream-soft)] text-[var(--ink-soft)]"><Flame size={26} /></div>
           <h2 className="text-lg font-semibold">Nenhuma fornada em andamento</h2>
           <p className="max-w-sm text-sm text-[var(--ink-soft)]">Inicie uma nova fornada para começar o acompanhamento em tempo real da temperatura, etapas e previsões.</p>
-          <button onClick={onNovaFornada} className="mt-2 bg-[var(--ink)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">+ Nova fornada</button>
+          <button onClick={onNovaFornada} className="mt-2 bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--accent-hover)]">+ Nova fornada</button>
         </Card>
       ) : (
         <FornadaAtivaPainel
@@ -753,7 +754,7 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
             <input autoFocus value={inputTemp} onChange={(e) => setInputTemp(e.target.value)} type="number" className="mb-4 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="Ex: 920" />
             <div className="flex gap-2">
               <button type="button" onClick={() => setModalTemp(false)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
-              <button type="submit" className="flex-1 bg-[var(--ink)] py-2.5 text-sm font-medium text-white hover:opacity-90">Atualizar</button>
+              <button type="submit" className="flex-1 bg-[var(--accent)] py-2.5 text-sm font-medium text-white hover:bg-[var(--accent-hover)]">Atualizar</button>
             </div>
           </form>
         </Modal>
@@ -766,7 +767,7 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
             <textarea autoFocus value={inputObs} onChange={(e) => setInputObs(e.target.value)} rows={3} className="mb-4 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="Ex: Patamar iniciado." />
             <div className="flex gap-2">
               <button type="button" onClick={() => setModalObs(false)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
-              <button type="submit" className="flex-1 bg-[var(--ink)] py-2.5 text-sm font-medium text-white hover:opacity-90">Adicionar</button>
+              <button type="submit" className="flex-1 bg-[var(--accent)] py-2.5 text-sm font-medium text-white hover:bg-[var(--accent-hover)]">Adicionar</button>
             </div>
           </form>
         </Modal>
@@ -795,7 +796,7 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
             <dt className="text-[var(--ink-soft)]">Categorias</dt><dd className="text-right font-medium">{modalDetalheHist.categorias.map((c) => CATEGORIAS.find((x) => x.id === c)?.label).join(", ") || "—"}</dd>
           </dl>
           {modalDetalheHist.detalhesConteudo && <p className="mb-4 bg-[var(--cream)] p-3 text-sm text-[var(--ink-soft)]">{modalDetalheHist.detalhesConteudo}</p>}
-          <button onClick={() => { onDuplicar(modalDetalheHist); setModalDetalheHist(null); }} className="w-full bg-[var(--ink)] py-2.5 text-sm font-medium text-white hover:opacity-90">Duplicar configuração</button>
+          <button onClick={() => { onDuplicar(modalDetalheHist); setModalDetalheHist(null); }} className="w-full bg-[var(--accent)] py-2.5 text-sm font-medium text-white hover:bg-[var(--accent-hover)]">Duplicar configuração</button>
         </Modal>
       )}
     </div>
@@ -831,7 +832,7 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
             <div className="mb-1 flex items-center gap-2 text-sm text-[var(--ink-soft)]"><Flame size={15} className="text-[var(--ink-soft)]" />Temperatura atual (estimada)</div>
             <div className="text-4xl font-semibold leading-none">{p.temperatura}°C <span className="text-base font-normal text-[var(--ink-soft)]">de {fornada.config.temperaturaMaxima}°C</span></div>
             {ultima && <div className="mt-2 text-sm text-[var(--ink-soft)]">Última temperatura informada: <span className="font-medium text-[var(--ink)]">{ultima.temp}°C</span> · {fmtRelativo(ultima.em, agora)}</div>}
-            <div className="mt-3 h-2 w-full overflow-hidden bg-[var(--cream-soft)]"><div className="h-full bg-[var(--ink)] transition-all duration-700" style={{ width: p.pct + "%" }} /></div>
+            <div className="mt-3 h-2 w-full overflow-hidden bg-[var(--cream-soft)]"><div className="h-full bg-[var(--accent)] transition-all duration-700" style={{ width: p.pct + "%" }} /></div>
           </div>
           <div className="flex flex-col items-start gap-1 md:items-center md:justify-center">
             <span className="text-xs text-[var(--ink-soft)]">Etapa atual</span>
@@ -879,7 +880,7 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
         </Card>
 
         <div className="flex flex-col gap-2.5">
-          <button onClick={onAtualizarTemp} className="flex items-center justify-center gap-2 bg-[var(--ink)] py-3.5 text-sm font-semibold text-white hover:opacity-90"><Thermometer size={17} />Atualizar temperatura</button>
+          <button onClick={onAtualizarTemp} className="flex items-center justify-center gap-2 bg-[var(--accent)] py-3.5 text-sm font-semibold text-white hover:bg-[var(--accent-hover)]"><Thermometer size={17} />Atualizar temperatura</button>
           <button onClick={onAdicionarObs} className="flex items-center justify-center gap-2 border border-[var(--line)] bg-white py-3.5 text-sm font-semibold text-[var(--ink)] hover:bg-[var(--cream)]"><MessageCircle size={17} />Adicionar observação</button>
           <button onClick={onFinalizar} className="flex items-center justify-center gap-2 bg-rose-50 py-3.5 text-sm font-semibold text-rose-600 hover:bg-rose-100">Finalizar fornada</button>
         </div>
@@ -898,7 +899,7 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
               <ReferenceLine y={fornada.config.temperaturaMaxima} stroke="#8A8479" strokeDasharray="3 3" label={{ value: "Patamar", position: "insideTopLeft", fontSize: 11, fill: "#8A8479" }} />
               <ReferenceLine y={fornada.config.temperaturaSegura} stroke="#60A5FA" strokeDasharray="3 3" label={{ value: "Abertura segura", position: "insideBottomLeft", fontSize: 11, fill: "#60A5FA" }} />
               <Area type="monotone" dataKey="prevista" name="Curva prevista" stroke="#B8B2A6" fill="#EDEBE3" strokeDasharray="4 3" />
-              <Line type="monotone" dataKey="real" name="Temperatura real" stroke="#3B3833" strokeWidth={2.5} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="real" name="Temperatura real" stroke="#C2410C" strokeWidth={2.5} dot={{ r: 3 }} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -957,8 +958,8 @@ function NovaFornada({ rascunho, onVoltar, onIniciar }) {
         <h2 className="mb-3 text-sm font-semibold">Tipo de queima</h2>
         <div className="grid grid-cols-3 gap-3">
           {[["esmalte", "Esmalte"], ["biscoito", "Biscoito"], ["outro", "Outros"]].map(([id, label]) => (
-            <button key={id} onClick={() => selecionarTipo(id)} className={"relative border-2 px-3 py-6 text-center text-sm font-semibold transition-all " + (tipo === id ? "scale-[1.03] border-[var(--ink)] bg-[var(--cream-soft)] text-[var(--ink)]" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--ink-soft)]")}>
-              {tipo === id && <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--ink)] text-white"><Check size={12} strokeWidth={3} /></span>}
+            <button key={id} onClick={() => selecionarTipo(id)} className={"relative border-2 px-3 py-6 text-center text-sm font-semibold transition-all " + (tipo === id ? "scale-[1.03] border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--ink-soft)]")}>
+              {tipo === id && <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)] text-white"><Check size={12} strokeWidth={3} /></span>}
               {label}
             </button>
           ))}
@@ -974,8 +975,8 @@ function NovaFornada({ rascunho, onVoltar, onIniciar }) {
           {CATEGORIAS.map((c) => {
             const ativo = categorias.includes(c.id);
             return (
-              <button key={c.id} onClick={() => toggleCategoria(c.id)} className={"relative flex flex-col items-center gap-2 border-2 px-3 py-5 text-center text-xs font-medium transition-all " + (ativo ? "scale-[1.03] border-[var(--ink)] bg-[var(--cream-soft)] text-[var(--ink)]" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--ink-soft)]")}>
-                {ativo && <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--ink)] text-white"><Check size={12} strokeWidth={3} /></span>}
+              <button key={c.id} onClick={() => toggleCategoria(c.id)} className={"relative flex flex-col items-center gap-2 border-2 px-3 py-5 text-center text-xs font-medium transition-all " + (ativo ? "scale-[1.03] border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--ink-soft)]")}>
+                {ativo && <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--accent)] text-white"><Check size={12} strokeWidth={3} /></span>}
                 <c.icon size={22} />{c.label}
               </button>
             );
@@ -1022,7 +1023,7 @@ function NovaFornada({ rascunho, onVoltar, onIniciar }) {
         <button
           disabled={!pronto}
           onClick={() => onIniciar({ tipo, tipoDescricao, categorias, detalhesConteudo: detalhes, parametros: config })}
-          className="flex-[2] bg-[var(--ink)] py-3 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex-[2] bg-[var(--accent)] py-3 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
         >
           🔥 Iniciar fornada
         </button>
@@ -1084,11 +1085,11 @@ function Turmas({ notificar, diaInicial = "ter" }) {
     <div>
       <div className="mb-5 flex items-start justify-between">
         <div><h1 className="text-2xl font-semibold" style={FONT_DISPLAY}>Turmas</h1><p className="text-sm text-[var(--ink-soft)]">Gerencie suas turmas, alunos e presenças.</p></div>
-        <button className="hidden bg-[var(--ink)] px-4 py-2 text-sm font-medium text-white sm:block" onClick={() => notificar("Cadastro de nova turma (demo)")}>+ Nova turma</button>
+        <button className="hidden bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white sm:block" onClick={() => notificar("Cadastro de nova turma (demo)")}>+ Nova turma</button>
       </div>
       <div className="mb-3 flex gap-2 overflow-x-auto">
         {TURMAS_DIAS.map((d) => (
-          <button key={d.id} onClick={() => selecionarDia(d)} disabled={!d.disponivel} className={"shrink-0 px-4 py-2 text-sm font-medium " + (diaAtivo === d.id ? "bg-[var(--ink)] text-white" : d.disponivel ? "bg-[var(--cream-soft)] text-[var(--ink-soft)]" : "bg-[var(--cream)] text-[var(--line)]")}>{d.label}</button>
+          <button key={d.id} onClick={() => selecionarDia(d)} disabled={!d.disponivel} className={"shrink-0 px-4 py-2 text-sm font-medium " + (diaAtivo === d.id ? "bg-[var(--accent)] text-white" : d.disponivel ? "bg-[var(--cream-soft)] text-[var(--ink-soft)]" : "bg-[var(--cream)] text-[var(--line)]")}>{d.label}</button>
         ))}
       </div>
       {diaInfo.turmas.length > 1 && (
@@ -1183,7 +1184,7 @@ function ModalCadastrarAluno({ numero, onClose, onSalvar }) {
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={onClose} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
-          <button type="submit" className="flex-1 bg-[var(--ink)] py-2.5 text-sm font-medium text-white hover:opacity-90">Cadastrar</button>
+          <button type="submit" className="flex-1 bg-[var(--accent)] py-2.5 text-sm font-medium text-white hover:bg-[var(--accent-hover)]">Cadastrar</button>
         </div>
       </form>
     </Modal>
@@ -1203,7 +1204,7 @@ function Alunos() {
     <div>
       <div className="mb-5 flex items-start justify-between">
         <div><h1 className="text-2xl font-semibold" style={FONT_DISPLAY}>Alunos</h1><p className="text-sm text-[var(--ink-soft)]">Cadastro e histórico dos alunos do ateliê.</p></div>
-        <button onClick={() => setModal(true)} className="bg-[var(--ink)] px-4 py-2 text-sm font-medium text-white hover:opacity-90">+ Cadastrar aluno</button>
+        <button onClick={() => setModal(true)} className="bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--accent-hover)]">+ Cadastrar aluno</button>
       </div>
 
       {alunos.length === 0 ? (
@@ -1211,7 +1212,7 @@ function Alunos() {
           <GraduationCap size={26} className="text-[var(--ink-soft)]" />
           <h2 className="text-base font-semibold">Nenhum aluno cadastrado ainda</h2>
           <p className="max-w-xs text-sm text-[var(--ink-soft)]">Cadastre seus alunos reais para começar a controlar turmas, pacotes e presenças.</p>
-          <button onClick={() => setModal(true)} className="mt-2 bg-[var(--ink)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">+ Cadastrar aluno</button>
+          <button onClick={() => setModal(true)} className="mt-2 bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--accent-hover)]">+ Cadastrar aluno</button>
         </Card>
       ) : (
         <Card><ul className="divide-y divide-[var(--line)]">
@@ -1257,7 +1258,7 @@ function FormAluno({ onCancelar, onSalvar }) {
       </div>
       <div className="flex gap-2">
         <button type="button" onClick={onCancelar} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
-        <button type="submit" className="flex-1 bg-[var(--ink)] py-2.5 text-sm font-medium text-white hover:opacity-90">Cadastrar</button>
+        <button type="submit" className="flex-1 bg-[var(--accent)] py-2.5 text-sm font-medium text-white hover:bg-[var(--accent-hover)]">Cadastrar</button>
       </div>
     </form>
   );
@@ -1268,7 +1269,7 @@ function Oficinas({ oficinas, onAbrir }) {
     <div>
       <div className="mb-5 flex items-start justify-between">
         <div><h1 className="text-2xl font-semibold" style={FONT_DISPLAY}>Oficinas</h1><p className="text-sm text-[var(--ink-soft)]">Eventos avulsos com inscrição e pagamento.</p></div>
-        <button className="bg-[var(--ink)] px-4 py-2 text-sm font-medium text-white">+ Nova oficina</button>
+        <button className="bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white">+ Nova oficina</button>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         {oficinas.map((o) => {
@@ -1282,7 +1283,7 @@ function Oficinas({ oficinas, onAbrir }) {
                 </div>
                 <p className="text-sm text-[var(--ink-soft)]">{o.data} · {o.hora}</p>
                 <p className="mt-1 text-sm text-[var(--ink-soft)]">R$ {o.valor} por pessoa</p>
-                <div className="mt-3 h-1.5 w-full overflow-hidden bg-[var(--cream-soft)]"><div className="h-full bg-[var(--ink)]" style={{ width: (ocupadas / o.vagas) * 100 + "%" }} /></div>
+                <div className="mt-3 h-1.5 w-full overflow-hidden bg-[var(--cream-soft)]"><div className="h-full bg-[var(--accent)]" style={{ width: (ocupadas / o.vagas) * 100 + "%" }} /></div>
                 <p className="mt-1.5 text-xs text-[var(--ink-soft)]">{ocupadas}/{o.vagas} inscritos</p>
               </Card>
             </button>
@@ -1320,12 +1321,12 @@ function StatusPecasCard({ status, somenteLeitura, onAlterar }) {
               onClick={() => clicavel && onAlterar(e.id)}
               className={
                 "flex-1 min-w-[140px] border px-3 py-3 text-left text-xs font-medium transition-all " +
-                (atual ? "border-[var(--ink)] bg-[var(--cream-soft)] text-[var(--ink)]" : concluida ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-[var(--line)] bg-[var(--cream)] text-[var(--ink-soft)]") +
+                (atual ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]" : concluida ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-[var(--line)] bg-[var(--cream)] text-[var(--ink-soft)]") +
                 (clicavel ? " hover:border-[var(--ink-soft)] cursor-pointer" : " cursor-default")
               }
             >
               <div className="mb-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold "
-                style={{ background: atual ? "#3B3833" : concluida ? "#059669" : "#DEDAD1", color: "#fff" }}>
+                style={{ background: atual ? "#C2410C" : concluida ? "#059669" : "#DEDAD1", color: "#fff" }}>
                 {concluida && !atual ? <Check size={12} /> : i + 1}
               </div>
               {e.label}
@@ -1369,7 +1370,7 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
             Ver como aluno
           </label>
           <button className="flex items-center gap-1.5 border border-[var(--line)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]">Editar oficina</button>
-          <button onClick={() => notificar("Lembrete enviado via WhatsApp (demo).")} className="flex items-center gap-1.5 bg-[var(--ink)] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90">Enviar lembrete</button>
+          <button onClick={() => notificar("Lembrete enviado via WhatsApp (demo).")} className="flex items-center gap-1.5 bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--accent-hover)]">Enviar lembrete</button>
         </div>
       </div>
 
@@ -1475,7 +1476,7 @@ function ModalCadastrarParticipante({ numero, opcoesDupla, onClose, onSalvar }) 
 
         <div className="flex gap-2">
           <button type="button" onClick={onClose} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
-          <button type="submit" className="flex-1 bg-[var(--ink)] py-2.5 text-sm font-medium text-white hover:opacity-90">Cadastrar</button>
+          <button type="submit" className="flex-1 bg-[var(--accent)] py-2.5 text-sm font-medium text-white hover:bg-[var(--accent-hover)]">Cadastrar</button>
         </div>
       </form>
     </Modal>
