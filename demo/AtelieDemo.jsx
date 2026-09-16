@@ -287,10 +287,11 @@ function Toggle({ checked, onChange, title }) {
     <button
       onClick={onChange}
       title={title}
+      aria-label={title}
       aria-pressed={checked}
       className={"relative h-6 w-11 shrink-0 rounded-full transition-colors " + (checked ? "bg-emerald-500" : "bg-[var(--line)]")}
     >
-      <span className={"absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform " + (checked ? "translate-x-[22px]" : "translate-x-0.5")} />
+      <span className={"absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform " + (checked ? "translate-x-5" : "translate-x-0")} />
     </button>
   );
 }
@@ -305,7 +306,7 @@ function VaseMark() {
 function Modal({ children, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[var(--ink)]/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative w-full max-w-sm rounded-3xl border border-[var(--line)] bg-white p-5 shadow-xl animate-in">{children}</div>
     </div>
   );
@@ -345,6 +346,7 @@ export default function AtelieDemo() {
   function abrirNovaFornada(base) {
     setRascunho(base || null);
     setTela("fornoNova");
+    window.scrollTo(0, 0);
   }
 
   function cliqueNovaFornada() {
@@ -368,6 +370,7 @@ export default function AtelieDemo() {
     };
     setFornadas((fs) => [nova, ...fs]);
     setTela("forno");
+    window.scrollTo(0, 0);
     notificar("Fornada iniciada! Acompanhamento em tempo real ativo.");
   }
 
@@ -384,21 +387,21 @@ export default function AtelieDemo() {
     notificar("Fornada finalizada e salva no histórico.");
   }
 
-  function ir(t) { setTela(t); setMenuAberto(false); }
+  function ir(t) { setTela(t); setMenuAberto(false); window.scrollTo(0, 0); }
   const [diaTurmaAlvo, setDiaTurmaAlvo] = useState("ter");
   function abrirDiaTurmas(diaId) { setDiaTurmaAlvo(diaId); ir("turmas"); }
 
   return (
     <div className="flex min-h-screen w-full bg-[var(--cream)] text-[var(--ink)]" style={{ fontFamily: "var(--font-sans)" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
         :root {
           --cream: #F2F2EB; --cream-soft: #E7E4DA; --line: #DEDAD1;
-          --ink: #3B3833; --ink-soft: #8A8479;
+          --ink: #3B3833; --ink-soft: #6B655C;
           --accent: #C2410C; --accent-hover: #9A3412; --accent-soft: #F3E1D6;
           --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', ui-sans-serif, system-ui, sans-serif;
           --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
-          --font-display: var(--font-sans);
+          --font-display: 'Space Grotesk', var(--font-sans);
         }
         @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
         .animate-in{animation:fadeUp .2s ease-out both}
@@ -423,7 +426,7 @@ export default function AtelieDemo() {
 
       {menuAberto && (
         <div className="fixed inset-0 z-40 md:hidden">
-          <div className="absolute inset-0 bg-[var(--ink)]/30" onClick={() => setMenuAberto(false)} />
+          <div className="absolute inset-0 bg-black/30" onClick={() => setMenuAberto(false)} />
           <div className="absolute left-0 top-0 h-full w-64 bg-white p-4 shadow-xl">
             <div className="mb-6 flex items-center justify-between"><VaseMark /><button onClick={() => setMenuAberto(false)}><X size={20} /></button></div>
             <nav className="space-y-1">
@@ -440,7 +443,7 @@ export default function AtelieDemo() {
 
       <div className="min-w-0 flex-1 pb-20 md:pb-0">
         <header className="flex items-center justify-between border-b border-[var(--line)] bg-white px-4 py-3 md:hidden">
-          <button onClick={() => setMenuAberto(true)}><Menu size={22} /></button>
+          <button onClick={() => setMenuAberto(true)} aria-label="Abrir menu"><Menu size={22} /></button>
           <VaseMark />
           <Bell size={20} className="text-[var(--ink-soft)]" />
         </header>
@@ -951,7 +954,7 @@ function StatCard({ icon: Icon, label, value, sub, mono }) {
   return (
     <Card className="min-w-0 p-4">
       <div className="mb-2 flex items-center gap-1.5 text-[var(--ink-soft)]"><Icon size={15} /><span className="truncate text-xs">{label}</span></div>
-      <div className={"truncate text-lg font-semibold text-[var(--ink)] " + (mono ? "font-mono" : "")}>{value}</div>
+      <div className={"truncate text-lg font-semibold text-[var(--ink)] " + (mono ? "font-[family-name:var(--font-mono)]" : "")}>{value}</div>
       {sub && <div className="truncate text-xs text-[var(--ink-soft)]">{sub}</div>}
     </Card>
   );
@@ -1153,6 +1156,7 @@ function Turmas({ notificar, diaInicial = "ter" }) {
                     <button
                       onClick={() => toggleStatusAula(v.numero)}
                       title={v.statusAula === "confirmado" ? "Confirmado p/ próxima aula — toque p/ marcar ausente" : "Ausente na próxima aula — toque p/ confirmar"}
+                      aria-label={v.statusAula === "confirmado" ? "Confirmado para a próxima aula. Toque para marcar ausente." : "Ausente na próxima aula. Toque para confirmar."}
                       className={"h-2.5 w-2.5 shrink-0 rounded-full " + (v.statusAula === "confirmado" ? "bg-emerald-500" : "bg-rose-500")}
                     />
                     <span className="truncate text-sm font-medium">{v.nome}</span>
@@ -1403,10 +1407,18 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
           </div>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
-          <label className="flex items-center gap-1.5 border border-[var(--line)] bg-white px-3 py-2.5 text-xs font-medium text-[var(--ink-soft)]">
-            <input type="checkbox" checked={verComoAluno} onChange={(e) => setVerComoAluno(e.target.checked)} />
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={verComoAluno}
+            onClick={() => setVerComoAluno((v) => !v)}
+            className="flex items-center gap-1.5 border border-[var(--line)] bg-white px-3 py-2.5 text-xs font-medium text-[var(--ink-soft)]"
+          >
+            <span className={"flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm border " + (verComoAluno ? "border-[var(--accent)] bg-[var(--accent)] text-white" : "border-[var(--ink-soft)]")}>
+              {verComoAluno && <Check size={10} strokeWidth={3} />}
+            </span>
             Ver como aluno
-          </label>
+          </button>
           <button className="flex items-center gap-1.5 border border-[var(--line)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]">Editar oficina</button>
           <button onClick={() => notificar("Lembrete enviado via WhatsApp (demo).")} className="flex items-center gap-1.5 bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--accent-hover)]">Enviar lembrete</button>
         </div>

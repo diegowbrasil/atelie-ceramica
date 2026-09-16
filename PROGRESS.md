@@ -47,7 +47,7 @@ fase CRAFT; resposta: **manter arquivo único**, organizar por dentro
 (seções claras, componentes reutilizados, zero duplicação), sem separar em
 pastas de verdade. Registrado em `PRODUCT.md` no fim do arquivo.
 
-### Fase atual: CRITIQUE (fase 1 de 5 do pedido formal do Diego)
+### Fase atual do redesign formal (5 fases pedidas pelo Diego via `/impeccable`)
 
 Pedido verbatim do Diego: reescrever/redesenhar o app inteiro com o
 `/impeccable`, em etapas, preservando toda funcionalidade e dado existente.
@@ -62,47 +62,42 @@ duplicação, evitar libs pesadas sem necessidade, assets otimizados,
 estrutura fácil de crescer).
 
 - ✅ **INIT** — `PRODUCT.md` criado (ver acima).
-- 🔄 **CRITIQUE — em andamento.** Rodando pelo processo formal do skill
-  (`.claude/skills/impeccable/reference/critique.md`): Assessment A (design
-  review qualitativo — heurísticas de Nielsen, carga cognitiva, personas,
-  issues P0-P3) e Assessment B (scan determinístico `impeccable detect` +
-  overlay via injeção no navegador), como dois sub-agentes isolados, sem se
-  verem.
-  - **Assessment B: concluída.** `impeccable detect --json demo/AtelieDemo.jsx`
-    achou 1 finding (`overused-font`, Inter, linha ~394). Overlay via
-    navegador rodou limpo em 4 telas (Dashboard 82 achados/63 elementos,
-    Turmas 33/33, Forno 27/27, detalhe de Oficina 24/23) — maioria
-    `low-contrast`/`undersized-ui-text`, mais um padrão de `text-occlusion`
-    em avatares empilhados (provável falso positivo) e headings pulados
-    repetidos. Achado real e sistêmico: **contraste de `--ink-soft` (texto
-    secundário) ~3.7:1, abaixo do WCAG AA (4.5:1)** — vale revisar o token
-    em si. Confirmou ao vivo que a tipografia do pivô Apple está
-    renderizando certo (Inter/sans em tudo, mono só onde devia). Uma
-    observação da IA sobre "border-radius contradiz a regra de cantos
-    retos documentada" **não é bug** — é ela comparando contra o texto
-    antigo do CLAUDE.md §6.1 (v1/v2), que eu já reescrevi pra documentar a
-    v3 (Apple, cantos arredondados) como estado atual — não deixar isso
-    entrar no relatório final como problema real.
-  - **Assessment A: refeita.** A primeira tentativa foi cortada no meio por
-    rate limit do Diego (parou sem produzir achado nenhum, só uma frase).
-    Relançada como um sub-agente novo e independente depois do reset do
-    limite — resultado ainda não chegou nesta entrada do PROGRESS (ver
-    conversa/sessão pra status mais recente; se estiver lendo isso numa
-    sessão nova e a fase CRITIQUE não tiver relatório final registrado em
-    `.impeccable/critique/`, ela ainda não terminou — retomar por ali, não
-    reiniciar do zero).
-  - Depois que as duas terminarem: sintetizar num relatório único (formato
-    exigido pelo critique.md — tabela de heurísticas, veredito de
-    especificidade de design, issues P0-P3, personas, observações
-    menores), persistir em `.impeccable/critique/`, e fechar com perguntas
-    direcionadas pro Diego antes de avançar pra fase SHAPE.
-- ⬜ **SHAPE** — não iniciada. Vai repensar nav/home/lista de turma/detalhe/
+- ✅ **CRITIQUE — concluída.** As duas avaliações isoladas (Assessment A
+  qualitativa — Nielsen 23/40 "Aceitável"; Assessment B determinística —
+  detector + overlay) foram sintetizadas num relatório único, entregue no
+  chat e persistido em `.impeccable/critique/2026-09-16T18-34-43Z__demo-ateliedemo-jsx.md`
+  (primeira execução, sem tendência ainda). Veredito central: **o Forno é
+  autoral de verdade; Turmas/Oficinas/Pagamentos são um padrão genérico
+  "lista de pessoas com badge" indistinguível de qualquer CRM pequeno** —
+  ponto de partida pra fase SHAPE. 5 problemas priorizados (2× P1, 2× P2,
+  1× P3) — todos corrigidos na hora, ver "O que foi feito" abaixo.
+  **3 decisões do Diego nas perguntas de fechamento**: (1) corrigir todos
+  os 5 problemas antes do SHAPE, não só os críticos; (2) **manter 2
+  tipografias** (Inter no corpo + Space Grotesk nos títulos grandes) — ele
+  respondeu inicialmente "manter uma família só", mas corrigiu poucos
+  minutos depois no chat ("pode deixar com 2 fontes msm") — **a resposta
+  final é 2 fontes**, não confundir com a primeira resposta se reler o
+  histórico; (3) incluir os achados de acessibilidade da persona Sam no
+  escopo, mas só ajustes pontuais que não mudem a direção visual nem
+  deixem a interface mais carregada (nada de auditoria completa de
+  acessibilidade agora).
+- ⬜ **SHAPE** — próxima. Vai repensar nav/home/lista de turma/detalhe/
   participantes/estados/ações, com identidade própria MTCST entre
   VigaShoes e Apple (não cópia literal de nenhum), incluindo o sistema de
-  cor de identidade por turma/oficina.
+  cor de identidade por turma/oficina — esse é o veredito central da
+  CRITIQUE que a SHAPE precisa endereçar (ver acima).
 - ⬜ **CRAFT** — não iniciada. Implementar preservando dado/função,
   respeitando a decisão de arquivo único (ver acima).
 - ⬜ **POLISH** — não iniciada.
+
+**Correções da fase CRITIQUE já aplicadas** (todas verificadas ao vivo no
+preview, não só por esbuild — ver entrada de sessão abaixo pro detalhe
+completo): fundo escurecido de modal/drawer que renderizava transparente
+(P1), toggle de presença que não deslizava (P1), contraste do
+`--ink-soft` abaixo do WCAG AA (P2), rolagem que não resetava ao trocar
+de tela (P2), checkbox nativo fora do sistema de cores + fonte mono
+divergente no `StatCard` (P3), mais rótulo acessível no botão hambúrguer,
+na bolinha de RSVP e no `Toggle`.
 
 **Histórico completo das 3 rodadas de direção visual e da causa raiz do
 overflow mobile**: ver CLAUDE.md §6.1 e §8 (fonte de verdade permanente) —
@@ -726,3 +721,124 @@ no celular real do Diego pela rede local.
   reabrir a pergunta "qual estilo" sem necessidade numa sessão futura.
 
 **Próximos passos:** ver "Onde continuar agora" no topo deste arquivo.
+
+---
+
+### 2026-09-16 (continuação) — Fase CRITIQUE concluída e os 5 achados corrigidos
+
+**Contexto:** retomada depois do reset do limite de uso do Diego.
+Relancei a Assessment A do zero como sub-agente novo (a tentativa anterior
+não tinha produzido achado nenhum antes do rate limit cortar). Ela voltou
+com um relatório completo e bem verificado (leu o arquivo inteiro, testou
+ao vivo no preview a 375px, descartou 2 suspeitas de bug que eram artefato
+de timing da própria ferramenta de automação antes de reportar as que se
+confirmaram — mesma disciplina que o CLAUDE.md §8 pede).
+
+**Síntese das duas avaliações**, entregue no chat seguindo o formato do
+`critique.md` (tabela de heurísticas, veredito de especificidade, 5
+prioridades P1-P3, personas, observações menores) e persistida em
+`.impeccable/critique/2026-09-16T18-34-43Z__demo-ateliedemo-jsx.md`
+(23/40 no Design Health Score — "Aceitável"). Achado central: o Forno
+(`TempGauge`, `calcularPrevisao`, seleção de conteúdo) é genuinamente
+autoral; fora dele, Turmas/Oficinas/Pagamentos/Alunos são o mesmo padrão
+"avatar + nome + badge" indistinguível de um CRM genérico — isso vira o
+ponto de partida da fase SHAPE.
+
+**Uma correção de leitura própria durante a síntese**: a Assessment A leu
+o bloco "Tipografia: duas fontes" do CLAUDE.md §6.1 (na época ainda
+descrevendo a v1/v2 — mono em tudo + Space Grotesk nos títulos) e
+concluiu que o código (`--font-display` igual a `--font-sans`, sem
+segunda família) não implementava o que o CLAUDE.md dizia ser a v3. Não
+era isso — o bloco em si estava desatualizado (eu tinha reescrito só o
+resumo "Estado atual" da mesma seção antes, não as regras detalhadas
+embaixo). Identifiquei e corrigi essa contradição interna do CLAUDE.md
+durante a limpeza abaixo, independente da decisão de tipografia em si.
+
+**As 3 perguntas de fechamento e as respostas do Diego:**
+1. Corrigir os 5 problemas priorizados agora (não só os 2 P1, nem adiar
+   tudo pra fase SHAPE) — **"Corrigir tudo (P1 a P3) agora."**
+2. Manter tipografia única ou reintroduzir uma segunda família pros
+   títulos — respondeu **"Manter uma família só"** na pergunta
+   estruturada, mas **poucos minutos depois, no chat, corrigiu**: "pode
+   deixar com 2 fontes msm". A resposta que valeu foi a segunda —
+   registrei isso explicitamente no CLAUDE.md e no topo deste arquivo
+   pra não se perder numa sessão futura que só olhe a primeira resposta.
+3. Incluir os achados de acessibilidade da persona Sam no escopo —
+   **"Sim, pode incluir... desde que sejam ajustes pontuais e não alterem
+   a direção visual nem deixem a interface mais carregada."** Tratado
+   como restrição de escopo, não como pedido de auditoria completa.
+
+**O que foi feito** (todos os 5 problemas priorizados + os itens
+pontuais de acessibilidade, nesta ordem de prioridade do relatório):
+- **[P1] Fundo escurecido de modal/drawer transparente**: `bg-[var(--ink)]/40`
+  e `/30` resolviam pra `rgba(0,0,0,0)` porque o modificador de opacidade
+  do Tailwind não combina com custom property em string hex — trocado
+  por `bg-black/40`/`bg-black/30` (`Modal` e o drawer mobile). Confirmado
+  via `getComputedStyle` no navegador: `rgba(0, 0, 0, 0.4)` agora.
+- **[P1] Toggle de presença sem deslizar**: a bolinha não tinha
+  `left`/`right`, só `top-0.5` — ancorada em `left-0.5` e as classes de
+  translação trocadas pra `translate-x-0`/`translate-x-5` (20px de
+  percurso, bate exato com `w-11` de trilha menos `w-5` de bolinha menos
+  padding dos dois lados). Confirmado clicando de verdade no preview e
+  lendo `transform` computado antes/depois (`matrix(1,0,0,1,0,0)` →
+  `matrix(1,0,0,1,20,0)`).
+- **[P2] Contraste do `--ink-soft`**: escurecido de `#8A8479` (~3.3-3.7:1)
+  pra `#6B655C` (~5.1:1 contra `--cream`, ~5.8:1 contra branco — cálculo
+  de luminância relativa, não estimativa). Como é só texto/borda em todo
+  o arquivo (conferido por busca — nenhum uso como fundo sólido), o
+  escurecimento não quebra nenhum outro lugar.
+- **[P2] Rolagem não resetava ao trocar de tela**: `window.scrollTo(0, 0)`
+  adicionado nos 3 pontos que mudam `tela` (`ir()`, `abrirNovaFornada`,
+  `iniciarFornada`). Confirmado no navegador: rolar a página, trocar de
+  aba, `scrollY` volta a 0.
+- **[P3] Checkbox nativo "Ver como aluno"**: virou um botão
+  `role="checkbox"`/`aria-checked` com quadradinho no mesmo padrão visual
+  do check de seleção do Nova Fornada (accent + ícone `Check`), em vez do
+  checkbox azul padrão do navegador. Confirmado clicando via JS: estado e
+  aparência alternam certo.
+- **[P3] Fonte mono divergente no `StatCard`**: `font-mono` genérico
+  (cai na mono do sistema operacional) trocado por
+  `font-[family-name:var(--font-mono)]` (o token do projeto), igual já
+  era feito em `KilnMiniCard`/observações do forno.
+- **Acessibilidade pontual** (escopo definido pelo Diego, sem mudar
+  direção visual): `aria-label` no botão hambúrguer mobile (não tinha
+  nome acessível nenhum), na bolinha de RSVP (`toggleStatusAula`,
+  espelhando o `title` já existente) e no `Toggle` (idem).
+- **Tipografia — decisão revertida em tempo real**: reintroduzida a
+  segunda família (`Space Grotesk`, pesos 500/600/700, adicionada ao
+  `@import` do Google Fonts) pros títulos grandes de página via
+  `--font-display: 'Space Grotesk', var(--font-sans)` — só esse token
+  mudou, `FONT_DISPLAY`/`style={FONT_DISPLAY}` já existiam nos 9 `<h1>`
+  de tela e não precisaram de nenhuma edição. Confirmado via
+  `getComputedStyle` no `<h1>` ao vivo.
+- **CLAUDE.md §6.1 corrigido** pra descrever o sistema de 3 papéis
+  tipográficos certo pra v3 (Inter no corpo sem maiúsculo/tracking,
+  Space Grotesk só nos títulos, mono só em medição real — não o par
+  antigo "mono em tudo + Space Grotesk" da v1/v2), o token `--ink-soft`
+  atualizado com o novo valor e o motivo, e cantos
+  arredondados/sombra suave documentados como regra v3 (a regra antiga
+  de "cantos retos em tudo, sem sombra no fluxo" também estava
+  desatualizada, mesmo bug de documentação). **Nova armadilha em §8**:
+  nunca combinar `bg-[var(--token)]` com modificador de opacidade
+  Tailwind quando o token é hex string — é exatamente o bug do P1 acima,
+  documentado pra não se repetir num modal novo.
+
+**Testes realizados:** `esbuild` depois de cada edição (limpo, sem
+erro). Todas as mudanças visuais/comportamentais confirmadas ao vivo no
+preview (`localhost:5183`, já rodando de antes na sessão) via
+`getComputedStyle`/`getBoundingClientRect`/clique real simulado por JS —
+não só screenshot, seguindo a lição do CLAUDE.md §8. Um teste inicial do
+toggle deu leitura inconsistente (posição igual antes/depois) — repetido
+com uma abordagem mais direta (ler `transform` computado em vez de só
+`getBoundingClientRect`) e confirmou que o fix funciona; ficou registrado
+aqui como mais um caso da instabilidade de medição já conhecida desta
+sessão, não um bug real do toggle.
+
+**Problemas pendentes:** nenhum dos 5 da CRITIQUE. Backlog não afetado
+(Área do Aluno, Notificações, Reposições — ver fim deste arquivo).
+
+**Próximos passos:** iniciar a fase SHAPE — repensar nav/home/lista de
+turma/detalhe/participantes/estados/ações com identidade própria MTCST,
+endereçando o veredito central da CRITIQUE (telas fora do Forno parecem
+CRM genérico) e o sistema de cor de identidade por turma/oficina pedido
+no brief original. Ver "Onde continuar agora" no topo deste arquivo.

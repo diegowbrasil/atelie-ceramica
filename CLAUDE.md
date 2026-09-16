@@ -279,7 +279,11 @@ tematicamente ligado a argila/cerâmica):
 --cream-soft: #E7E4DA;    /* superfícies suaves, hover, badges neutros */
 --line: #DEDAD1;          /* bordas */
 --ink: #3B3833;           /* texto principal — não é preto puro */
---ink-soft: #8A8479;      /* texto secundário/muted */
+--ink-soft: #6B655C;      /* texto secundário/muted — escurecido na fase
+                              CRITIQUE (2026-09-16): era #8A8479, medindo
+                              ~3.3-3.7:1 de contraste, abaixo do WCAG AA
+                              (4.5:1); achado confirmado por duas
+                              avaliações independentes, ver PROGRESS.md */
 --accent: #C2410C;        /* AÇÃO: botão primário, nav ativo, "hoje", progresso, dado ao vivo */
 --accent-hover: #9A3412;  /* hover dos botões de acento */
 --accent-soft: #F3E1D6;   /* fundo tingido leve p/ estado ativo (ex: item de menu selecionado) */
@@ -309,26 +313,38 @@ config customizado). Usados via sintaxe arbitrária do Tailwind:
   (verde, ligado à marca do WhatsApp), etapa "Aquecendo" do forno (âmbar).
   Isso é informação de estado, não identidade visual — não confundir com o
   "sem acento de marca" acima.
-- **Tipografia: duas fontes**, carregadas via `@import` do Google Fonts
-  dentro do `<style>` do componente:
-  - `IBM Plex Mono` (peso 500) — tudo: nav, rótulos, corpo de texto,
-    botões, preços. Maiúsculo + `tracking-wide` em nav/labels/badges.
-  - `Space Grotesk` — só os títulos grandes de página (`<h1>` "Forno",
-    "Turmas" etc.). Aplicado via `style={FONT_DISPLAY}`
-    (`{ fontFamily: "var(--font-display)" }`), não por classe Tailwind —
-    mais confiável no ambiente de artifact do que arbitrary value de
-    `font-family`.
-- **Cantos retos em tudo** — `border-radius: 0` confirmado no site real
-  (botão, card, imagem). `rounded-xl`/`rounded-2xl`/`rounded-lg` foram
-  removidos do arquivo inteiro. **Exceção deliberada**: elementos
-  circulares pequenos e funcionais continuam redondos —
-  `Avatar`/iniciais, o badge "+N" de avatares empilhados, os círculos de
-  check/seleção (NovaFornada) e os círculos de ícone "+" em vagas vazias.
-  Isso segue o próprio vigashoes, que mantém botões flutuantes em pílula
-  mesmo com o resto totalmente reto.
-- **Sem sombra em elementos no fluxo da página** (cards, botões) —
-  `shadow-sm` removido. Sombra só sobrevive em elementos genuinamente
-  flutuantes sobre o conteúdo: `Modal`, menu mobile (drawer), toast.
+- **Tipografia: três papéis, não dois** (redefinido na fase CRITIQUE do
+  redesign formal, 2026-09-16 — ver PROGRESS.md pelo histórico da
+  decisão, tomada em duas rodadas no chat):
+  - `Inter` (pesos 400/500/600/700), fallback de
+    `-apple-system`/`BlinkMacSystemFont` — corpo de texto, nav, rótulos,
+    botões, preços. **Não é mais maiúsculo/`tracking-wide`** como na
+    v1/v2 (removido na virada Apple) — mais suave, menos "site
+    institucional".
+  - `Space Grotesk` (pesos 500/600/700) — só os títulos grandes de
+    página (`<h1>` "Forno", "Turmas" etc.), via `--font-display` +
+    `style={FONT_DISPLAY}` (`{ fontFamily: "var(--font-display)" }`),
+    não classe Tailwind — mais confiável no ambiente de artifact do que
+    arbitrary value de `font-family`. Na primeira resposta da fase
+    CRITIQUE o Diego tinha pedido família única (`--font-display` virou
+    alias de `--font-sans`); poucos minutos depois voltou atrás no chat
+    — **Space Grotesk nos títulos fica**, não é regressão pra v1/v2, é
+    a resposta final.
+  - `IBM Plex Mono` (peso 500), só via
+    `font-[family-name:var(--font-mono)]` — exclusivo de leitura de
+    medição real (cronômetro do forno: tempo decorrido/restante). Nunca
+    usar a classe genérica `font-mono` do Tailwind aqui — ela cai na
+    fonte mono do sistema operacional, não no token do projeto; já
+    causou inconsistência real entre timers na mesma tela (achado da
+    fase CRITIQUE, corrigido no `StatCard`).
+- **Cantos arredondados e sombra suave em tudo** — o oposto da v1/v2:
+  `rounded-2xl` (`Card`), `rounded-3xl` (`Modal`), `rounded-full`
+  (`Avatar`/`Toggle`/`Badge`/círculos de seleção) e `shadow-sm` **no
+  fluxo normal da página, não só em elementos flutuantes** — todos
+  fazem parte do sistema v3 desde a virada "parecido com Apple". Regra
+  global de baixa especificidade no `<style>`: `button, input, textarea,
+  select { border-radius: 0.75rem; }`, cobre controles sem `rounded-*`
+  explícito, sem competir com quem já define a própria classe.
 - Gráfico do forno (Recharts): curva "real" em `--accent` sólido (`#C2410C`
   — é o dado ao vivo, tem que saltar aos olhos), curva "prevista" em
   cinza-amarronzado claro `#B8B2A6`/`#EDEBE3` (discreta, é só referência),
@@ -385,6 +401,18 @@ decisão no início da §2).
   document.documentElement.clientWidth` deve ser verdadeiro em toda tela —
   se não for, procure `min-w-0` faltando subindo a árvore a partir do
   elemento largo, não só nele.
+- **Nunca combine `bg-[var(--token)]` com modificador de opacidade do
+  Tailwind (`/40`, `/30` etc.) quando o token é uma string hex** (ex:
+  `--ink: #3B3833`). `rgb(#3B3833 / 0.4)` não é CSS válido — o Tailwind
+  gera a declaração assim mesmo, o navegador ignora silenciosamente, sem
+  erro nenhum, e o elemento fica 100% transparente. Já aconteceu 2× (fundo
+  escurecido do `Modal` e do menu mobile — achado na fase CRITIQUE do
+  redesign, 2026-09-16, ambos rodando "invisíveis" havia sessões sem
+  ninguém notar porque não dá erro de console). Corrigido pra
+  `bg-black/40`/`bg-black/30` direto. Pra escurecer/clarear com opacidade
+  de verdade a partir de um token de cor, ou usa `bg-black/NN`/
+  `bg-white/NN`, ou cria um token RGB space-separated à parte
+  (`--ink-rgb: 59 56 51;`) e usa `bg-[rgb(var(--ink-rgb)/0.4)]`.
 - **Edições no `demo/AtelieDemo.jsx` já quebraram a sintaxe 3×**, sempre por
   `str_replace`/edição que engoliu uma linha de declaração (`const X = [`
   sumindo) ou fechamento de `.map()`. **Rodar o esbuild (§3) sempre antes de
