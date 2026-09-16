@@ -142,15 +142,12 @@ padrão — ver `reference/craft-floor.md` do impeccable pela régua mecânica.
 
 ---
 
-## Decisão em aberto (não é product truth confirmada — registrar e perguntar)
+## Decisão confirmada (2026-09-16): arquitetura de código do redesign
 
-O pedido de redesign (CRAFT) pede estrutura de pastas própria de app
-(`components/screens/layouts/hooks/services/...`). Isso conflita
-diretamente com a restrição "arquivo único" acima, que existe
-especificamente pra manter `demo/AtelieDemo.jsx` publicável como artifact
-do Claude.ai (o canal que o cliente usa pra testar em celular que não seja
-o do Diego). Perguntar ao Diego antes da fase CRAFT: manter arquivo único
-(navegável/organizado por dentro, mas um arquivo só) ou aceitar abrir mão
-da publicação direta como artifact em troca de uma estrutura de pastas de
-verdade (nesse caso o preview local via Vite/LAN vira o canal principal de
-teste, não mais o claude.site).
+Perguntado ao Diego antes da fase CRAFT: o pedido de estrutura de pastas
+(`components/screens/hooks/...`) conflita com a restrição de arquivo único
+que mantém `demo/AtelieDemo.jsx` publicável como artifact do Claude.ai.
+**Resposta: manter arquivo único.** O código é organizado POR DENTRO do
+mesmo arquivo — seções claras, componentes bem definidos e reutilizados,
+zero duplicação — mas sem separar em pastas de verdade. O canal de
+publicação pro Claude.ai continua sendo o principal pra Camila testar.
