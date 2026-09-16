@@ -468,3 +468,64 @@ de progresso agora saltam aos olhos contra o fundo neutro.
   hierarquia, não a cor em si.
 
 **Próximos passos:** ver "Onde continuar agora" no topo deste arquivo.
+
+---
+
+### 2026-09-16 — Bug real de overflow mobile (reportado com screenshot do usuário)
+
+**Contexto:** o Diego mandou um screenshot de verdade (celular/menu de
+Viewport do próprio painel, não a ferramenta de preview instável deste
+Claude Code) mostrando a tela de Turmas cortada na lateral direita, e
+descreveu que na página inicial a barra de navegação de baixo some.
+
+**O que foi encontrado e corrigido:**
+- **Bug real confirmado**: os grids de 12 vagas (`Turmas` e
+  `OficinaDetalhe`) usam `grid grid-cols-2` mas os cards dentro (tanto o
+  card de aluno ocupado quanto o botão "vaga disponível") não tinham
+  `min-width: 0`. É o bug clássico do CSS Grid: sem isso, um item de grid
+  não encolhe abaixo do tamanho mínimo do próprio conteúdo, então em telas
+  estreitas o grid inteiro estoura a largura em vez dos cards encolherem.
+  Também quebrava o `truncate` do nome do aluno, que precisa de um
+  container com largura restringida pra funcionar. Corrigido nos 4 pontos
+  (card + vaga vazia, em Turmas e em Oficinas).
+- **Correções defensivas relacionadas** (mesma causa-raiz, aplicadas por
+  precaução mesmo sem confirmação visual direta): `min-w-0` no componente
+  `Card` (usado em quase todo o app) e no `StatCard` (mais `truncate` nos
+  textos), e `w-full min-w-0 overflow-hidden` nos dois containers do
+  gráfico Recharts (mini-gráfico do dashboard e gráfico grande do Forno) —
+  gráficos responsivos são uma fonte comum desse tipo de problema.
+- **Não confirmado**: a barra de navegação sumindo especificamente na
+  página inicial. Tentei reproduzir e medir via JavaScript
+  (`getBoundingClientRect`), mas a ferramenta de navegador deste Claude
+  Code está com uma inconsistência própria nesta sessão — reporta duas
+  larguras de página diferentes ao mesmo tempo (uma "correta" pra media
+  queries, outra bem maior pra medidas de elemento/scroll), o que faz
+  qualquer medição minha sobre esse ponto especificamente não ser
+  confiável. Não descarto que seja o mesmo tipo de causa (overflow
+  horizontal empurrando/confundindo o cálculo de `position: fixed` em
+  algum navegador móvel real), mas não consegui isolar com certeza.
+  **Vale o Diego testar de novo depois desta correção** — é possível que
+  já tenha resolvido junto, já que overflow horizontal real na página pode
+  interferir em elementos fixos em alguns navegadores.
+
+**Testes realizados:** esbuild após cada edição; `get_page_text` +
+`read_console_messages` confirmando que a página carrega sem erro novo
+(só os avisos pré-existentes do Recharts). Medição via
+`getBoundingClientRect`/`scrollWidth` tentada mas não confiável nesta
+sessão pelo motivo acima — **não** serve como confirmação de que o
+overflow sumiu, só o código foi corrigido com uma causa plausível e bem
+entendida.
+
+**Problemas pendentes:**
+- Confirmar com o Diego se a barra de navegação da página inicial voltou
+  a aparecer depois desta correção.
+- Se ainda estiver quebrada, pedir um screenshot novo especificamente da
+  página inicial (Dashboard) pra investigar mais fundo — o código deste
+  componente específico (nav fixa, `position: fixed; bottom: 0`) não tem
+  nada visivelmente diferente por tela, então se o problema for
+  tela-específico a causa provavelmente está no conteúdo daquela tela
+  (ela é a mais alta/complexa do app: KPIs + card do forno com gráfico +
+  calendário da semana + 3 cards de resumo) interagindo com o navegador
+  real do celular, não algo óbvio no código da própria barra.
+
+**Próximos passos:** ver "Onde continuar agora" no topo deste arquivo.

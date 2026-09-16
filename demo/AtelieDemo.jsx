@@ -260,7 +260,7 @@ function fmtRelativo(d, agora) {
 const FONT_DISPLAY = { fontFamily: "var(--font-display)" };
 
 function Card({ className = "", children }) {
-  return <div className={"border border-[var(--line)] bg-white " + className}>{children}</div>;
+  return <div className={"min-w-0 border border-[var(--line)] bg-white " + className}>{children}</div>;
 }
 function Badge({ tone = "neutral", children }) {
   const tones = {
@@ -518,8 +518,8 @@ function Dashboard({ ir, ativa, onAbrirDia, onAbrirOficinas }) {
         <h1 className="text-2xl font-semibold text-[var(--ink)]" style={FONT_DISPLAY}>Painel geral</h1>
         <p className="text-sm text-[var(--ink-soft)]">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })} · dados de demonstração</p>
       </div>
-      <div className="grid gap-3 lg:grid-cols-[300px_1fr]">
-        <div className="grid grid-cols-2 gap-2">
+      <div className="grid min-w-0 gap-3 lg:grid-cols-[300px_1fr]">
+        <div className="grid min-w-0 grid-cols-2 gap-2">
           {kpis.map((k) => (
             <button key={k.label} onClick={() => ir(k.tela)} className="text-left">
               <Card className="flex items-center gap-2 p-2.5 hover:border-[var(--ink-soft)]">
@@ -665,7 +665,7 @@ function KilnMiniCard({ fornada, onDetalhes }) {
           </div>
           <div className="mt-3 h-2 w-full overflow-hidden bg-[var(--cream-soft)]"><div className="h-full bg-[var(--accent)] transition-all duration-700" style={{ width: p.pct + "%" }} /></div>
         </div>
-        <div className="h-24 sm:h-full">
+        <div className="h-24 w-full min-w-0 overflow-hidden sm:h-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={mini}>
               <Area type="monotone" dataKey="prevista" stroke="#B8B2A6" fill="#EDEBE3" strokeDasharray="3 2" />
@@ -888,7 +888,7 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
 
       <Card className="mt-5 p-5">
         <h3 className="mb-3 text-sm font-semibold">Curva da queima</h3>
-        <div className="h-80">
+        <div className="h-80 w-full min-w-0 overflow-hidden">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={grafico}>
               <CartesianGrid strokeDasharray="3 3" stroke="#DEDAD1" />
@@ -910,10 +910,10 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
 
 function StatCard({ icon: Icon, label, value, sub, mono }) {
   return (
-    <Card className="p-4">
-      <div className="mb-2 flex items-center gap-1.5 text-[var(--ink-soft)]"><Icon size={15} /><span className="text-xs">{label}</span></div>
-      <div className={"text-lg font-semibold text-[var(--ink)] " + (mono ? "font-mono" : "")}>{value}</div>
-      {sub && <div className="text-xs text-[var(--ink-soft)]">{sub}</div>}
+    <Card className="min-w-0 p-4">
+      <div className="mb-2 flex items-center gap-1.5 text-[var(--ink-soft)]"><Icon size={15} /><span className="truncate text-xs">{label}</span></div>
+      <div className={"truncate text-lg font-semibold text-[var(--ink)] " + (mono ? "font-mono" : "")}>{value}</div>
+      {sub && <div className="truncate text-xs text-[var(--ink-soft)]">{sub}</div>}
     </Card>
   );
 }
@@ -1107,7 +1107,7 @@ function Turmas({ notificar, diaInicial = "ter" }) {
           </Card>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
             {vagas.map((v) => v.nome ? (
-              <div key={v.numero} className={"flex flex-col gap-2 border p-3 " + (v.status === "ultima" ? "border-rose-200 bg-rose-50/40" : "border-[var(--line)] bg-white")}>
+              <div key={v.numero} className={"flex min-w-0 flex-col gap-2 border p-3 " + (v.status === "ultima" ? "border-rose-200 bg-rose-50/40" : "border-[var(--line)] bg-white")}>
                 <div className="flex items-start justify-between"><span className="text-xs text-[var(--line)]">{v.numero}</span><MoreVertical size={15} className="text-[var(--line)]" /></div>
                 <Avatar nome={v.nome} size={44} />
                 <div><div className="truncate text-sm font-medium">{v.nome}</div><div className="text-xs text-[var(--ink-soft)]">{v.aula}/{v.total} aulas</div></div>
@@ -1124,7 +1124,7 @@ function Turmas({ notificar, diaInicial = "ter" }) {
                 )}
               </div>
             ) : (
-              <button key={v.numero} onClick={() => setModalVaga(v.numero)} className="flex flex-col items-center justify-center gap-2 border border-dashed border-[var(--line)] px-3 py-6 text-center hover:border-[var(--ink-soft)] hover:bg-[var(--cream-soft)]/40">
+              <button key={v.numero} onClick={() => setModalVaga(v.numero)} className="flex min-w-0 flex-col items-center justify-center gap-2 border border-dashed border-[var(--line)] px-3 py-6 text-center hover:border-[var(--ink-soft)] hover:bg-[var(--cream-soft)]/40">
                 <span className="text-xs text-[var(--line)]">{v.numero}</span>
                 <span className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-[var(--ink-soft)] text-[var(--line)]"><Plus size={16} /></span>
                 <span className="text-sm text-[var(--ink-soft)]">Vaga disponível</span>
@@ -1405,7 +1405,7 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
       <h3 className="mb-3 text-sm font-semibold">Participantes ({oficina.vagas} vagas)</h3>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
         {oficina.participantes.map((p) => p.nome ? (
-          <Card key={p.numero} className="flex flex-col gap-2 p-3">
+          <Card key={p.numero} className="flex min-w-0 flex-col gap-2 p-3">
             <span className="text-xs text-[var(--line)]">{p.numero}</span>
             <Avatar nome={p.nome} size={44} />
             <div className="truncate text-sm font-medium">{p.nome}</div>
@@ -1413,7 +1413,7 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
             <Badge tone={p.pagamento === "pago" ? "success" : "warning"}>{p.pagamento === "pago" ? "✓ Pago" : "Pendente"}</Badge>
           </Card>
         ) : (
-          <button key={p.numero} onClick={() => setModalNumero(p.numero)} className="flex flex-col items-center justify-center gap-2 border border-dashed border-[var(--line)] px-3 py-6 text-center hover:border-[var(--ink-soft)] hover:bg-[var(--cream-soft)]/40">
+          <button key={p.numero} onClick={() => setModalNumero(p.numero)} className="flex min-w-0 flex-col items-center justify-center gap-2 border border-dashed border-[var(--line)] px-3 py-6 text-center hover:border-[var(--ink-soft)] hover:bg-[var(--cream-soft)]/40">
             <span className="text-xs text-[var(--line)]">{p.numero}</span>
             <span className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-[var(--ink-soft)] text-[var(--line)]"><Plus size={16} /></span>
             <span className="text-sm text-[var(--ink-soft)]">Cadastrar participante</span>
