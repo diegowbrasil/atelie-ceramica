@@ -212,36 +212,78 @@ atualização de novo:
   corrente/estado atual, não uma marcação de presença já feita pelo
   admin; isso é ação ao vivo no app, não faz parte do dado importado.
 
-**Pendências que ficaram de fora desta atualização** (fora do escopo de
-"atualize as turmas", não construídas sem pedido explícito):
-- **Terça (15/09) tinha 14 pessoas na lista do Diego, não 12** — Vivian e
-  Cris apareceram lá "antecipando aula de quinta" (são alunas de Quinta,
-  fazendo uma aula extra adiantada na Terça). A regra de exatamente 12
-  vagas por turma (acima) já estava cheia com as 12 fixas, então essas
-  duas **não entraram** no roster de Terça. Perguntar ao Diego como
-  tratar esse tipo de reposição antecipada quando a turma de destino já
-  está cheia (ex: 13ª/14ª vaga só naquela semana? Registrar em outro
-  lugar?) antes de reintroduzir.
-- As seções extras que o Diego mandou junto (**Pacotes em andamento em
-  aberto**, **Aulas pontuais**, **Pacotes finalizados** — históricos de
-  datas de aula por pessoa) não foram usadas em nenhuma tela ainda; não
-  há campo de "histórico de datas" no modelo de dados hoje (seria o
-  mesmo tipo de log mencionado no item de data exata do Dashboard, acima
-  — "ainda não existe"). Ficam registradas aqui como referência caso
-  vire pedido de verdade depois.
-- A lista de **Alunos** (`ALUNOS`, tela separada de "todos os alunos")
-  **não foi tocada** — continua com o mock fictício antigo (violando a
-  regra abaixo de "lista começa vazia", pré-existente, não causado por
-  esta mudança). O Diego não deu telefone de ninguém nesta leva de
-  dados, e essa tela pede telefone no cadastro — não populada pra não
-  inventar dado que não foi dado.
-- O card "Pacotes terminando" do Dashboard (deriva de `VAGAS_POR_TURMA`
-  filtrando `status !== "confirmado"`) **cresceu de ~3 linhas fictícias
-  pra ~24 linhas reais** (muita gente pendente/terminando ao mesmo
-  tempo, coincidência real dos dados, não bug) — deixei sem corte/paginação
-  de propósito, pra não esconder dado real de cobrança que o Diego pode
-  querer ver todo. Se ficar grande demais na prática, considerar
-  limitar com "ver todos".
+**Atualização seguinte, mesma sessão/dia (2026-09-17) — o Diego resolveu
+a maior parte das pendências acima ao vivo, no chat:**
+- ~~Terça tinha 14 pessoas, regra de 12 vagas não permitia~~ **"nao
+  precisa travar em 12"** — a regra de exatamente 12 vagas deixou de ser
+  rígida (era uma regra "não reabrir" no início desta seção; o próprio
+  Diego reabriu, não é a IA decidindo por conta própria). Vivian e Cris
+  (números 13/14) entraram no roster de Terça em `VAGAS_POR_TURMA`.
+  Turmas podem ter mais de 12 quando a realidade pedir.
+- **`ALUNOS_REAIS` criado e populado** — "qro q vc cadastre essas
+  pessoas... em alunos vai ter... os pagamentos". Todas as 46 pessoas
+  reais únicas das 4 turmas (dedup: Marina e Elisabeth apareciam 2× nos
+  dados brutos por reposição — é a mesma pessoa, entram 1× na turma fixa
+  delas; "Camila" aparece 2× sem nota de reposição — são duas pessoas
+  reais diferentes, desambiguadas como "Camila (aula de quarta)"/"Camila
+  (aula de quinta)", padrão pedido pelo Diego pra nomes repetidos: "vc
+  coloque ana(aula de terça)"). `Alunos()` agora inicia com
+  `useState(ALUNOS_REAIS)` (antes `useState([])`) e cada card mostra
+  badge de pagamento (Pendente/Renovar), não só o anel de pacote.
+  `tel: null` em todo mundo — telefone não foi dado nesta leva, não
+  inventado; a tela já tolera (`{a.tel ? \` · ${a.tel}\` : ""}`).
+  **"todas as aulas que já fez" não foi implementado como histórico
+  datado de verdade** — só temos o pacote corrente (X de Y) e o ponto de
+  dado concreto desta semana, não um log de aulas passadas; ver item de
+  histórico de presença mais abaixo, ainda pendente de verdade.
+- **Pagamentos pendentes agora entram em Pagamentos de verdade** — "qro
+  q crie um historico, q entre em pagamentos os pacotes pendentes".
+  `pagamentosIniciais()` deriva de `VAGAS_POR_TURMA` (só `status ===
+  "pendente"`, 14 entradas reais — "ultima"/Renovar é categoria
+  diferente, pacote pago só precisa renovar, não é cobrança). `telefone`
+  e `valor` não informados → `null`, não inventados; `Pagamentos()`
+  precisa tolerar isso (ver armadilha nova em §8 sobre isso).
+- **Card "Pacotes terminando" removido do Dashboard** — "nao qro essa
+  lista gigantesca no painel principal com pacotes terminando". Grid de
+  3 colunas virou 2 (Próximas oficinas / Solicitações pendentes); o KPI
+  "Pagamentos pendentes" no topo já cobre o resumo rápido, e a lista
+  completa mora em Pagamentos agora.
+- **Os 4 KPIs do topo do Dashboard viraram calculados, não mais números
+  fixos** — "atualize esses cards com os dados reais". "Aulas
+  hoje"/"Alunos confirmados" usam o dia real (`new Date()`, mesmo padrão
+  do resto do app) contra `TURMAS_DIAS`/`VAGAS_POR_TURMA`; "confirmados"
+  conta só quem não está "ausente" nas turmas de hoje. "Pagamentos
+  pendentes" é `pagamentosIniciais().length` (mesma fonte real de cima).
+  "Reposições pendentes" continua de `SOLICITACOES_INICIAIS`, que
+  **não** fazia parte desta leva de dados reais — ainda fictício, só
+  passou a ser contado em vez de ser um número solto sem relação com
+  nada.
+- ~~"Painel geral" + data~~ / ~~data + "· dados de demonstração"~~ — o
+  Diego pediu pra tirar os dois em mensagens separadas ("tire esse texto
+  do painel geral" pro "dados de demonstração"; "tire o texto 'PAINEL
+  GERAL' DEIXE DO A DATA" pro H1). Sobrou só a data, sem nenhum título
+  acima — consistente com a regra de §6 de não ter saudação/nome de app
+  nos headers.
+
+**Ainda pendente de verdade (não é só falta de dado, é feature que não
+existe)** — pedido explícito do Diego, ainda não implementado nesta
+sessão: **"e quando eu clicar no aluno la em turma, va para a pagina do
+aluno com as informações, telefone, um historico das presenças
+informação sobre os pacotes e se esta pago ou nao"** — uma tela de
+detalhe do aluno, aberta ao clicar num aluno em Turmas, com histórico de
+presença datado de verdade (não só o pacote corrente). Isso é o mesmo
+"histórico de presença por data" que já tinha sido sinalizado como
+necessidade futura lá no item de data exata do Dashboard, agora virando
+pedido concreto — ver PROGRESS.md pro estado de implementação exato
+(pode estar em andamento/incompleto dependendo de quando este arquivo
+foi lido).
+
+As seções extras que o Diego mandou junto com o roster (**Pacotes em
+andamento em aberto**, **Aulas pontuais**, **Pacotes finalizados** —
+históricos de datas de aula por pessoa) ainda não foram usadas em
+nenhuma tela; ficam registradas aqui como referência pra quando o
+histórico de presença de verdade for construído (provavelmente a mesma
+peça de trabalho).
 
 ### Forno (ferramenta central)
 - Menu "Forno" abre o **painel de acompanhamento**, NUNCA a criação direta.
@@ -446,6 +488,56 @@ função com outro parâmetro.
   (default inalterado — só a aba de dia em Turmas passa valores mais
   fortes).
 
+**Continuação da mesma história, ainda 2026-09-17 — o fundo com parallax
+virou `FundoArgilaParallax`, componente reutilizável, e ganhou mais 3
+rodadas de correção:**
+1. **Extraído pra componente próprio** quando o Diego pediu o mesmo
+   tratamento em Oficinas: "qro q o fundo da pagina das oficinas siga o
+   msm padrao das turmas, porem com esse fundo" (foto "carvão",
+   preto-e-branco — cor fixa, não varia por dia como em Turmas, já que
+   Oficinas não tem a dimensão "dia da semana").
+2. **"Borda lateral"** — `inset-0` só preenche o pai `relative` mais
+   próximo, que fica dentro do padding do `<main>` (`px-4 md:px-6`);
+   sobrava uma faixa da cor de fundo da página nos dois lados. Primeira
+   tentativa (`w-screen` + `left-1/2` + `-translate-x-1/2`, técnica
+   clássica de full-bleed) quebrou no desktop — `<main>` não é
+   centralizado no viewport lá (sidebar de 128px desloca ele), então
+   "centralizar no viewport" jogava o fundo pra fora
+   (`scrollWidth > clientWidth` de verdade). Corrigido com margem
+   negativa cancelando exatamente o padding do `<main>` (`-mx-4
+   md:-mx-6`) — só durou até o item 3 abaixo, que trocou a abordagem de
+   novo.
+3. **"Puladinha" no scroll** — achado final do Diego: "qnd uso scroll ele
+   da uma puladinha e nao fica parado o fundo para q eu percorra sobre
+   ele". Causa raiz: o container do fundo era `position:absolute`, que já
+   rola JUNTO com a página (100% da velocidade, por estar no fluxo
+   normal) — o JS só compensava por cima deslocando `backgroundPositionY`
+   em sentido contrário (fórmula `scrollY * (1 - VELOCIDADE)`). Duas
+   fontes de movimento tentando se cancelar quase por inteiro; em scroll
+   rápido (fling de trackpad/mobile) elas saem de sincronia por um
+   instante — o "pulinho". **Fix definitivo**: `position:fixed` em vez de
+   `absolute` — o container passa a ter ZERO movimento nativo, o
+   `backgroundPositionY` via JS vira a ÚNICA fonte de movimento (fórmula
+   simplificada pra `scrollY * VELOCIDADE` direto, sem o `1 -`). Isso
+   também resolveu a "borda lateral" de vez, de um jeito mais robusto que
+   a margem negativa (`fixed inset-0` ignora o padding/offset de
+   qualquer ancestral, sempre preenche o viewport inteiro) — mas
+   reabriu a mesma causa raiz do achado 1 acima (fundo fixed competindo
+   por empilhamento com `<aside>`/`<header>`), corrigida dessa vez de
+   forma permanente dando `z-10` explícito pros dois (antes só o
+   `<header>` tinha ganhado `relative` sem z-index; `<aside>` já tinha
+   `relative` mas também sem z-index — nenhum dos dois tinha proteção de
+   verdade contra um futuro fundo `fixed`, só não tinha sido testado
+   ainda). `FundoArgilaParallax` (função, perto de `ManchasFundo`) é o
+   componente final — usado em `Turmas` (`cor` varia por dia) e
+   `Oficinas` (`cor="carvao"` fixo).
+4. **Posição específica do recorte** — o Diego mandou um mockup mostrando
+   exatamente qual parte da foto "carvão" queria no cabeçalho (faixa
+   escura centralizada, atrás do texto "MTCST", clara nas pontas): "use
+   exatamente esse pattern". `backgroundPosition: "center 38%"` no
+   cabeçalho (não usa `FundoArgilaParallax` — barra pequena de altura
+   fixa, sem parallax, só a foto direto com posição ajustada à mão).
+
 ---
 
 ## 6. Preferências de UI (o cliente já cobrou — respeitar)
@@ -467,12 +559,49 @@ função com outro parâmetro.
   própria — é a mudança de material (reto → vidro) tornando a regra antiga
   obsoleta, junto com um pedido direto de corrigir o corte.
 - **Nada de "Olá, Hanna" nem "Ateliê de Cerâmica"** nos headers.
-  ~~Só o ícone do vaso (`VaseMark`)~~ **substituído em 2026-09-17 pelo
-  logo real da marca** (wordmark "MTCST" que o Diego mandou — recortado,
-  fundo tornado transparente, paleta reduzida a 8 cores, ~3.4KB, embutido
-  como base64 no componente `LogoMark`). `VaseMark` era só um placeholder
-  de antes de existir logo de verdade — removido do código, não é mais
-  usado em lugar nenhum.
+  ~~Só o ícone do vaso (`VaseMark`)~~ ~~substituído em 2026-09-17 pelo logo
+  real da marca (wordmark "MTCST" recortado de uma imagem que o Diego
+  mandou, fundo transparente, paleta reduzida a 8 cores, embutido como
+  base64 em `LogoMark`)~~ **`LogoMark` virou TEXTO de verdade, mesmo dia**
+  — o Diego identificou a fonte: "a fonte do logo e a Bebas Neue, refaça
+  o logo usando ela". A versão em imagem tinha um bug real e nunca
+  resolvido de transparência (`Image.quantize()` do Pillow chamado numa
+  imagem RGBA perdia o canal alpha de um jeito que PIL e o navegador
+  discordavam sobre o mesmo arquivo — só ficou visível na prática ao
+  tentar `filter: brightness(0) invert(1)` pra versão branca do cabeçalho,
+  que virou um bloco branco sólido em vez das letras). Trocar pra texto
+  elimina o problema inteiro — `LogoMark` agora é um `<span>MTCST</span>`
+  com `font-family: 'Bebas Neue'` e `uppercase` (a fonte não tem forma
+  minúscula visualmente distinta, é desenhada pra caixa alta), cor via
+  `className` normal (`text-[var(--ink)]` nos lugares claros,
+  `text-white` no cabeçalho escuro) — sem imagem, sem canal alpha, sem
+  base64. `VaseMark` (o ícone antigo) e `LOGO_MTCST_SRC` (a imagem)
+  seguem removidos, não usados em lugar nenhum.
+- **Bebas Neue também virou a fonte de TODOS os títulos de página
+  (`FONT_DISPLAY`/`--font-display`), não só do logo** — "smp titulo de
+  alguma pagina faça ela" (sempre, título de qualquer página, use essa
+  fonte). `--font-display` trocou de `'Space Grotesk', var(--font-sans)`
+  pra `'Bebas Neue', 'Space Grotesk', var(--font-sans)` (Space Grotesk
+  fica de fallback, não removido de outros usos). Todo `<h1>` que já usava
+  `style={FONT_DISPLAY}` ganhou também `uppercase tracking-wide
+  font-bold` — Forno, Nova fornada, Turmas, Alunos, Oficinas, nome da
+  oficina em OficinaDetalhe, Solicitações, Pagamentos. Reabre a decisão
+  "Space Grotesk nos títulos" registrada em §6.1 abaixo — reabertura do
+  próprio Diego, com motivo novo (identificou a fonte real do logo),
+  não a IA voltando atrás por conta própria.
+- **Cabeçalho mobile ganhou a foto "carvão" também (2026-09-17)** — "qro
+  q a parte do topo fique assim, com o logo branco", com referência
+  visual. Primeira tentativa foi pílula flutuante (margem + cantos
+  arredondados, mesma linguagem visual da nav inferior) — corrigido na
+  hora: "nao qro q seja uma pilula flutuante, qro q só tenha essa
+  aparencia de mesclado, porem seja quadrado igual estava". Formato
+  final: retangular, borda a borda, igual sempre foi — só o fundo
+  (`FUNDOS_ARGILA.carvao`, `backgroundPosition: "center 38%"`, ver
+  detalhe em §5 no histórico do `FundoArgilaParallax`) e a cor do
+  logo/ícones (branco) mudaram. `<Menu>`/`<Bell>` ganharam `text-white`;
+  o logo virou legível de verdade só depois da correção de §6.1 (fonte
+  real Bebas Neue, texto em vez de imagem — a versão em imagem tinha o
+  bug de alpha documentado em §8).
 - Prioridade mobile, desktop completo e confortável.
 
 ### 6.1 Sistema visual (revisado 2026-09-15/16 — 3 rodadas no mesmo período,
@@ -552,15 +681,22 @@ config customizado). Usados via sintaxe arbitrária do Tailwind:
     botões, preços. **Não é mais maiúsculo/`tracking-wide`** como na
     v1/v2 (removido na virada Apple) — mais suave, menos "site
     institucional".
-  - `Space Grotesk` (pesos 500/600/700) — só os títulos grandes de
-    página (`<h1>` "Forno", "Turmas" etc.), via `--font-display` +
+  - ~~`Space Grotesk` (pesos 500/600/700) — só os títulos grandes de
+    página~~ **`Bebas Neue` (2026-09-17)** — via `--font-display` +
     `style={FONT_DISPLAY}` (`{ fontFamily: "var(--font-display)" }`),
     não classe Tailwind — mais confiável no ambiente de artifact do que
     arbitrary value de `font-family`. Na primeira resposta da fase
     CRITIQUE o Diego tinha pedido família única (`--font-display` virou
     alias de `--font-sans`); poucos minutos depois voltou atrás no chat
-    — **Space Grotesk nos títulos fica**, não é regressão pra v1/v2, é
-    a resposta final.
+    — Space Grotesk nos títulos ficou como resposta final da fase
+    CRITIQUE. **Reaberto de novo, mesmo dia, motivo novo**: o Diego
+    identificou que a fonte do próprio logo "MTCST" é Bebas Neue e pediu
+    pra usar ela tanto no logo (`LogoMark`, ver §6 — imagem virou texto)
+    quanto "sempre, título de qualquer página". `--font-display` agora é
+    `'Bebas Neue', 'Space Grotesk', var(--font-sans)` (Space Grotesk
+    ainda é o fallback caso Bebas Neue não carregue) e todo `<h1>` que
+    usa `FONT_DISPLAY` ganhou `uppercase` — a fonte é desenhada só pra
+    caixa alta, não tem uma forma minúscula visualmente distinta.
   - `IBM Plex Mono` (peso 500), só via
     `font-[family-name:var(--font-mono)]` — exclusivo de leitura de
     medição real (cronômetro do forno: tempo decorrido/restante). Nunca
@@ -613,6 +749,27 @@ decisão no início da §2).
 
 ## 8. Armadilhas conhecidas — cuidado ao editar
 
+- **`Image.quantize()` do Pillow chamado direto numa imagem RGBA perde o
+  canal alpha de um jeito que nem sempre aparece nos seus próprios testes**
+  (2026-09-17, durante o processamento do logo antigo — hoje já não é mais
+  imagem, ver §6, mas a armadilha vale pra QUALQUER PNG com transparência
+  processado neste projeto no futuro, ex: os fundos de `FUNDOS_ARGILA` se
+  algum dia precisarem de alpha, hoje são JPEG sem alpha então não foram
+  afetados). PIL relendo o PRÓPRIO arquivo salvo às vezes reportava alpha
+  correto (`getextrema()` mostrando 0-255) e o navegador, no mesmo arquivo,
+  via tudo opaco (`transparentCount: 0` num canvas real) — ou vice-versa,
+  dependendo exatamente de como o alpha foi reaplicado depois da
+  quantização. Sem erro, sem exceção, só a imagem renderizando errado
+  (virou um bloco sólido em vez de letras recortadas — só ficou óbvio ao
+  tentar `filter: invert()` pra uma versão branca, que expôs um retângulo
+  branco sólido em vez da silhueta esperada). **Não confiar só no
+  `Image.open(out).convert('RGBA').split()[-1].getextrema()` do PIL como
+  prova de que o arquivo está correto** — verificar TAMBÉM no navegador de
+  verdade via canvas (`ctx.drawImage` + `getImageData` + contar pixels com
+  alpha 0 vs 255), já que os dois discordaram nesta sessão sobre o mesmo
+  arquivo. Se possível, evitar quantização de paleta em PNGs com
+  transparência inteiramente — um PNG RGBA sem quantizar (só resize +
+  `optimize=True`) é mais pesado mas não tem essa categoria de bug.
 - **Overflow horizontal no mobile: cheque `min-w-0` no shell do App primeiro,
   não só no componente que parece afetado.** Isso já consumiu várias rodadas
   de correção numa sessão (2026-09-16): cada fix (grid de vagas, `Card`,

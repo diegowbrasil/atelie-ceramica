@@ -112,6 +112,39 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
     onde entrar ainda, lista de Alunos não tocada por falta de telefone,
     card "Pacotes terminando" do Dashboard que cresceu bastante) —
     tudo detalhado em CLAUDE.md §5, logo depois das regras de Turmas.
+11. **O Diego resolveu ao vivo quase todas as pendências do item 10**,
+    numa sequência rápida de mensagens curtas: regra de 12 vagas
+    destravada (Vivian/Cris entraram em Terça, 14/12), `ALUNOS_REAIS`
+    criado e populado (46 pessoas únicas, dedup de Marina/Elisabeth que
+    apareciam 2× por reposição, "Camila" desambiguada em duas pessoas
+    reais diferentes), pagamentos pendentes reais entrando em Pagamentos
+    (`pagamentosIniciais()` agora deriva de `VAGAS_POR_TURMA`), os 4 KPIs
+    do Dashboard recalculados a partir do dado real, card "Pacotes
+    terminando" removido do painel principal, e os textos "Painel geral"
+    + "· dados de demonstração" removidos dos headers. Fica só o
+    histórico de presença datado de verdade como pendência real (não é
+    falta de dado, é feature que ainda não existe) — ver CLAUDE.md §5.
+12. **Cabeçalho mobile, logo e tipografia de título — mini-saga na mesma
+    sessão**: o Diego pediu o fundo "carvão" no cabeçalho com o logo
+    branco; a primeira tentativa de deixar o logo (imagem PNG) branco via
+    `filter: invert()` expôs um bug real de transparência que já existia
+    sem ninguém notar (a imagem virava um bloco branco sólido, não as
+    letras — Pillow perdendo o canal alpha na quantização, detalhe em
+    CLAUDE.md §8). Depois de tentar reprocessar a imagem correndo atrás
+    do alpha (sem sucesso confiável — PIL e o navegador discordavam sobre
+    o mesmo arquivo), o Diego identificou a fonte de verdade do logo
+    ("Bebas Neue") e pediu pra refazer como texto — resolveu o problema
+    pela raiz. `LogoMark` virou um `<span>` de texto, `LOGO_MTCST_SRC`
+    (a imagem base64) foi removida, e Bebas Neue virou a fonte de todos
+    os títulos de página (`--font-display`), não só do logo. Também
+    corrigido no caminho: formato do cabeçalho (pílula flutuante →
+    voltou pro retangular original, só o fundo mudou), "borda lateral"
+    no fundo com foto de Turmas/Oficinas (técnica de full-bleed
+    incompatível com a sidebar do desktop), e uma "puladinha" no scroll
+    do parallax (`position:absolute` competindo com o próprio scroll
+    nativo da página — virou `position:fixed`, única fonte de
+    movimento). Detalhe técnico completo em CLAUDE.md §5 (parallax) e §6
+    (logo/tipografia/cabeçalho).
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills
