@@ -250,15 +250,26 @@ função com outro parâmetro.
 - ~~Calendário "Turmas da semana": colunas por dia, scroll horizontal no
   mobile.~~ **Redesenhado como lista vertical (2026-09-17)** — pedido do
   Diego: "isso qro um calendario como se fosse uma lista, nao qro q use
-  scroll para o lado". Um card só (`VIDRO_CARD` + `divide-y`), uma linha por
-  dia (SEG→DOM), sem scroll lateral em nenhum breakpoint. Selo do dia
-  (esquerda da linha) mostra sigla + **data real** (`DD/MM`, calculada de
-  `new Date()` via `datasDaSemanaAtual()`/`formatarDiaMes()` em
-  `AtelieDemo.jsx`, não mais um número fixo) — dia atual identificado
-  comparando a data real, não mais um id de dia fixo (`"TER"`) hardcoded.
-  Dias vazios mostram "Sem aulas", dias com aula(s)/oficina(s) empilham
-  sub-cards brancos abaixo do selo. **Linhas continuam clicáveis** → leva a
-  Turmas naquele dia (dia com oficina → leva a Oficinas). O mesmo par de
+  scroll para o lado". `space-y-3` de cards `VIDRO_CARD` separados (um por
+  dia, SEG→DOM — não mais um card só com `divide-y`, trocado no mesmo dia
+  depois que o Diego mandou uma referência visual pronta: "o calendario da
+  pagina inicial qro q seja assim", print com cards soltos, ícone+frase nos
+  dias vazios e chevron nos cards de aula), sem scroll lateral em nenhum
+  breakpoint. Selo do dia (esquerda da linha) mostra sigla + **data real**
+  (`DD/MM`, calculada de `new Date()` via
+  `datasDaSemanaAtual()`/`formatarDiaMes()` em `AtelieDemo.jsx`, não mais
+  um número fixo) — dia atual identificado comparando a data real, não
+  mais um id de dia fixo (`"TER"`) hardcoded; o card de hoje também ganhou
+  o rótulo "Hoje" dentro do próprio selo. Dias vazios mostram ícone
+  (`Coffee`, lucide) + "Sem aulas" + frase curta com a cara do ateliê
+  (`MENSAGEM_DIA_VAZIO`, uma por dia — só Seg/Sex/Dom têm entrada, é onde
+  a agenda fica vazia hoje). Dias com aula(s)/oficina(s) empilham sub-cards
+  brancos com `ChevronRight` indicando que são clicáveis. **Cards de aula
+  continuam clicáveis individualmente** → leva a Turmas naquele dia (dia
+  com oficina → leva a Oficinas); todo card do mesmo dia ainda aponta pro
+  mesmo destino (não há deep-link pra uma turma específica dentro do dia —
+  Quinta com 2 horários sempre abre no primeiro; não implementado por não
+  ter sido pedido). O mesmo par de
   funções (`datasDaSemanaAtual`/`formatarDiaMes`) também alimenta a data
   exata no cabeçalho do dia em Turmas ("Terça-feira · 15/09 · 18:30 às
   20:30" — antes só "Terça-feira · 18:30 às 20:30"), pedido explícito do

@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Home, Users, GraduationCap, Flame, Bell, CreditCard, Menu, X,
   BarChart3, Settings, MessageSquare, Plus, MoreVertical, Thermometer,
-  ChevronDown, ChevronLeft, CalendarDays, RotateCcw, Check, Clock,
+  ChevronDown, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, Check, Clock,
   Snowflake, ShieldCheck, Flag, MessageCircle, GraduationCap as GradIcon,
-  Truck, Package, School,
+  Truck, Package, School, Coffee,
 } from "lucide-react";
 /* ------------------------------------------------------------------ */
 /*  Dados fictícios base                                               */
@@ -757,6 +757,15 @@ function Dashboard({ ir, fornadas, onAbrirDia, onAbrirOficinas, onAbrirForno }) 
 }
 
 const DIA_ID_MAP = { SEG: "seg", TER: "ter", QUA: "qua", QUI: "qui", SEX: "sex", "SÁB": "sab", DOM: "dom" };
+/* Mensagem de dia vazio no card "Turmas da semana" — referência visual do
+   Diego (2026-09-17) trocou o "Sem aulas" seco por um ícone + frase curta
+   com a cara do ateliê. Só os dias sem turma fixa aparecem aqui (Sáb tem
+   oficina, não é "vazio"). */
+const MENSAGEM_DIA_VAZIO = {
+  SEG: "Aproveite para se inspirar!",
+  SEX: "Final de semana criativo!",
+  DOM: "Dia de descanso.",
+};
 const ORDEM_DIAS_ID = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
 /* Data real de cada dia da semana atual (segunda a domingo), calculada a
    partir do dia do sistema — pedido do Diego (2026-09-17): precisa da data
@@ -789,7 +798,7 @@ function AgendaSemanaCard({ onAbrirDia, onAbrirOficinas }) {
         <h3 className="text-base font-semibold">Turmas da semana</h3>
         <button className="border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink)] hover:bg-[var(--cream)]">Ver calendário completo</button>
       </div>
-      <div className={"relative w-full min-w-0 divide-y divide-white/50 overflow-hidden " + VIDRO_CARD}>
+      <div className="space-y-3">
         {AGENDA_SEMANA.map((d) => {
           const diaId = DIA_ID_MAP[d.dia];
           const dataFmt = formatarDiaMes(datas[diaId]);
@@ -805,30 +814,44 @@ function AgendaSemanaCard({ onAbrirDia, onAbrirOficinas }) {
           return (
             <div
               key={d.dia}
-              onClick={clicavel ? clicarDia : undefined}
-              className={"flex w-full min-w-0 items-start gap-3 p-3.5 transition-colors " + (clicavel ? "cursor-pointer hover:bg-white/40" : "")}
+              className={"relative flex w-full min-w-0 items-start gap-3 p-3.5 " + VIDRO_CARD + (isHoje ? " border-[var(--accent)]/35" : "")}
             >
               <div className={"flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl py-2.5 " + (isHoje ? ACCENT_SOLIDO : "border border-white/60 bg-white/40")}>
                 <span className={"text-[10px] font-bold uppercase tracking-wide " + (isHoje ? "text-[var(--cream)]" : "text-[var(--ink-soft)]")}>{d.dia}</span>
                 <span className={"text-sm font-semibold " + (isHoje ? "text-white" : "text-[var(--ink)]")}>{dataFmt}</span>
+                {isHoje && <span className="text-[9px] font-semibold uppercase tracking-wide text-white/85">Hoje</span>}
               </div>
-              <div className="min-w-0 flex-1 space-y-2 pt-1">
-                {vazio && <div className="py-2 text-sm text-[var(--ink-soft)]">Sem aulas</div>}
-                {d.aulas.map((a, i) => a.oficina ? (
-                  <div key={i} className="min-w-0 rounded-2xl border border-[var(--line)] bg-white p-3">
-                    <div className="text-xs font-bold text-[var(--ink)]">{a.hora}</div>
-                    <div className="mt-0.5 truncate text-sm font-semibold text-[var(--ink)]">{a.oficina}</div>
-                    <div className="mt-0.5 text-xs text-[var(--ink-soft)]">{a.inscritos} inscritos</div>
-                  </div>
-                ) : (
-                  <div key={i} className="min-w-0 rounded-2xl border border-[var(--line)] bg-white p-3">
-                    <div className="text-xs font-bold text-[var(--ink)]">{a.hora}</div>
-                    <div className="mt-0.5 text-xs text-[var(--ink-soft)]">{a.ocupados}/{a.total} alunos</div>
-                    <div className="mt-2 flex items-center -space-x-2">
-                      {a.nomes.slice(0, 4).map((n) => <Avatar key={n} nome={n} size={26} stacked />)}
-                      {a.nomes.length > 4 && <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[var(--cream-soft)] text-[10px] font-semibold text-[var(--ink)] ring-2 ring-white">+{a.nomes.length - 4}</span>}
+              <div className="min-w-0 flex-1 space-y-2 pt-0.5">
+                {vazio && (
+                  <div className="flex items-center gap-2.5 py-1.5">
+                    <Coffee size={18} className="shrink-0 text-[var(--ink-soft)]" />
+                    <div className="min-w-0">
+                      <div className="text-sm text-[var(--ink-soft)]">Sem aulas</div>
+                      <div className="text-xs italic text-[var(--ink-soft)]">{MENSAGEM_DIA_VAZIO[d.dia]}</div>
                     </div>
                   </div>
+                )}
+                {d.aulas.map((a, i) => a.oficina ? (
+                  <button key={i} onClick={clicarDia} className="flex w-full min-w-0 items-center gap-2 rounded-2xl border border-[var(--line)] bg-white p-3 text-left">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-[var(--ink)]">{a.hora}</div>
+                      <div className="mt-0.5 truncate text-sm font-semibold text-[var(--ink)]">{a.oficina}</div>
+                      <div className="mt-0.5 text-xs text-[var(--ink-soft)]">{a.inscritos} inscritos</div>
+                    </div>
+                    <ChevronRight size={16} className="shrink-0 text-[var(--ink-soft)]" />
+                  </button>
+                ) : (
+                  <button key={i} onClick={clicarDia} className="flex w-full min-w-0 items-center gap-2 rounded-2xl border border-[var(--line)] bg-white p-3 text-left">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-[var(--ink)]">{a.hora}</div>
+                      <div className="mt-0.5 text-xs text-[var(--ink-soft)]">{a.ocupados}/{a.total} alunos</div>
+                      <div className="mt-2 flex items-center -space-x-2">
+                        {a.nomes.slice(0, 4).map((n) => <Avatar key={n} nome={n} size={26} stacked />)}
+                        {a.nomes.length > 4 && <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[var(--cream-soft)] text-[10px] font-semibold text-[var(--ink)] ring-2 ring-white">+{a.nomes.length - 4}</span>}
+                      </div>
+                    </div>
+                    <ChevronRight size={16} className="shrink-0 text-[var(--ink-soft)]" />
+                  </button>
                 ))}
               </div>
             </div>

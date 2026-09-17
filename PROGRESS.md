@@ -51,6 +51,15 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
    suaves de antes, fracas demais contra a foto). Detalhe técnico completo
    em CLAUDE.md §5, bullet do Dashboard/Turmas — inclui o que falta (foto
    pra "café", dias sem turma sem fundo especial).
+5. **`AgendaSemanaCard` (Dashboard) recebeu uma segunda passada visual** —
+   o Diego mandou uma referência pronta ("o calendario da pagina inicial
+   qro q seja assim") com cards separados por dia (em vez de um card só
+   com divisórias), ícone de xícara + frase curta nos dias sem aula
+   ("Aproveite para se inspirar!" na Segunda, "Final de semana criativo!"
+   na Sexta, mais "Dia de descanso." pro Domingo que não aparecia no
+   recorte da imagem), selo "Hoje" explícito no dia atual, e seta `›` nos
+   cards de aula/oficina indicando que são clicáveis. Implementado 1:1 com
+   a referência.
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills
