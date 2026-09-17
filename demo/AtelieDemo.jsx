@@ -147,17 +147,87 @@ function ManchasFundo({ tela }) {
   );
 }
 
-const VAGAS_INICIAIS = [
-  { numero: 1, nome: "Maria Oliveira", aula: 3, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
-  { numero: 2, nome: "João Silva", aula: 1, total: 4, status: "pendente", statusAula: "confirmado", presente: false },
-  { numero: 3, nome: "Ana Paula", aula: 4, total: 4, status: "ultima", statusAula: "confirmado", presente: false },
-  { numero: 4, nome: "Pedro Santos", aula: 2, total: 8, status: "confirmado", statusAula: "confirmado", presente: false },
-  { numero: 5, nome: "Júlia Costa", aula: 2, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
-  { numero: 6, nome: "Lucas Mendes", aula: 3, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
-  { numero: 7, nome: "Carla Souza", aula: 1, total: 4, status: "pendente", statusAula: "confirmado", presente: false },
-  { numero: 8, nome: "Rafael Lima", aula: 5, total: 8, status: "confirmado", statusAula: "confirmado", presente: false },
-  { numero: 9, nome: null }, { numero: 10, nome: null }, { numero: 11, nome: null }, { numero: 12, nome: null },
-];
+/* Alunos reais das 4 turmas fixas, passados pelo Diego (2026-09-17,
+   "essas sao as pessoas reais das turmas... atualize as turmas") —
+   substitui o mock fictício. Regras de leitura que ele deu, literais:
+   - "X/Y" (ex: "3/4"): aula X de Y, pagamento em dia → status "confirmado"
+     (ou "ultima"/Renovar quando X===Y, mesma lógica que já existia pra
+     pacote completo).
+   - Só um número solto (ex: "2", sem "/Y"): "na verdade está na Xª aula do
+     pacote, porém o pacote não está pago" → aula X, total 4 (padrão, não
+     informado diferente), status "pendente" — regra geral, vale pra TODO
+     número solto, não só os que ele anotou "(sem pagar)" explicitamente.
+   - Nome + só a letra "A": aula avulsa, não é pacote → aula:1, total:1
+     (fecha o anel, não é um pacote de verdade).
+   - "faltou": ausente nessa aula específica (`statusAula: "ausente"`) —
+     independente do status de pagamento/pacote, que é outro campo.
+   `presente` fica sempre `false` — os números dados são o pacote
+   corrente, não uma marcação de presença já feita; marcar presença é
+   ação ao vivo do admin no app, não parte do dado importado. */
+const VAGAS_POR_TURMA = {
+  "ter-1830": [
+    { numero: 1, nome: "Isadora", aula: 3, total: 4, status: "confirmado", statusAula: "ausente", presente: false },
+    { numero: 2, nome: "Cristiane", aula: 1, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 3, nome: "Maria Clara", aula: 3, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 4, nome: "Cintya", aula: 2, total: 4, status: "pendente", statusAula: "confirmado", presente: false },
+    { numero: 5, nome: "Moises", aula: 1, total: 4, status: "pendente", statusAula: "confirmado", presente: false },
+    { numero: 6, nome: "Fabiola", aula: 4, total: 4, status: "ultima", statusAula: "confirmado", presente: false },
+    { numero: 7, nome: "Maria Helena", aula: 2, total: 4, status: "confirmado", statusAula: "ausente", presente: false },
+    { numero: 8, nome: "Mayara", aula: 4, total: 4, status: "ultima", statusAula: "confirmado", presente: false },
+    { numero: 9, nome: "Karol", aula: 4, total: 4, status: "ultima", statusAula: "ausente", presente: false },
+    { numero: 10, nome: "Ananda", aula: 4, total: 4, status: "ultima", statusAula: "ausente", presente: false },
+    { numero: 11, nome: "Marina", aula: 2, total: 4, status: "confirmado", statusAula: "ausente", presente: false },
+    { numero: 12, nome: "Dani", aula: 3, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
+    /* Vivian (aula 1, sem pagar) e Cris (aula 3, sem pagar) também
+       apareceram na terça (15/09) "antecipando aula de quinta" — mas a
+       turma já fecha em 12/12 com os alunos fixos acima e a regra diz
+       exatamente 12 vagas por turma (CLAUDE.md §5). Não incluídas aqui;
+       ver observação no chat pro Diego decidir como tratar reposição
+       antecipada quando a turma de origem já está cheia. */
+  ],
+  "qua-1630": [
+    { numero: 1, nome: "Ju Pita", aula: 4, total: 4, status: "ultima", statusAula: "confirmado", presente: false },
+    { numero: 2, nome: "Natalia", aula: 2, total: 4, status: "confirmado", statusAula: "ausente", presente: false },
+    { numero: 3, nome: "Paula", aula: 3, total: 4, status: "confirmado", statusAula: "ausente", presente: false },
+    { numero: 4, nome: "Bianca", aula: 4, total: 4, status: "ultima", statusAula: "confirmado", presente: false },
+    { numero: 5, nome: "Amanda", aula: 4, total: 4, status: "pendente", statusAula: "confirmado", presente: false },
+    { numero: 6, nome: "Silvia", aula: 1, total: 4, status: "pendente", statusAula: "confirmado", presente: false },
+    { numero: 7, nome: "Ana Carolina", aula: 4, total: 4, status: "ultima", statusAula: "confirmado", presente: false },
+    { numero: 8, nome: "Fer", aula: 3, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 9, nome: "Santina", aula: 4, total: 4, status: "ultima", statusAula: "confirmado", presente: false },
+    { numero: 10, nome: "Camila", aula: 4, total: 4, status: "pendente", statusAula: "confirmado", presente: false },
+    { numero: 11, nome: "Marina", aula: 2, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 12, nome: "Elisabeth", aula: 4, total: 4, status: "ultima", statusAula: "ausente", presente: false },
+  ],
+  "qui-1430": [
+    { numero: 1, nome: "Bia", aula: 1, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 2, nome: "Isa", aula: 3, total: 4, status: "pendente", statusAula: "ausente", presente: false },
+    { numero: 3, nome: "Roxanne", aula: 3, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 4, nome: "Piti", aula: 3, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 5, nome: "Celina", aula: 1, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 6, nome: "Helo", aula: 2, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 7, nome: "Isabele", aula: 1, total: 4, status: "pendente", statusAula: "ausente", presente: false },
+    { numero: 8, nome: "Luciane", aula: 1, total: 4, status: "pendente", statusAula: "ausente", presente: false },
+    { numero: 9, nome: "Vitoria", aula: 2, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 10, nome: "Elisabeth", aula: 4, total: 4, status: "ultima", statusAula: "confirmado", presente: false },
+    { numero: 11, nome: "Ana Lara", aula: 1, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 12, nome: null },
+  ],
+  "qui-1830": [
+    { numero: 1, nome: "Lu", aula: 4, total: 4, status: "ultima", statusAula: "confirmado", presente: false },
+    { numero: 2, nome: "Nayane", aula: 2, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 3, nome: "Yasmin", aula: 1, total: 4, status: "pendente", statusAula: "confirmado", presente: false },
+    { numero: 4, nome: "Vivi", aula: 4, total: 4, status: "ultima", statusAula: "confirmado", presente: false },
+    { numero: 5, nome: "Barbara", aula: 3, total: 4, status: "pendente", statusAula: "confirmado", presente: false },
+    { numero: 6, nome: "Tais", aula: 2, total: 4, status: "pendente", statusAula: "confirmado", presente: false },
+    { numero: 7, nome: "Camila", aula: 2, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 8, nome: "Ju Oba", aula: 1, total: 1, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 9, nome: "Amanda R", aula: 3, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 10, nome: "Paola", aula: 1, total: 4, status: "pendente", statusAula: "confirmado", presente: false },
+    { numero: 11, nome: "Olga", aula: 1, total: 1, status: "confirmado", statusAula: "confirmado", presente: false },
+    { numero: 12, nome: null },
+  ],
+};
 
 const ALUNOS = [
   { nome: "Maria Oliveira", turma: "Terça 18:30", pacote: "3/4 aulas", tel: "(14) 99123-4567" },
@@ -236,13 +306,17 @@ function oficinasIniciais() {
    — corrigido (2026-09-17) depois do Diego notar a inconsistência:
    "lembre as datas das oficinas, nao tem oficina desses dias ai, só a
    partir de outubro". Não reintroduzir oficina fictícia nesse mock. */
+/* Nomes/ocupação batem com VAGAS_POR_TURMA (mesmos alunos reais, 2026-09-17)
+   — atualizados junto pra não ficar inconsistente com a tela de Turmas
+   (o Diego ia ver "Maria Oliveira" aqui e um roster real lá, duas
+   verdades diferentes pra mesma turma). */
 const AGENDA_SEMANA = [
   { dia: "SEG", aulas: [] },
-  { dia: "TER", aulas: [{ hora: "18:30 - 20:30", ocupados: 8, total: 12, nomes: ["Maria Oliveira","João Silva","Ana Paula","Pedro Santos"] }] },
-  { dia: "QUA", aulas: [{ hora: "16:30 - 18:30", ocupados: 11, total: 12, nomes: ["Júlia Costa","Lucas Mendes","Carla Souza","Rafael Lima","Beatriz Almeida","Felipe Martins","Sofia Ramos"] }] },
+  { dia: "TER", aulas: [{ hora: "18:30 - 20:30", ocupados: 12, total: 12, nomes: ["Isadora","Cristiane","Maria Clara","Cintya","Moises","Fabiola","Maria Helena","Mayara","Karol","Ananda","Marina","Dani"] }] },
+  { dia: "QUA", aulas: [{ hora: "16:30 - 18:30", ocupados: 12, total: 12, nomes: ["Ju Pita","Natalia","Paula","Bianca","Amanda","Silvia","Ana Carolina","Fer","Santina","Camila","Marina","Elisabeth"] }] },
   { dia: "QUI", aulas: [
-    { hora: "14:30 - 16:30", ocupados: 12, total: 12, nomes: ["Maria Oliveira","João Silva","Ana Paula","Pedro Santos","Júlia Costa","Lucas Mendes","Carla Souza","Rafael Lima"] },
-    { hora: "18:30 - 20:30", ocupados: 9, total: 12, nomes: ["Beatriz Almeida","Felipe Martins","Sofia Ramos","Diego Alves","Nina Prado"] },
+    { hora: "14:30 - 16:30", ocupados: 11, total: 12, nomes: ["Bia","Isa","Roxanne","Piti","Celina","Helo","Isabele","Luciane","Vitoria","Elisabeth","Ana Lara"] },
+    { hora: "18:30 - 20:30", ocupados: 11, total: 12, nomes: ["Lu","Nayane","Yasmin","Vivi","Barbara","Tais","Camila","Ju Oba","Amanda R","Paola","Olga"] },
   ] },
   { dia: "SEX", aulas: [] },
   { dia: "SÁB", aulas: [] },
@@ -752,8 +826,8 @@ function Dashboard({ ir, fornadas, onAbrirDia, onAbrirOficinas, onAbrirForno }) 
         </Card>
         <Card className="p-4">
           <h3 className="mb-3 text-sm font-semibold">Pacotes terminando</h3>
-          <ul className="space-y-3 text-sm">{VAGAS_INICIAIS.filter((v) => v.status === "ultima" || v.status === "pendente").map((v) => (
-            <li key={v.numero} className="flex items-center justify-between"><span><span className="block font-medium">{v.nome}</span><span className="text-[var(--ink-soft)]">{v.aula}/{v.total} aulas</span></span><Badge tone={v.status === "ultima" ? "danger" : "warning"}>{v.aula}/{v.total}</Badge></li>
+          <ul className="space-y-3 text-sm">{Object.values(VAGAS_POR_TURMA).flat().filter((v) => v.status === "ultima" || v.status === "pendente").map((v) => (
+            <li key={v.numero + v.nome} className="flex items-center justify-between"><span><span className="block font-medium">{v.nome}</span><span className="text-[var(--ink-soft)]">{v.aula}/{v.total} aulas</span></span><Badge tone={v.status === "ultima" ? "danger" : "warning"}>{v.aula}/{v.total}</Badge></li>
           ))}</ul>
         </Card>
         <Card className="p-4">
@@ -1324,7 +1398,19 @@ function Turmas({ notificar, diaInicial = "ter" }) {
   const diaValido = TURMAS_DIAS.find((d) => d.id === diaInicial && d.disponivel) || TURMAS_DIAS.find((d) => d.id === "ter");
   const [diaAtivo, setDiaAtivo] = useState(diaValido.id);
   const [turmaAtiva, setTurmaAtiva] = useState(diaValido.turmas[0].id);
-  const [vagas, setVagas] = useState(VAGAS_INICIAIS);
+  /* Roster por turma (2026-09-17) — antes era um `vagas` só, compartilhado
+     entre as 4 turmas (mock fictício reaproveitado nas 4 abas). Com dado
+     real por turma (VAGAS_POR_TURMA), cada turma precisa do seu próprio
+     estado, senão editar presença numa aba vaza pra outra. Mesmo padrão
+     já usado pros 2 fornos independentes (estado fatiado por chave).
+     `setVagas` mantém a assinatura antiga (`(vs) => vs.map(...)`) pra não
+     precisar reescrever cadastrarAluno/toggleStatusAula/marcarPresenca —
+     só redireciona pra fatia da turma ativa. */
+  const [vagasPorTurma, setVagasPorTurma] = useState(VAGAS_POR_TURMA);
+  const vagas = vagasPorTurma[turmaAtiva] || [];
+  function setVagas(atualizar) {
+    setVagasPorTurma((vpt) => ({ ...vpt, [turmaAtiva]: typeof atualizar === "function" ? atualizar(vpt[turmaAtiva] || []) : atualizar }));
+  }
   const [modalVaga, setModalVaga] = useState(null);
   function cadastrarAluno(numero, dados) {
     setVagas((vs) => vs.map((v) => v.numero === numero ? { ...v, nome: dados.nome, aula: 0, total: dados.total, status: "confirmado", statusAula: "confirmado", presente: false } : v));

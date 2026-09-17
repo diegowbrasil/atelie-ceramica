@@ -174,6 +174,75 @@ APP MTCST/
   - Se a presença fecha o pacote: card destaca "Última aula" + alerta de
     renovação.
 
+**Roster real das 4 turmas (2026-09-17)** — o Diego mandou a lista real de
+alunos de cada turma fixa (nome, progresso do pacote, pagamento, presença
+da semana de 14/09) e pediu "atualize as turmas". Substituiu o mock
+fictício (`VAGAS_INICIAIS`, um array só compartilhado pelas 4 abas —
+trocar de turma mostrava sempre as mesmas 8 pessoas fictícias) por
+`VAGAS_POR_TURMA` em `demo/AtelieDemo.jsx`, um roster de verdade por
+`id` de turma (`ter-1830`/`qua-1630`/`qui-1430`/`qui-1830`). Isso também
+exigiu mudar o estado do componente `Turmas` — antes um `vagas` só
+(`useState(VAGAS_INICIAIS)`), agora `vagasPorTurma` fatiado por turma
+ativa (mesmo padrão já usado pros 2 fornos independentes), senão marcar
+presença numa turma vazava pra outra ao trocar de aba. `AGENDA_SEMANA`
+(preview do Dashboard) também foi atualizada com os mesmos nomes reais —
+antes tinha "Maria Oliveira"/"João Silva" fictícios que não batiam mais
+com o roster real da tela de Turmas.
+
+Regras de leitura da notação que o Diego deu, pra reaplicar se ele mandar
+atualização de novo:
+- `"X/Y"` (ex: `"3/4"`): aula X de Y, **pagamento em dia**.
+- Só um número solto (ex: `"2"`, sem `/Y`): "na verdade está na Xª aula do
+  pacote, porém o pacote não está pago" — regra geral, vale pra **todo**
+  número solto, não só os que ele anotou "(sem pagar)" explicitamente do
+  lado. `total` vira 4 (padrão) quando não informado diferente.
+- Nome + só a letra `"A"`: aula avulsa (não é pacote) →
+  `aula: 1, total: 1` no dado (fecha o anel, não usa `status: "ultima"`/
+  Renovar — avulsa não pede renovação de pacote).
+- `"faltou"`: ausente **nessa aula específica** (`statusAula: "ausente"`)
+  — independente do status de pagamento/pacote (`status`), que é outro
+  campo; um aluno pode estar ausente E com pacote pendente ao mesmo tempo.
+- Quando `aula === total` **e** o pacote está pago, vira `status:
+  "ultima"` (badge "Renovar") — mesma lógica que já existia. Quando não
+  está pago (número solto), `status: "pendente"` tem prioridade sobre
+  "ultima" mesmo se por acaso `aula === total` (ex: "Amanda 4" na
+  Quarta — 4ª aula, mas sem pagar: fica "Pendente", não "Renovar", porque
+  cobrar o pagamento é a ação mais urgente ali).
+- `presente` sempre entra `false` — os números dados são o pacote
+  corrente/estado atual, não uma marcação de presença já feita pelo
+  admin; isso é ação ao vivo no app, não faz parte do dado importado.
+
+**Pendências que ficaram de fora desta atualização** (fora do escopo de
+"atualize as turmas", não construídas sem pedido explícito):
+- **Terça (15/09) tinha 14 pessoas na lista do Diego, não 12** — Vivian e
+  Cris apareceram lá "antecipando aula de quinta" (são alunas de Quinta,
+  fazendo uma aula extra adiantada na Terça). A regra de exatamente 12
+  vagas por turma (acima) já estava cheia com as 12 fixas, então essas
+  duas **não entraram** no roster de Terça. Perguntar ao Diego como
+  tratar esse tipo de reposição antecipada quando a turma de destino já
+  está cheia (ex: 13ª/14ª vaga só naquela semana? Registrar em outro
+  lugar?) antes de reintroduzir.
+- As seções extras que o Diego mandou junto (**Pacotes em andamento em
+  aberto**, **Aulas pontuais**, **Pacotes finalizados** — históricos de
+  datas de aula por pessoa) não foram usadas em nenhuma tela ainda; não
+  há campo de "histórico de datas" no modelo de dados hoje (seria o
+  mesmo tipo de log mencionado no item de data exata do Dashboard, acima
+  — "ainda não existe"). Ficam registradas aqui como referência caso
+  vire pedido de verdade depois.
+- A lista de **Alunos** (`ALUNOS`, tela separada de "todos os alunos")
+  **não foi tocada** — continua com o mock fictício antigo (violando a
+  regra abaixo de "lista começa vazia", pré-existente, não causado por
+  esta mudança). O Diego não deu telefone de ninguém nesta leva de
+  dados, e essa tela pede telefone no cadastro — não populada pra não
+  inventar dado que não foi dado.
+- O card "Pacotes terminando" do Dashboard (deriva de `VAGAS_POR_TURMA`
+  filtrando `status !== "confirmado"`) **cresceu de ~3 linhas fictícias
+  pra ~24 linhas reais** (muita gente pendente/terminando ao mesmo
+  tempo, coincidência real dos dados, não bug) — deixei sem corte/paginação
+  de propósito, pra não esconder dado real de cobrança que o Diego pode
+  querer ver todo. Se ficar grande demais na prática, considerar
+  limitar com "ver todos".
+
 ### Forno (ferramenta central)
 - Menu "Forno" abre o **painel de acompanhamento**, NUNCA a criação direta.
 - **O ateliê tem 2 fornos físicos de verdade (2026-09-17, pedido do

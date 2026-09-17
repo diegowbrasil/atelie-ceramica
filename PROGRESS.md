@@ -92,6 +92,26 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
    "mesmo tratamento das outras": texto agora dentro da mesma caixa branca
    opaca que os cards de aula/oficina já usam, corrigido de forma geral
    (não só pro Sábado). Detalhe técnico em CLAUDE.md §5.
+9. **Nav inferior mobile: Solicitações trocada por Oficinas** — "qro q
+   tenha inicio, turmas, forno, oficinas, mais, tire o solicitações
+   dali". Solicitações continua no menu completo ("Mais"), só saiu da
+   barra fixa. Detalhe em CLAUDE.md §6.
+10. **Roster real das 4 turmas fixas** — o Diego mandou a lista completa
+    de alunos de cada turma (nome, progresso de pacote, pagamento,
+    presença) e pediu "atualize as turmas". Trocou `VAGAS_INICIAIS`
+    (mock fictício único, compartilhado pelas 4 abas — bug latente que
+    isso escondia: trocar de turma sempre mostrava as mesmas 8 pessoas)
+    por `VAGAS_POR_TURMA`, roster de verdade por turma, com o estado do
+    componente `Turmas` fatiado por turma ativa (mesmo padrão dos 2
+    fornos independentes). `AGENDA_SEMANA` (preview do Dashboard)
+    também ganhou os nomes reais, pra não ficar inconsistente com a
+    tela de Turmas. Regras de leitura da notação dele (X/Y = pago,
+    número solto = não pago, "A" = avulsa, "faltou" = ausente) e as
+    pendências que ficaram de fora (14 pessoas reais na Terça vs. 12
+    vagas do sistema, seções de histórico que ele mandou mas não têm
+    onde entrar ainda, lista de Alunos não tocada por falta de telefone,
+    card "Pacotes terminando" do Dashboard que cresceu bastante) —
+    tudo detalhado em CLAUDE.md §5, logo depois das regras de Turmas.
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills
