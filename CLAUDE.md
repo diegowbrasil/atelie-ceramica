@@ -271,6 +271,46 @@ função com outro parâmetro.
   agregado (`aula`/`total`), sem log de datas. Não construir essa parte sem
   pedido explícito — o Diego sinalizou como necessidade futura ("depois"),
   não decisão de escopo pra agora.
+- **Turmas ganhou um fundo de fotos reais de mesclagem de argila, uma cor
+  por dia, com parallax (2026-09-17)** — pedido do Diego em várias rodadas
+  seguidas. (1) "vc nao consegue usar a foto q enviei como fundo?" — queria
+  a FOTO de verdade, não a recriação em SVG que eu tinha tentado primeiro.
+  (2) "qro q cada dia seja uma cor diferente, quarta azul e quinta o fundo
+  verde" — `FUNDOS_ARGILA` (`demo/AtelieDemo.jsx`) mapeia cor→foto (JPEG
+  comprimido, base64), reaproveitando as mesmas chaves de
+  `CORES_IDENTIDADE`/`TURMA_COR` já existentes; a cor do dia ativo em
+  Turmas decide a foto. Fotos hoje: sienna (Terça), ardósia/azul (Quarta),
+  musgo/verde (Quinta) — falta uma pra "café" (Quinta 18:30 usa o musgo do
+  primeiro horário do dia por enquanto); dias sem turma ficam no `--cream`
+  normal. (3) Pediu parallax de verdade, em duas mensagens com a mesma
+  ideia: "não tem como eu fazer uma imagem que fique parada e conforme eu
+  desça no scroll eu percorra por ela" e, depois de eu ter feito o fundo
+  rolar 1:1 junto com o conteúdo (achou pouco): "o fundo ainda esta fixo
+  junto com o scroll, mexe td.. eu qria q o fundo ficasse parado e conforme
+  eu desça o scroll eu perscorra pelo fundo" — ele queria o fundo se
+  movendo mais DEVAGAR que o conteúdo, nem 0% parado (`position:fixed`,
+  trava sempre no mesmo recorte) nem 100% junto. Implementado com um
+  listener de `scroll` no `window` (não CSS puro —
+  `background-attachment:fixed` não tem suporte confiável em mobile
+  Safari) deslocando `backgroundPositionY` a 65% da rolagem via `ref`
+  (mutação direta do DOM, sem `setState`, pra não re-renderizar a cada
+  pixel) — o fundo passa a se mover a 35% da velocidade do conteúdo.
+  `backgroundSize:"100% auto"` + `repeat-y` (não `cover`) continua a
+  mesma base de antes, só ganhou o deslocamento por cima. **Achado
+  corrigido na mesma leva**: cabeçalho mobile e título "Turmas" ficaram
+  "apagados" no primeiro teste — causa raiz dupla: (1) o fundo antigo
+  (`ManchasFundo`, `position:fixed z-0`) pintava por cima de irmãos
+  não-posicionados tipo o `<header>` mesmo vindo depois no DOM (regra de
+  stacking do CSS — corrigida ao mover o fundo pra dentro do fluxo do
+  próprio `Turmas`, que não tem como alcançar o header, que fica fora
+  dele); (2) título e abas de dia ficavam direto sobre a foto sem card
+  atrás — corrigido com `relative` nesses blocos (pintam por cima do fundo
+  `absolute`) e um degradê cream nos primeiros ~144px. As pills de aba
+  também estavam "fracas, parecem estar atrás do fundo" (22-45% opacas,
+  calibradas pras manchas suaves de antes): `VIDRO_PILL_NEUTRO` subiu pra
+  65% e `estiloVidroTingido` ganhou 2º/3º parâmetro opcional de alpha
+  (default inalterado — só a aba de dia em Turmas passa valores mais
+  fortes).
 
 ---
 

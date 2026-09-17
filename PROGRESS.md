@@ -37,6 +37,20 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
    oficinas" do Dashboard — reaparecia desde a troca pras oficinas reais
    (duas ocorrências de "Kit Café da Manhã" em datas diferentes), achado
    ao verificar o console durante o teste desta rodada.
+4. **Fundo de Turmas trocado pras fotos reais de mesclagem de argila que o
+   Diego mandou** (não uma recriação — ele foi direto: "vc nao consegue
+   usar a foto q enviei como fundo?"), uma cor por dia ativo (Terça=sienna,
+   Quarta=azul/ardósia, Quinta=verde/musgo — reaproveita `CORES_IDENTIDADE`
+   já existente), com efeito parallax de verdade (fundo se move a 35% da
+   velocidade do conteúdo ao rolar — pedido explícito, duas vezes: "não
+   tem como eu fazer uma imagem que fique parada e conforme eu desça no
+   scroll eu percorra por ela"). De caminho, corrigido um bug real de
+   stacking do CSS que fazia o cabeçalho/título ficarem "apagados" (o fundo
+   antigo, `position:fixed`, pintava por cima de irmãos não-posicionados) e
+   subida a opacidade das pills de aba (estavam calibradas pras manchas
+   suaves de antes, fracas demais contra a foto). Detalhe técnico completo
+   em CLAUDE.md §5, bullet do Dashboard/Turmas — inclui o que falta (foto
+   pra "café", dias sem turma sem fundo especial).
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills
