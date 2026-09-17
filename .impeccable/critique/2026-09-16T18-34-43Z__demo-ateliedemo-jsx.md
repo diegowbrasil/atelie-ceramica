@@ -10,6 +10,7 @@ target_fingerprint: "sha256:9b881107436343c0d7cb99dc8cc5a2eb16fdc5b7cacad47540dd
 target_path: "C:\\Users\\Usuario\\Desktop\\APP MTCST\\demo\\AtelieDemo.jsx"
 timestamp: 2026-09-16T18-34-43Z
 slug: demo-ateliedemo-jsx
+closed: true
 ---
 **Método:** dois sub-agentes isolados — Assessment A (revisão qualitativa de design, relançada do zero como sub-agente novo depois que a primeira tentativa foi cortada por rate limit) e Assessment B (scan determinístico `impeccable detect` + overlay via injeção no navegador, concluída mais cedo nesta mesma sessão). Não degradado.
 

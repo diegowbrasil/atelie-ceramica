@@ -528,6 +528,18 @@ export default function AtelieDemo() {
         /* Apple-ish default: soft rounding on every button/field unless a
            utility class (e.g. rounded-full on Toggle/Avatar) wins on specificity. */
         button, input, textarea, select { border-radius: 0.75rem; }
+        /* Fase POLISH (2026-09-17): botões/links não tinham nenhum anel de
+           foco visível ao navegar por teclado (Tab) — confirmado testando
+           de verdade, não só suposição. Inputs já usam borda colorida como
+           indicador (outline-none + focus:border-[var(--ink)], proposital,
+           não mexido aqui). Anel visível, com a cor do sistema, só quando
+           navegação é por teclado (:focus-visible não aparece em clique de
+           mouse). */
+        button:focus-visible, a:focus-visible, [role="checkbox"]:focus-visible, [tabindex]:focus-visible {
+          outline: 2px solid var(--accent);
+          outline-offset: 2px;
+          border-radius: inherit;
+        }
       `}</style>
 
       <ManchasFundo />
@@ -1702,7 +1714,7 @@ function Solicitacoes({ notificar }) {
     <div>
       <h1 className="mb-1 text-2xl font-semibold" style={FONT_DISPLAY}>Solicitações</h1>
       <p className="mb-5 text-sm text-[var(--ink-soft)]">Vagas e reposições aguardando aprovação.</p>
-      <Card><ul className="divide-y divide-[var(--line)]">
+      <div className={"relative divide-y divide-white/50 overflow-hidden " + VIDRO_CARD}><ul className="divide-y divide-white/50">
         {SOLICITACOES_INICIAIS.map((s) => (
           <li key={s.nome} className="flex items-center justify-between gap-3 px-4 py-3">
             <div className="flex items-center gap-3"><Avatar nome={s.nome} /><div><div className="text-sm font-medium">{s.nome}</div><div className="text-xs text-[var(--ink-soft)]">{s.tipo} · {s.quando}</div></div></div>
@@ -1712,7 +1724,7 @@ function Solicitacoes({ notificar }) {
             </div>
           </li>
         ))}
-      </ul></Card>
+      </ul></div>
     </div>
   );
 }
