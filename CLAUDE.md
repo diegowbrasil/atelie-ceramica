@@ -189,8 +189,15 @@ APP MTCST/
 - Observações com timestamp, adicionáveis durante toda a queima.
 - 3 botões grandes: Atualizar temperatura · Adicionar observação · Finalizar
   fornada.
-- Gráfico é o elemento principal: curva prevista + temperatura real + linha
-  de patamar + linha de abertura segura.
+- ~~Gráfico é o elemento principal~~ **Removido (2026-09-17, pedido do
+  Diego): "tire essa curva de queima, não vou precisar desse gráfico".**
+  Essa regra dizia o oposto até aqui — reabrir decisão só porque o Diego
+  pediu de novo, não é a IA reabrindo por conta própria. O `ComposedChart`
+  ("Curva da queima": curva prevista + temperatura real + linha de patamar
+  + linha de abertura segura) saiu do painel do Forno inteiro. Patamar e
+  abertura segura continuam visíveis como `StatCard`s (já existiam em
+  paralelo ao gráfico, não foram removidos). O mini-gráfico do card de
+  forno no Dashboard é outra instância, separada, e não foi tocado.
 - "Nova fornada": tudo em UMA tela, sem etapas/"Próximo". Cards grandes
   clicáveis (tipo, categorias), config em grade com presets por tipo, bloco
   "Revisão" ao vivo.
@@ -238,10 +245,21 @@ função com outro parâmetro.
 
 - Menu lateral **estreito** (`w-32`, ícone + rótulo pequeno empilhado) —
   pediu redução 3×. Não alargar.
-- **Sem margem à direita** no conteúdo — vai até a borda. `mx-auto` no
-  `<main>` foi removido de propósito; não reintroduzir.
-- **Nada de "Olá, Hanna" nem "Ateliê de Cerâmica"** nos headers — só o
-  ícone do vaso (`VaseMark`).
+- ~~Sem margem à direita no conteúdo~~ **Revertido em 2026-09-17.** Fazia
+  sentido só enquanto os cards eram retos e iam até a borda (regra da v1
+  MTCST-literal); com cantos arredondados + sombra (v3, atual), `pr-0`
+  cortava a sombra/borda direita do card contra a viewport — achado real
+  do Diego, screenshot mostrando o corte. `<main>` voltou a ter padding
+  simétrico (`px-4`/`md:px-6`). Não é a IA reabrindo a decisão por conta
+  própria — é a mudança de material (reto → vidro) tornando a regra antiga
+  obsoleta, junto com um pedido direto de corrigir o corte.
+- **Nada de "Olá, Hanna" nem "Ateliê de Cerâmica"** nos headers.
+  ~~Só o ícone do vaso (`VaseMark`)~~ **substituído em 2026-09-17 pelo
+  logo real da marca** (wordmark "MTCST" que o Diego mandou — recortado,
+  fundo tornado transparente, paleta reduzida a 8 cores, ~3.4KB, embutido
+  como base64 no componente `LogoMark`). `VaseMark` era só um placeholder
+  de antes de existir logo de verdade — removido do código, não é mais
+  usado em lugar nenhum.
 - Prioridade mobile, desktop completo e confortável.
 
 ### 6.1 Sistema visual (revisado 2026-09-15/16 — 3 rodadas no mesmo período,
@@ -345,16 +363,13 @@ config customizado). Usados via sintaxe arbitrária do Tailwind:
   global de baixa especificidade no `<style>`: `button, input, textarea,
   select { border-radius: 0.75rem; }`, cobre controles sem `rounded-*`
   explícito, sem competir com quem já define a própria classe.
-- Gráfico do forno (Recharts): curva "real" em `--accent` sólido (`#C2410C`
-  — é o dado ao vivo, tem que saltar aos olhos), curva "prevista" em
-  cinza-amarronzado claro `#B8B2A6`/`#EDEBE3` (discreta, é só referência),
-  grid e linha de referência "Patamar" nos tons neutros do sistema. Linha
-  de referência "Abertura segura" **continua azul** (`#60A5FA`) — marcador
-  funcional (não é acento de marca nem confundir com o dado ao vivo), pra
-  não perder a distinção visual entre curva prevista, real, e os dois
-  marcadores de referência. Cores do gráfico são hex literal (`stroke=`),
-  não `var()` — Recharts/SVG e CSS custom properties nem sempre combinam
-  bem, mais seguro usar o valor direto.
+- ~~Gráfico do forno (Recharts)~~ **O `ComposedChart` "Curva da queima"
+  foi removido do painel do Forno em 2026-09-17 (pedido do Diego, ver
+  §5).** Essa paleta descrevia esse gráfico especificamente — fica aqui só
+  de referência histórica caso ele peça de volta algum dia, não é mais uma
+  regra ativa. O mini-gráfico do Dashboard é outra instância e continua de
+  pé, mesma lógica de cor (hex literal em vez de `var()`, Recharts/SVG nem
+  sempre combina bem com CSS custom property).
 
 **Ainda não migrado para este sistema**: o projeto Next.js (§2B) —
 continua com o Tailwind config antigo (`tailwind.config.ts`,
