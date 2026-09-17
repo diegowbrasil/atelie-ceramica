@@ -6,11 +6,6 @@ import {
   Snowflake, ShieldCheck, Flag, MessageCircle, GraduationCap as GradIcon,
   Truck, Package, School,
 } from "lucide-react";
-import {
-  ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, ReferenceLine,
-} from "recharts";
-
 /* ------------------------------------------------------------------ */
 /*  Dados fictícios base                                               */
 /* ------------------------------------------------------------------ */
@@ -244,11 +239,20 @@ const STATUS_LABEL = { andamento: "Em andamento", finalizada: "Finalizada", inte
 const STATUS_TONE = { andamento: "warning", finalizada: "success", interrompida: "info", cancelada: "neutral" };
 
 /* Histórico inicial (fictício) — a 1ª é a fornada ativa */
+/* Ateliê tem 2 fornos físicos de verdade (pedido do Diego, 2026-09-17:
+   "quero acompanhar 2 fornadas simultâneas") — cada fornada pertence a um
+   deles via `fornoId`. Antes disso o app assumia 1 fornada ativa por vez
+   no app inteiro; agora é 1 fornada ativa por vez POR FORNO. */
+const FORNOS = [
+  { id: "forno1", nome: "Forno 1" },
+  { id: "forno2", nome: "Forno 2" },
+];
+
 function fornadasIniciais() {
   const agora = Date.now();
   return [
     {
-      id: "f1", tipo: "esmalte", tipoDescricao: "", categorias: ["alunos", "encomendas"],
+      id: "f1", fornoId: "forno1", tipo: "esmalte", tipoDescricao: "", categorias: ["alunos", "encomendas"],
       detalhesConteudo: "Peças da turma de terça, duas encomendas e uma queima externa (cliente João).",
       config: PRESETS.esmalte,
       iniciadoEm: new Date(agora - 6.7 * 3600 * 1000), finalizadoEm: null, status: "andamento",
@@ -259,19 +263,19 @@ function fornadasIniciais() {
       ],
     },
     {
-      id: "f2", tipo: "biscoito", tipoDescricao: "", categorias: ["oficinas"],
+      id: "f2", fornoId: "forno2", tipo: "biscoito", tipoDescricao: "", categorias: ["oficinas"],
       detalhesConteudo: "", config: PRESETS.biscoito,
       iniciadoEm: new Date(agora - 3 * 24 * 3600 * 1000), finalizadoEm: new Date(agora - 3 * 24 * 3600 * 1000 + 9 * 3600 * 1000),
       status: "finalizada", leituras: [], observacoes: [],
     },
     {
-      id: "f3", tipo: "outro", tipoDescricao: "Lustre", categorias: ["fora"],
+      id: "f3", fornoId: "forno1", tipo: "outro", tipoDescricao: "Lustre", categorias: ["fora"],
       detalhesConteudo: "", config: { ...PRESETS.outro, temperaturaMaxima: 1220 },
       iniciadoEm: new Date(agora - 10 * 24 * 3600 * 1000), finalizadoEm: new Date(agora - 10 * 24 * 3600 * 1000 + 5 * 3600 * 1000),
       status: "interrompida", leituras: [], observacoes: [],
     },
     {
-      id: "f4", tipo: "esmalte", tipoDescricao: "", categorias: ["alunos"],
+      id: "f4", fornoId: "forno2", tipo: "esmalte", tipoDescricao: "", categorias: ["alunos"],
       detalhesConteudo: "", config: PRESETS.esmalte,
       iniciadoEm: new Date(agora - 15 * 24 * 3600 * 1000), finalizadoEm: new Date(agora - 15 * 24 * 3600 * 1000 + 1 * 3600 * 1000),
       status: "cancelada", leituras: [], observacoes: [],
@@ -419,35 +423,41 @@ export default function AtelieDemo() {
   const [toast, setToast] = useState(null);
   const [fornadas, setFornadas] = useState(fornadasIniciais);
   const [rascunho, setRascunho] = useState(null); // config pré-preenchida ao "Duplicar"
-  const [modalConflito, setModalConflito] = useState(false);
+  const [fornoAlvo, setFornoAlvo] = useState(FORNOS[0].id); // pra qual forno a Nova Fornada em andamento é
+  const [modalConflito, setModalConflito] = useState(null); // fornoId em conflito, ou null
   const [oficinas, setOficinas] = useState(oficinasIniciais);
   const [oficinaAbertaId, setOficinaAbertaId] = useState(null);
 
   function notificar(msg) { setToast(msg); setTimeout(() => setToast(null), 2200); }
 
-  const ativa = fornadas.find((f) => f.status === "andamento") || null;
+  function fornadaAtivaDoForno(fornoId) {
+    return fornadas.find((f) => f.status === "andamento" && f.fornoId === fornoId) || null;
+  }
 
-  function abrirNovaFornada(base) {
+  function abrirNovaFornada(base, fornoId) {
     setRascunho(base || null);
+    setFornoAlvo(fornoId || base?.fornoId || FORNOS[0].id);
     setTela("fornoNova");
     window.scrollTo(0, 0);
   }
 
-  function cliqueNovaFornada() {
-    if (ativa) setModalConflito(true);
-    else abrirNovaFornada(null);
+  function cliqueNovaFornada(fornoId) {
+    if (fornadaAtivaDoForno(fornoId)) setModalConflito(fornoId);
+    else abrirNovaFornada(null, fornoId);
   }
 
   function confirmarSalvarEIniciarNova() {
-    setFornadas((fs) => fs.map((f) => f.id === ativa.id ? { ...f, status: "interrompida", finalizadoEm: new Date() } : f));
-    setModalConflito(false);
+    const conflitante = fornadaAtivaDoForno(modalConflito);
+    setFornadas((fs) => fs.map((f) => f.id === conflitante.id ? { ...f, status: "interrompida", finalizadoEm: new Date() } : f));
+    const fornoId = modalConflito;
+    setModalConflito(null);
     notificar("Fornada atual salva no histórico como Interrompida.");
-    abrirNovaFornada(null);
+    abrirNovaFornada(null, fornoId);
   }
 
   function iniciarFornada(config) {
     const nova = {
-      id: "f" + Date.now(), tipo: config.tipo, tipoDescricao: config.tipoDescricao,
+      id: "f" + Date.now(), fornoId: fornoAlvo, tipo: config.tipo, tipoDescricao: config.tipoDescricao,
       categorias: config.categorias, detalhesConteudo: config.detalhesConteudo,
       config: config.parametros, iniciadoEm: new Date(), finalizadoEm: null, status: "andamento",
       leituras: [], observacoes: [{ em: new Date(), texto: "Início da queima." }],
@@ -458,22 +468,24 @@ export default function AtelieDemo() {
     notificar("Fornada iniciada! Acompanhamento em tempo real ativo.");
   }
 
-  function atualizarTemperatura(valor) {
-    setFornadas((fs) => fs.map((f) => f.id === ativa.id ? { ...f, leituras: [...f.leituras, { temp: valor, em: new Date() }] } : f));
+  function atualizarTemperatura(valor, fornadaId) {
+    setFornadas((fs) => fs.map((f) => f.id === fornadaId ? { ...f, leituras: [...f.leituras, { temp: valor, em: new Date() }] } : f));
     notificar("Temperatura real atualizada — gráfico e previsão recalculados.");
   }
-  function adicionarObservacao(texto) {
-    setFornadas((fs) => fs.map((f) => f.id === ativa.id ? { ...f, observacoes: [...f.observacoes, { em: new Date(), texto }] } : f));
+  function adicionarObservacao(texto, fornadaId) {
+    setFornadas((fs) => fs.map((f) => f.id === fornadaId ? { ...f, observacoes: [...f.observacoes, { em: new Date(), texto }] } : f));
     notificar("Observação adicionada.");
   }
-  function finalizarFornada() {
-    setFornadas((fs) => fs.map((f) => f.id === ativa.id ? { ...f, status: "finalizada", finalizadoEm: new Date() } : f));
+  function finalizarFornada(fornadaId) {
+    setFornadas((fs) => fs.map((f) => f.id === fornadaId ? { ...f, status: "finalizada", finalizadoEm: new Date() } : f));
     notificar("Fornada finalizada e salva no histórico.");
   }
 
   function ir(t) { setTela(t); setMenuAberto(false); window.scrollTo(0, 0); }
   const [diaTurmaAlvo, setDiaTurmaAlvo] = useState("ter");
   function abrirDiaTurmas(diaId) { setDiaTurmaAlvo(diaId); ir("turmas"); }
+  const [fornoAlvoDash, setFornoAlvoDash] = useState(FORNOS[0].id);
+  function abrirForno(fornoId) { setFornoAlvoDash(fornoId); ir("forno"); }
 
   return (
     <div className="flex min-h-screen w-full bg-[var(--cream)] text-[var(--ink)]" style={{ fontFamily: "var(--font-sans)" }}>
@@ -537,7 +549,7 @@ export default function AtelieDemo() {
         </header>
 
         <main className="w-full px-4 py-5 md:px-6 md:py-8">
-          {tela === "dashboard" && <Dashboard ir={ir} ativa={ativa} onAbrirDia={abrirDiaTurmas} onAbrirOficinas={() => ir("oficinas")} />}
+          {tela === "dashboard" && <Dashboard ir={ir} fornadas={fornadas} onAbrirDia={abrirDiaTurmas} onAbrirOficinas={() => ir("oficinas")} onAbrirForno={abrirForno} />}
           {tela === "turmas" && <Turmas notificar={notificar} diaInicial={diaTurmaAlvo} />}
           {tela === "alunos" && <Alunos />}
           {tela === "oficinas" && <Oficinas oficinas={oficinas} onAbrir={(id) => { setOficinaAbertaId(id); ir("oficinaDetalhe"); }} />}
@@ -560,9 +572,9 @@ export default function AtelieDemo() {
           )}
           {tela === "forno" && (
             <PainelForno
-              ativa={ativa} fornadas={fornadas} notificar={notificar}
+              fornadas={fornadas} notificar={notificar} fornoInicial={fornoAlvoDash}
               onNovaFornada={cliqueNovaFornada}
-              onDuplicar={(f) => abrirNovaFornada(f)}
+              onDuplicar={(f) => abrirNovaFornada(f, f.fornoId)}
               onAtualizarTemp={atualizarTemperatura}
               onAdicionarObs={adicionarObservacao}
               onFinalizar={finalizarFornada}
@@ -593,13 +605,13 @@ export default function AtelieDemo() {
       {toast && <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 bg-[var(--ink)] px-4 py-2.5 text-sm text-[var(--cream)] shadow-lg md:bottom-6">{toast}</div>}
 
       {modalConflito && (
-        <Modal onClose={() => setModalConflito(false)}>
-          <h3 className="mb-2 text-base font-semibold">Já existe uma fornada em andamento</h3>
+        <Modal onClose={() => setModalConflito(null)}>
+          <h3 className="mb-2 text-base font-semibold">{FORNOS.find((f) => f.id === modalConflito)?.nome} já tem uma fornada em andamento</h3>
           <p className="mb-5 text-sm leading-relaxed text-[var(--ink-soft)]">
-            Você já possui uma fornada sendo acompanhada. Ao iniciar uma nova fornada, a atual será encerrada automaticamente e salva no histórico. Nenhuma informação será perdida. Deseja continuar?
+            Esse forno já está sendo acompanhado. Ao iniciar uma nova fornada nele, a atual será encerrada automaticamente e salva no histórico. Nenhuma informação será perdida. Deseja continuar?
           </p>
           <div className="flex gap-2">
-            <button onClick={() => setModalConflito(false)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]">Cancelar</button>
+            <button onClick={() => setModalConflito(null)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]">Cancelar</button>
             <button onClick={confirmarSalvarEIniciarNova} className={"flex-1 py-2.5 text-sm font-medium " + ACCENT_SOLIDO}>Salvar e criar nova</button>
           </div>
         </Modal>
@@ -612,7 +624,7 @@ export default function AtelieDemo() {
 /*  Dashboard                                                          */
 /* ------------------------------------------------------------------ */
 
-function Dashboard({ ir, ativa, onAbrirDia, onAbrirOficinas }) {
+function Dashboard({ ir, fornadas, onAbrirDia, onAbrirOficinas, onAbrirForno }) {
   const kpis = [
     { icon: CalendarDays, valor: 4, label: "Aulas hoje", tone: "text-[var(--ink)] bg-[var(--cream-soft)]", tela: "turmas" },
     { icon: Users, valor: 28, label: "Alunos confirmados", tone: "text-emerald-700 bg-emerald-50", tela: "alunos" },
@@ -640,9 +652,16 @@ function Dashboard({ ir, ativa, onAbrirDia, onAbrirOficinas }) {
           ))}
         </div>
 
-        {ativa ? <KilnMiniCard fornada={ativa} onDetalhes={() => ir("forno")} /> : (
-          <Card className="flex items-center justify-center p-5 text-center text-sm text-[var(--ink-soft)]">Nenhuma fornada ativa no momento.</Card>
-        )}
+        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+          {FORNOS.map((forno) => (
+            <FornoResumoCard
+              key={forno.id}
+              forno={forno}
+              fornadaAtiva={fornadas.find((f) => f.status === "andamento" && f.fornoId === forno.id) || null}
+              onDetalhes={() => onAbrirForno(forno.id)}
+            />
+          ))}
+        </div>
       </div>
 
       <AgendaSemanaCard onAbrirDia={onAbrirDia} onAbrirOficinas={onAbrirOficinas} />
@@ -736,52 +755,48 @@ function AgendaSemanaCard({ onAbrirDia, onAbrirOficinas }) {
   );
 }
 
-function KilnMiniCard({ fornada, onDetalhes }) {
+/* Substituiu o KilnMiniCard (que tinha um mini-gráfico embutido) — pedido
+   do Diego (2026-09-17): "cada forno com apenas aquele timer, não precisa
+   desse gráfico". Um card compacto por forno físico, sem gráfico nenhum,
+   só o essencial: nome do forno, anel de progresso pequeno (mesma
+   linguagem visual do resto do app) e o timer. */
+function FornoResumoCard({ forno, fornadaAtiva, onDetalhes }) {
   const [agora, setAgora] = useState(new Date());
-  useEffect(() => { const id = setInterval(() => setAgora(new Date()), 1000); return () => clearInterval(id); }, []);
-  const ultima = fornada.leituras[fornada.leituras.length - 1] || null;
-  const p = calcularPrevisao(fornada.config, fornada.iniciadoEm, agora, ultima);
+  useEffect(() => {
+    if (!fornadaAtiva) return;
+    const id = setInterval(() => setAgora(new Date()), 1000);
+    return () => clearInterval(id);
+  }, [fornadaAtiva]);
 
-  const mini = useMemo(() => {
-    const pontos = [];
-    const inicio = fornada.iniciadoEm.getTime();
-    const fim = inicio + 20 * 3600 * 1000;
-    for (let i = 0; i <= 16; i++) {
-      const t = new Date(inicio + (i / 16) * (fim - inicio));
-      const pp = calcularPrevisao(fornada.config, fornada.iniciadoEm, t, null);
-      const leituraProxima = fornada.leituras.filter((l) => l.em <= t).slice(-1)[0];
-      pontos.push({ prevista: pp.temperatura, real: t <= agora ? (leituraProxima ? leituraProxima.temp : pp.temperatura) : null });
-    }
-    return pontos;
-  }, [fornada, agora]);
+  if (!fornadaAtiva) {
+    return (
+      <button onClick={onDetalhes} className={"flex min-w-0 items-center gap-3 p-4 text-left " + VIDRO_CARD}>
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--cream-soft)] text-[var(--ink-soft)]"><Flame size={18} /></div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold">{forno.nome}</div>
+          <div className="text-xs text-[var(--ink-soft)]">Nenhuma fornada ativa</div>
+        </div>
+      </button>
+    );
+  }
+
+  const ultima = fornadaAtiva.leituras[fornadaAtiva.leituras.length - 1] || null;
+  const p = calcularPrevisao(fornadaAtiva.config, fornadaAtiva.iniciadoEm, agora, ultima);
 
   return (
-    <Card className="overflow-hidden border-[var(--line)] bg-gradient-to-br from-[var(--cream-soft)] to-white">
-      <div className="flex items-center justify-between px-5 pt-4">
-        <span className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]"><Flame size={16} />Forno em andamento</span>
-        <button onClick={onDetalhes} className={"px-3 py-1.5 text-sm font-medium " + ACCENT_SOLIDO}>Ver forno</button>
+    <button onClick={onDetalhes} className={"flex min-w-0 items-center gap-3 p-4 text-left " + VIDRO_CARD}>
+      <ProgressRing pct={p.pct} size={48} stroke={5}>
+        <span className="text-[11px] font-semibold">{p.temperatura}°</span>
+      </ProgressRing>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold">{forno.nome}</div>
+        <div className="truncate text-xs text-[var(--ink-soft)]">{TIPO_LABEL[fornadaAtiva.tipo]} · {ETAPA_LABEL[p.etapa]}</div>
       </div>
-      <div className="grid gap-3 px-5 pb-5 pt-3 sm:grid-cols-[1fr_180px]">
-        <div>
-          <p className="mb-2 text-base font-medium">Queima de {TIPO_LABEL[fornada.tipo]}</p>
-          <div className="[&>*]:min-w-0 grid grid-cols-2 gap-3">
-            <div><div className="text-2xl font-semibold">{p.temperatura}°C</div><div className="text-xs text-[var(--ink-soft)]">Estimada</div></div>
-            <div><div className="text-base font-semibold">{ETAPA_LABEL[p.etapa]}</div><div className="text-xs text-[var(--ink-soft)]">Etapa</div></div>
-            <div><div className="text-sm font-[family-name:var(--font-mono)]">{fmtDuracaoCurta(p.restanteSeg)}</div><div className="text-xs text-[var(--ink-soft)]">Restante</div></div>
-            <div><div className="text-sm font-[family-name:var(--font-mono)]">{fmtDuracaoCurta(p.decorridoSeg)}</div><div className="text-xs text-[var(--ink-soft)]">Decorrido</div></div>
-          </div>
-          <div className="mt-3 h-2 w-full overflow-hidden bg-[var(--cream-soft)]"><div className="h-full bg-[var(--accent)] transition-all duration-700" style={{ width: p.pct + "%" }} /></div>
-        </div>
-        <div className="h-24 w-full min-w-0 overflow-hidden sm:h-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={mini}>
-              <Area type="monotone" dataKey="prevista" stroke="#B8B2A6" fill="#EDEBE3" strokeDasharray="3 2" />
-              <Line type="monotone" dataKey="real" stroke="#C2410C" strokeWidth={2} dot={false} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
+      <div className="shrink-0 text-right">
+        <div className="text-sm font-[family-name:var(--font-mono)] font-semibold">{fmtDuracaoCurta(p.restanteSeg)}</div>
+        <div className="text-[11px] text-[var(--ink-soft)]">restante</div>
       </div>
-    </Card>
+    </button>
   );
 }
 
@@ -789,7 +804,8 @@ function KilnMiniCard({ fornada, onDetalhes }) {
 /*  Painel principal do Forno                                          */
 /* ------------------------------------------------------------------ */
 
-function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, onAtualizarTemp, onAdicionarObs, onFinalizar }) {
+function PainelForno({ fornadas, notificar, fornoInicial, onNovaFornada, onDuplicar, onAtualizarTemp, onAdicionarObs, onFinalizar }) {
+  const [fornoSel, setFornoSel] = useState(() => fornoInicial || fornadas.find((f) => f.status === "andamento")?.fornoId || FORNOS[0].id);
   const [modalTemp, setModalTemp] = useState(false);
   const [modalObs, setModalObs] = useState(false);
   const [modalFinalizar, setModalFinalizar] = useState(false);
@@ -800,7 +816,9 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
 
   useEffect(() => { const id = setInterval(() => setAgora(new Date()), 1000); return () => clearInterval(id); }, []);
 
-  const historico = fornadas;
+  const ativa = fornadas.find((f) => f.status === "andamento" && f.fornoId === fornoSel) || null;
+  const historico = fornadas.filter((f) => f.fornoId === fornoSel);
+  const corForno = fornoSel === FORNOS[0].id ? "sienna" : "ardosia";
 
   return (
     <div>
@@ -809,18 +827,37 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
           <h1 className="text-2xl font-semibold" style={FONT_DISPLAY}>Forno</h1>
           <p className="text-sm text-[var(--ink-soft)]">Acompanhe sua fornada em tempo real.</p>
         </div>
-        <button onClick={onNovaFornada} className={"flex shrink-0 items-center gap-1.5 px-4 py-2.5 text-sm font-medium " + ACCENT_SOLIDO}>
+        <button onClick={() => onNovaFornada(fornoSel)} className={"flex shrink-0 items-center gap-1.5 px-4 py-2.5 text-sm font-medium " + ACCENT_SOLIDO}>
           <Plus size={16} strokeWidth={2.5} />Nova fornada
         </button>
       </div>
 
+      <div className="mb-5 flex gap-2">
+        {FORNOS.map((forno) => {
+          const corTab = forno.id === FORNOS[0].id ? "sienna" : "ardosia";
+          const temAtiva = fornadas.some((f) => f.status === "andamento" && f.fornoId === forno.id);
+          const ativoTab = fornoSel === forno.id;
+          return (
+            <button
+              key={forno.id}
+              onClick={() => setFornoSel(forno.id)}
+              className={"flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium " + (ativoTab ? ACCENT_SOLIDO : VIDRO_PILL)}
+              style={ativoTab ? undefined : estiloVidroTingido(corTab)}
+            >
+              {forno.nome}
+              {temAtiva && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />}
+            </button>
+          );
+        })}
+      </div>
+
       {!ativa ? (
-        <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+        <div className={"flex flex-col items-center justify-center gap-3 px-6 py-16 text-center " + VIDRO_CARD}>
           <div className="flex h-14 w-14 items-center justify-center bg-[var(--cream-soft)] text-[var(--ink-soft)]"><Flame size={26} /></div>
-          <h2 className="text-lg font-semibold">Nenhuma fornada em andamento</h2>
+          <h2 className="text-lg font-semibold">Nenhuma fornada em andamento no {FORNOS.find((f) => f.id === fornoSel)?.nome}</h2>
           <p className="max-w-sm text-sm text-[var(--ink-soft)]">Inicie uma nova fornada para começar o acompanhamento em tempo real da temperatura, etapas e previsões.</p>
-          <button onClick={onNovaFornada} className={"mt-2 px-4 py-2.5 text-sm font-medium " + ACCENT_SOLIDO}>+ Nova fornada</button>
-        </Card>
+          <button onClick={() => onNovaFornada(fornoSel)} className={"mt-2 px-4 py-2.5 text-sm font-medium " + ACCENT_SOLIDO}>+ Nova fornada</button>
+        </div>
       ) : (
         <FornadaAtivaPainel
           fornada={ativa} agora={agora}
@@ -832,8 +869,8 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
 
       <div className="[&>*]:min-w-0 mt-5 grid gap-5 lg:grid-cols-[1fr_320px]">
         <div />
-        <Card className="p-4 lg:col-start-2">
-          <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">Histórico de fornadas</h3></div>
+        <div className={"relative p-4 lg:col-start-2 " + VIDRO_CARD}>
+          <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">Histórico — {FORNOS.find((f) => f.id === fornoSel)?.nome}</h3></div>
           <ul className="space-y-3">
             {historico.map((f) => (
               <li key={f.id} className="border border-[var(--line)] p-3 hover:border-[var(--line)]">
@@ -850,13 +887,13 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
               </li>
             ))}
           </ul>
-        </Card>
+        </div>
       </div>
 
       {modalTemp && (
         <Modal onClose={() => setModalTemp(false)}>
           <h3 className="mb-3 text-base font-semibold">Atualizar temperatura</h3>
-          <form onSubmit={(e) => { e.preventDefault(); const v = parseFloat(inputTemp); if (!isNaN(v)) { onAtualizarTemp(v); setModalTemp(false); setInputTemp(""); } }}>
+          <form onSubmit={(e) => { e.preventDefault(); const v = parseFloat(inputTemp); if (!isNaN(v)) { onAtualizarTemp(v, ativa.id); setModalTemp(false); setInputTemp(""); } }}>
             <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Temperatura real (°C)</label>
             <input autoFocus value={inputTemp} onChange={(e) => setInputTemp(e.target.value)} type="number" className="mb-4 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="Ex: 920" />
             <div className="flex gap-2">
@@ -870,7 +907,7 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
       {modalObs && (
         <Modal onClose={() => setModalObs(false)}>
           <h3 className="mb-3 text-base font-semibold">Adicionar observação</h3>
-          <form onSubmit={(e) => { e.preventDefault(); if (inputObs.trim()) { onAdicionarObs(inputObs.trim()); setModalObs(false); setInputObs(""); } }}>
+          <form onSubmit={(e) => { e.preventDefault(); if (inputObs.trim()) { onAdicionarObs(inputObs.trim(), ativa.id); setModalObs(false); setInputObs(""); } }}>
             <textarea autoFocus value={inputObs} onChange={(e) => setInputObs(e.target.value)} rows={3} className="mb-4 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="Ex: Patamar iniciado." />
             <div className="flex gap-2">
               <button type="button" onClick={() => setModalObs(false)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
@@ -886,7 +923,7 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
           <p className="mb-5 text-sm text-[var(--ink-soft)]">A fornada será marcada como Finalizada e todo o histórico (gráfico, temperaturas, observações e conteúdo) será salvo.</p>
           <div className="flex gap-2">
             <button onClick={() => setModalFinalizar(false)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
-            <button onClick={() => { onFinalizar(); setModalFinalizar(false); }} className="flex-1 bg-rose-600 py-2.5 text-sm font-medium text-white hover:bg-rose-700">Finalizar</button>
+            <button onClick={() => { onFinalizar(ativa.id); setModalFinalizar(false); }} className="flex-1 bg-rose-600 py-2.5 text-sm font-medium text-white hover:bg-rose-700">Finalizar</button>
           </div>
         </Modal>
       )}
