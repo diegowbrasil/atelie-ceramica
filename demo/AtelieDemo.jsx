@@ -821,16 +821,29 @@ function AgendaSemanaCard({ onAbrirDia, onAbrirOficinas }) {
           const diaTurmasInfo = TURMAS_DIAS.find((td) => td.id === diaId);
           const corDia = diaTurmasInfo?.turmas[0] ? corTurma(diaTurmasInfo.turmas[0].id) : null;
           const estiloCard = !isHoje && corDia ? { background: `linear-gradient(180deg, ${rgbCor(corDia, 0.18)}, ${rgbCor(corDia, 0.08)})`, borderColor: rgbCor(corDia, 0.3) } : undefined;
+          const fotoDia = corDia && FUNDOS_ARGILA[corDia];
           return (
             <div
               key={d.dia}
               className={"relative flex w-full min-w-0 items-start gap-3 p-3.5 " + VIDRO_CARD + (isHoje ? " border-[var(--accent)]/35" : "")}
               style={estiloCard}
             >
-              <div className={"flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border py-2.5 " + (isHoje ? ACCENT_SOLIDO : corDia ? "" : "border-white/60 bg-white/40")} style={!isHoje && corDia ? estiloVidroTingido(corDia) : undefined}>
-                <span className={"text-[10px] font-bold uppercase tracking-wide " + (isHoje ? "text-[var(--cream)]" : !corDia ? "text-[var(--ink-soft)]" : "")}>{d.dia}</span>
-                <span className={"text-sm font-semibold " + (isHoje ? "text-white" : !corDia ? "text-[var(--ink)]" : "")}>{dataFmt}</span>
-                {isHoje && <span className="text-[9px] font-semibold uppercase tracking-wide text-white/85">Hoje</span>}
+              {/* Selo do dia com a FOTO real de mesclagem de argila (não só
+                 a cor sólida) — só aqui, não no card/painel inteiro (pedido
+                 explícito do Diego: "nao o fundo todo do painel so esses
+                 quadrados apontados de cada dia da semana"). Mesmas fotos
+                 já usadas em Turmas (FUNDOS_ARGILA) — cover, sem parallax
+                 (selo pequeno de tamanho fixo, não precisa). Degradê escuro
+                 por cima garante contraste do texto branco em qualquer
+                 recorte da foto. */}
+              <div
+                className={"relative flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-2xl border py-2.5 " + (isHoje ? ACCENT_SOLIDO : fotoDia ? "border-white/50" : "border-white/60 bg-white/40")}
+                style={isHoje ? undefined : fotoDia ? { backgroundImage: `url(${fotoDia})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+              >
+                {!isHoje && fotoDia && <div className="absolute inset-0 bg-gradient-to-b from-black/15 to-black/40" />}
+                <span className={"relative text-[10px] font-bold uppercase tracking-wide " + (isHoje ? "text-[var(--cream)]" : fotoDia ? "text-white" : "text-[var(--ink-soft)]")}>{d.dia}</span>
+                <span className={"relative text-sm font-semibold " + (isHoje ? "text-white" : fotoDia ? "text-white" : "text-[var(--ink)]")}>{dataFmt}</span>
+                {isHoje && <span className="relative text-[9px] font-semibold uppercase tracking-wide text-white/85">Hoje</span>}
               </div>
               <div className="min-w-0 flex-1 space-y-2 pt-0.5">
                 {vazio && (

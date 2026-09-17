@@ -283,7 +283,16 @@ função com outro parâmetro.
   cor (identidade vs. ação) seguem separadas de propósito (CLAUDE.md
   §6.1), então Quinta (hoje neste mock) mostra laranja, não musgo,
   mesmo sendo o dia "verde". Dias sem turma fixa (Seg/Sex/Sáb/Dom) não
-  têm cor própria ainda, ficam neutros. O mesmo par de
+  têm cor própria ainda, ficam neutros. **Depois, só o selo do dia (não o
+  card inteiro) ganhou a FOTO de mesclagem de argila** — o Diego apontou
+  com setas especificamente os quadradinhos SEG/TER/QUA/QUI e foi claro
+  ao corrigir o escopo: "nao o fundo todo do painel so esses quadrados
+  apontados de cada dia da semana". Reaproveita `FUNDOS_ARGILA` (as
+  mesmas fotos de Turmas), `background-size:cover` sem parallax (selo é
+  pequeno e de tamanho fixo, não precisa), com um degradê escuro
+  (`from-black/15 to-black/40`) por cima garantindo contraste do texto
+  branco em cima de qualquer recorte da foto. O resto do card (tingimento
+  suave de fundo do item 6 acima) não mudou. O mesmo par de
   funções (`datasDaSemanaAtual`/`formatarDiaMes`) também alimenta a data
   exata no cabeçalho do dia em Turmas ("Terça-feira · 15/09 · 18:30 às
   20:30" — antes só "Terça-feira · 18:30 às 20:30"), pedido explícito do

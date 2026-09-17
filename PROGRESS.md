@@ -67,6 +67,12 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
    sua cor da semana"), reaproveitando `corTurma`/`CORES_IDENTIDADE` já
    existentes. "Hoje" continua laranja de ação, não a cor de identidade do
    dia (mesma separação accent-vs-identidade do resto do app).
+7. **Selo do dia (só ele, não o card) ganhou a foto real de mesclagem de
+   argila** — Diego mandou print com setas apontando exatamente os
+   quadradinhos SEG/TER/QUA/QUI e confirmou o escopo: "nao o fundo todo
+   do painel so esses quadrados apontados de cada dia da semana".
+   Reaproveita as mesmas fotos de `FUNDOS_ARGILA` (Turmas), `cover` sem
+   parallax, degradê escuro por cima pro texto branco continuar legível.
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills
