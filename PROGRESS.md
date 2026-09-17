@@ -145,6 +145,54 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
     nativo da página — virou `position:fixed`, única fonte de
     movimento). Detalhe técnico completo em CLAUDE.md §5 (parallax) e §6
     (logo/tipografia/cabeçalho).
+13. **Contraste do logo reforçado com sombra + segunda rodada de ajustes
+    no cabeçalho** — mesmo texto "MTCST" difícil de ler mesmo já sendo
+    texto de verdade (a foto atrás varia demais pra confiar só na cor
+    branca); `textShadow`/`drop-shadow` escuros garantem contraste
+    independente de qual parte da foto cai atrás. Na sequência, 4 pedidos
+    numa mensagem só: altura do cabeçalho dobrada, hambúrguer removido
+    (redundante com "Mais" na nav inferior — layout virou grid de 3
+    colunas pra manter o logo centralizado sem o ícone), foto do
+    cabeçalho trocada por uma nova dedicada (mais escura, só pra essa
+    barra — não mexeu na foto "carvão" usada em Oficinas/Sábado), logo
+    aumentado. Detalhe técnico em CLAUDE.md §6.
+14. **Fechamento do cabeçalho (pílula de vidro de volta + logo) + achado
+    generalizado de contraste + brilho do forno por temperatura + borda
+    de identidade na lista de Turmas** — leva grande, tudo verificado ao
+    vivo (esbuild + screenshot/computed style) e detalhado em CLAUDE.md
+    §5/§6:
+    - Cabeçalho voltou a ser pílula flutuante de vidro (o Diego reabriu
+      essa direção de novo, agora sobre fundo branco — "esse cabeçalho
+      ainda nao ficou bom, deixe ele como uma pilula flutuante..."), e o
+      texto "MTCST" passou por 2 rodadas de ajuste (transparência
+      rejeitada por ler cinza → gradiente escuro com `background-clip:
+      text`; depois "mais preto com borda de vidro" — 2 tentativas de
+      contorno rejeitadas/pioradas antes da que funcionou,
+      `filter:drop-shadow` em vez de `text-stroke`/pilha de
+      `text-shadow`). Ver CLAUDE.md §6 pro histórico completo das
+      tentativas (vale ler se pedirem pra mexer no logo de novo — já
+      sabemos 2 caminhos que não funcionam).
+    - **Achado generalizado**: as abas Qua/Qui de Turmas tinham texto de
+      baixo contraste (mesma cor do fundo tingido) — corrigido, e o Diego
+      generalizou na hora: "a msm regra vale para os outros botoes q
+      estiverem coloridos". Causa raiz era `estiloVidroTingido()`, função
+      central usada por abas do forno, pill de horário, chip de dia,
+      status de oficina — corrigida na função (texto branco + sombra por
+      padrão), não em cada botão. CLAUDE.md §6.
+    - **Card do forno (Dashboard) ganhou brilho ao redor conforme a
+      temperatura real** — incandescente (vermelho→laranja→amarelo) acima
+      de 250°C, azul e discreto abaixo disso ou sem fornada ativa. 3
+      mensagens curtas em sequência definindo a regra final (cor
+      incandescente → forno frio/desligado em azul com menos efeito →
+      limiar exato de 250°C). CLAUDE.md §5, bullet do Dashboard.
+    - **Lista de alunos de Turmas ganhou contorno na cor de identidade da
+      turma ativa** (sienna/ardósia/musgo/café conforme a aba), a partir
+      de um exemplo visual que o Diego montou com uma seta. **Pendente,
+      mesmo pedido**: aluno "provisório" numa turma que não é a dele
+      deveria mostrar a borda da turma de ORIGEM — não dá pra construir
+      ainda, não existe esse dado (mesmo pré-requisito do recurso de
+      mover aluno entre turmas, ver item de pendências abaixo).
+      CLAUDE.md §5.
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills
@@ -343,6 +391,18 @@ se precisar, mas não é prioridade dado a decisão acima.
   não existe tela de aluno, não existe troca de papel (admin/aluno), não
   existe `vagas` lifted pro nível da App. Isso tudo ainda precisa ser feito
   (ver plano em "Próximo passo imediato").
+
+**Antes disso, considerar priorizar os 2 pedidos mais recentes do Diego
+(2026-09-17, item 10/14 acima), que também dependem do MESMO passo 1 abaixo
+(lift de `vagas`/`vagasPorTurma` pro componente raiz)**: página de detalhe
+do aluno (clicar num aluno em Turmas/Alunos) e mover aluno entre turmas
+(com prompt "vaga provisória" vs. fixa, e a borda de identidade seguindo a
+turma de origem enquanto provisório). Nenhum dos dois foi começado ainda —
+ver CLAUDE.md §5 (Turmas e Alunos) pro pedido verbatim e os detalhes
+técnicos de cada um. Como os dois pedem o mesmo lift de estado que o passo
+1 da Área do Aluno já precisava, faz sentido resolver o lift uma vez só e
+decidir com o Diego qual das duas frentes (Área do Aluno vs. estas duas
+features de Turmas/Alunos) construir em cima primeiro.
 
 **Próximo passo imediato — retomar a Área do Aluno:**
 1. Lift `vagas` (hoje `useState` local dentro de `Turmas`) pro nível da

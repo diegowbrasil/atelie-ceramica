@@ -285,6 +285,29 @@ nenhuma tela; ficam registradas aqui como referência pra quando o
 histórico de presença de verdade for construído (provavelmente a mesma
 peça de trabalho).
 
+**Card da lista de alunos ganhou contorno na cor de identidade da turma
+ativa (2026-09-17)** — "e envolta do card dos alunos daquele turma
+acompanhe a cor da turma igual no exemplo q montei", com screenshot
+marcando o contorno do card (não dos alunos individuais). `borderColor:
+rgbCor(cor, 0.75)` + `borderWidth: 2` via `style` inline no card
+`VIDRO_CARD` que envolve `vagas.map(...)` (`cor` já existia no escopo,
+`corTurma(turmaInfo.id)`) — troca só a cor da borda que o `VIDRO_CARD`
+já desenha, resto do vidro (fundo/sombra/blur) intacto. Verificado ao
+vivo trocando entre Terça (sienna)/Quinta 14:30 (musgo) — a cor do
+contorno acompanha a aba ativa.
+**Segunda parte do mesmo pedido, ainda NÃO implementada**: "cada turma os
+alunos tem o contorno da cor da sua turma ai os alunos q estiverem
+provisorios em outra turma ele acompanha a borda da turma dele" — um
+aluno movido temporariamente pra outra turma (feature "vaga provisória",
+ver pedido de mover aluno entre turmas em §5 Alunos, também não
+implementado) deveria mostrar, dentro da lista da turma onde está
+temporariamente, um contorno na cor da turma de ORIGEM dele, não da
+turma atual. Não dá pra construir isso agora: não existe ainda nenhum
+dado de "turma de origem" nem de "está aqui provisoriamente" —
+`VAGAS_POR_TURMA` não tem esse conceito. Fica pendente junto com o
+recurso de mover aluno entre turmas (mesma peça de trabalho, mesmo
+pré-requisito de subir `vagasPorTurma` pro componente raiz).
+
 ### Forno (ferramenta central)
 - Menu "Forno" abre o **painel de acompanhamento**, NUNCA a criação direta.
 - **O ateliê tem 2 fornos físicos de verdade (2026-09-17, pedido do
@@ -347,8 +370,48 @@ função com outro parâmetro.
   com texto codificado. Chave Pix fixa em `PIX_CHAVE`.
 
 ### Alunos
-- Lista **começa vazia** — cliente quer cadastrar alunos reais, sem mocks.
+- ~~Lista começa vazia — cliente quer cadastrar alunos reais, sem mocks.~~
+  **Substituída pelo roster real (2026-09-17)** — `useState(ALUNOS_REAIS)`,
+  ver §5 Turmas ("roster real das 4 turmas") pro histórico completo de como
+  os 46 alunos reais foram populados/desduplicados.
 - Cadastro: nome, telefone, turma fixa, pacote (4/8/12).
+- **Tela redesenhada pra escalar com 46 pessoas reais (2026-09-17)** — "na
+  pagina dos alunos separe por turmas, e q eu consiga fazer uma busca se
+  precisar, nao precisa mostrar todos os alunos em lista". Antes era uma
+  lista única flat (ok pra mock vazio, ruim pra 46 pessoas). Agora: campo de
+  busca (`busca`, filtro case-insensitive por substring no nome) — com
+  busca ativa mostra lista flat filtrada; sem busca mostra 4 seções por
+  turma (`TURMAS_ORDEM_LABELS`, ordem de `TURMA_LABEL_COR`), cada uma um
+  acordeão fechado por padrão (`turmaAberta`, só uma aberta por vez —
+  cabeçalho com bolinha da cor da turma + rótulo + contagem + chevron que
+  gira). Linha de aluno virou componente próprio `LinhaAluno({ a })`,
+  reaproveitado nos dois modos (busca e turma aberta) pra não duplicar o
+  JSX do card.
+- **Ainda pendente, pedido explícito do Diego, não implementado**: "e ainda
+  nao consigo clicar no aluno e ver a pagina dele. e qro poder arrastar um
+  aluno de uma turma e passar para a outra, porem depois de soltar vai
+  aparecer uma mensagem, vaga provisória (no sentido de q só essa semana
+  ele vai pra essa nova turma, ou vai ser trasferido fixo para essa
+  turma)". Dois pedidos distintos, nenhum dos dois começado ainda:
+  1. **Página de detalhe do aluno** — clicar num aluno (em Turmas OU em
+     Alunos) abre uma tela com telefone, histórico de presença datado,
+     status de pacote/pagamento. Mesmo pedido já registrado em §5 Turmas
+     ("ainda pendente de verdade") — é a mesma feature, cross-referenciada
+     nos dois lugares porque o Diego pediu o clique a partir dos dois
+     pontos de entrada.
+  2. **Mover aluno entre turmas** — depois de mover, perguntar se é "vaga
+     provisória" (só essa semana) ou transferência fixa. Isso exige
+     `vagasPorTurma`/`alunos` deixarem de ser estado local de cada
+     componente e subirem pro componente raiz `AtelieDemo` (mesmo padrão
+     de lift já usado pra `fornadas`/`oficinas`), pra Turmas e Alunos
+     lerem/escreverem o mesmo dado. **Avaliar arrastar-e-soltar (HTML5
+     DnD) antes de implementar**: o ambiente de artifact só tem
+     `react`/`lucide-react`/`recharts`/`tailwindcss` disponíveis, sem lib
+     de drag — HTML5 DnD nativo tem suporte fraco em touch/mobile, que é a
+     prioridade do app. Provável que valha propor um equivalente por
+     toque ("mover de turma" num menu/ação do próprio card) em vez de
+     tentar drag-and-drop nativo — **confirmar com o Diego antes de
+     construir**, não decidir a substituição silenciosamente.
 
 ### Dashboard
 - KPIs compactos (coluna estreita, 2×2) — cliente reclamou 2× de ocuparem
@@ -358,6 +421,30 @@ função com outro parâmetro.
   reais desde 2026-09-17 (ver §5), e o mini-gráfico saiu junto com o
   gráfico principal do Forno (pedido do Diego, "não precisa desse
   gráfico").
+- **`FornoResumoCard` ganhou um brilho ao redor pulsando, cor conforme a
+  temperatura real (2026-09-17)** — "coloque envolta do card do forno,
+  uma cor encandescente fazendo oscilando como se estivesse quente,
+  dependendo da temperatura ali". `corIncandescente(temp)` (perto de
+  `rgbCor`/`corTurma`) interpola por pontos fixos numa rampa
+  vermelho-escuro → laranja → amarelo-claro (referência visual: cor de
+  forja/forno de verdade, não fórmula científica de temperatura de cor) e
+  devolve `"R G B"` no mesmo formato space-separated de
+  `CORES_IDENTIDADE`. O card ativo ganha `--glow-rgb` inline + classe
+  `.forno-brasa` (`@keyframes brasaForno` no `<style>` do app, box-shadow
+  de 3 camadas oscilando de intensidade a cada 2.6s — "ao redor do card",
+  não borda sólida, pra ler como brilho/calor e não como contorno).
+  **Correção na sequência, mesmo pedido**: "agora o forno q estiver com
+  uma temperatura mais baixa ou desligado, dele ele com o volto em azul e
+  com menos efeitos" — forno sem fornada ativa (`Nenhuma fornada ativa`,
+  Forno 2 no exemplo) e forno ativo mas ainda frio usam `COR_FORNO_FRIO`
+  (azul, `"68 121 173"`) + classe própria `.forno-fresco`
+  (`@keyframes brasaFornoFrio`, raio/opacidade bem menores, oscilação mais
+  lenta — 3.6s — "menos efeitos" de verdade, não só cor diferente).
+  Limiar entre os dois estados é `TEMP_FORNO_QUENTE`, pedido explícito em
+  mensagem separada: "com a temperatura menor que 250 graus ja tenha a
+  borda azul" → `TEMP_FORNO_QUENTE = 250`. Acima disso usa
+  `corIncandescente`/`.forno-brasa`; abaixo (incluindo forno desligado)
+  usa `COR_FORNO_FRIO`/`.forno-fresco`.
 - ~~Calendário "Turmas da semana": colunas por dia, scroll horizontal no
   mobile.~~ **Redesenhado como lista vertical (2026-09-17)** — pedido do
   Diego: "isso qro um calendario como se fosse uma lista, nao qro q use
@@ -589,19 +676,119 @@ rodadas de correção:**
   "Space Grotesk nos títulos" registrada em §6.1 abaixo — reabertura do
   próprio Diego, com motivo novo (identificou a fonte real do logo),
   não a IA voltando atrás por conta própria.
-- **Cabeçalho mobile ganhou a foto "carvão" também (2026-09-17)** — "qro
-  q a parte do topo fique assim, com o logo branco", com referência
-  visual. Primeira tentativa foi pílula flutuante (margem + cantos
-  arredondados, mesma linguagem visual da nav inferior) — corrigido na
-  hora: "nao qro q seja uma pilula flutuante, qro q só tenha essa
-  aparencia de mesclado, porem seja quadrado igual estava". Formato
-  final: retangular, borda a borda, igual sempre foi — só o fundo
-  (`FUNDOS_ARGILA.carvao`, `backgroundPosition: "center 38%"`, ver
-  detalhe em §5 no histórico do `FundoArgilaParallax`) e a cor do
-  logo/ícones (branco) mudaram. `<Menu>`/`<Bell>` ganharam `text-white`;
-  o logo virou legível de verdade só depois da correção de §6.1 (fonte
+- **Cabeçalho mobile ganhou fundo de foto (2026-09-17)** — "qro q a parte
+  do topo fique assim, com o logo branco", com referência visual. Primeira
+  tentativa foi pílula flutuante (margem + cantos arredondados, mesma
+  linguagem visual da nav inferior) — corrigido na hora: "nao qro q seja
+  uma pilula flutuante, qro q só tenha essa aparencia de mesclado, porem
+  seja quadrado igual estava". Formato final: retangular, borda a borda,
+  igual sempre foi. Logo/ícones brancos com sombra escura garantida
+  (`textShadow` no logo, `filter: drop-shadow` no sino) — não depende só
+  de qual parte da foto cai atrás pra manter contraste, achado do próprio
+  Diego reagindo ao resultado ("MTCST" ficando pouco legível sem reforço).
+  Logo virou legível de verdade só depois da correção de §6.1 (fonte
   real Bebas Neue, texto em vez de imagem — a versão em imagem tinha o
   bug de alpha documentado em §8).
+  **Segunda rodada de ajuste, mesmo dia**: "dobre a altura do cabeçalho,
+  tire os 3 risquinho esquerda, pq ja tem esse msm atalho la embaixo,
+  troque a imagem do cabeçalho por essa, e aumente um pouco o logo" — 4
+  pedidos numa mensagem só:
+  1. Altura dobrada: `py-3` → `py-8` (~48px → ~89px medido de verdade,
+     não só a classe).
+  2. **Botão de menu (hambúrguer) removido** — o botão "Mais" da nav
+     inferior mobile já chama o mesmíssimo `setMenuAberto(true)`, o ícone
+     era redundante. Layout do cabeçalho trocou de `flex justify-between`
+     pra `grid grid-cols-[1fr_auto_1fr]` (coluna vazia / logo / sino) —
+     mantém o logo genuinamente centralizado sem precisar de um
+     espaçador do tamanho exato do ícone removido.
+  3. **Foto trocada pra uma dedicada só do cabeçalho**
+     (`FUNDO_CABECALHO_SRC`, mais escura/preta que `FUNDOS_ARGILA.carvao`
+     — que continua em uso normal em Oficinas/Sábado, não foi
+     substituída, são fotos diferentes agora).
+  4. Logo aumentado: `text-lg` → `text-2xl`.
+  **Terceira rodada — o Diego reverteu a foto de novo, mas manteve os
+  ganhos de tamanho**: "volte a deixar todo o cabeçalho branco com a
+  fonte preta, porem aumente mais um pouco". `FUNDO_CABECALHO_SRC`
+  removido do cabeçalho (constante continua no código, sem uso — não
+  apagada porque ele já pediu foto de volta uma vez, pode pedir de
+  novo), fundo `bg-white`, logo/ícones voltam pra `var(--ink)`/
+  `var(--ink-soft)` (sem `textShadow`/`drop-shadow` — não precisa em
+  fundo claro). Logo aumentado de novo: `text-2xl` → `text-3xl`.
+  **Quarta rodada — pílula flutuante de vidro, de verdade dessa vez**:
+  "esse cabeçalho ainda nao ficou bom, deixe ele como uma pilula
+  flutuante com os cantos arredondados com os efeitos nas bordas igual
+  de vidro". Isso REABRE a recusa de pílula flutuante de duas rodadas
+  atrás — mas aquela recusa foi especificamente sobre a versão com FOTO
+  escura ("nao qro q seja uma pilula flutuante... seja quadrado igual
+  estava"); com fundo branco a leitura mudou, não é a IA ignorando o
+  pedido anterior. `<header>` virou `position:fixed` (antes `relative`,
+  no fluxo normal) com a MESMA receita de vidro da nav inferior —
+  `rounded-full` + gradiente branco translúcido + `backdrop-blur-2xl` +
+  brilho interno + sombra de dois níveis, não uma variação nova, cópia
+  fiel do padrão já estabelecido. Por virar `fixed` (flutua sobre o
+  conteúdo, não empurra ele pra baixo), o `<main>` ganhou `pt-24` extra
+  só no mobile (compensar a altura da pílula + a margem `top-3` —
+  `md:pt-8` mantém o normal no desktop, cabeçalho é `md:hidden` lá de
+  qualquer forma) — mesmo padrão que `pb-20` já fazia pra nav inferior.
+  **Quinta rodada — o texto "MTCST" em si, duas correções em sequência**:
+  1. "pore a fonte mtcst acho q precisa de algum efeito, deixa ela um pouco
+     transparente como se fosse vidro escuro" — tentei `color:
+     rgba(59,56,51,0.55)` (tinta normal do app, só com alpha). **Rejeitado**
+     na hora: "porem ele ficou cinza, e nao qro cinza qro preto com efeito
+     q parece vidro" — a causa é óptica, não escolha de tom errado:
+     alfa-blend de uma cor escura sobre o fundo CLARO da pílula sempre
+     clareia pro cinza, não tem alpha que resolva "preto com transparência"
+     sobre fundo claro. Trocado pra `background-clip: text` (+
+     `WebkitBackgroundClip`) com um gradiente escuro opaco de verdade
+     (preenchimento sólido, não alpha) e `color: transparent` — o "vidro"
+     vem de um `textShadow` sutil claro por cima (`0 1px 0
+     rgba(255,255,255,0.35)`, brilho de borda), não de transparência real
+     do texto.
+  2. "e deixe mais preto o mtcst porem com a borda com efeito de vidro" —
+     gradiente escurecido pra `#0c0c0b → #000` (preto de verdade, não só
+     escuro). Primeira tentativa da borda: `WebkitTextStroke: "0.5px
+     rgba(255,255,255,0.4)"`. **Rejeitada na hora**, com screenshot:
+     "essa borda ficou muito feia, qro q fique menor q a borda seja pra
+     fora da fonte e nao dentro, dentro qro a cor preta" — causa raiz:
+     `-webkit-text-stroke` desenha o traço CENTRADO no contorno da letra
+     (metade por dentro, metade por fora), então numa fonte com traços
+     finos (Bebas Neue) ele invade o preenchimento preto por dentro,
+     "sujando" o preto em vez de só contornar. Segunda tentativa: 8
+     `textShadow`s sobrepostos (deslocamento pequeno em 8 direções, sem
+     blur) tentando simular contorno só por fora — **pior ainda**,
+     confirmado por screenshot (não só suposição): a pilha de 8 camadas
+     claras semi-transparentes se fundiu visualmente num halo que lavou o
+     preto quase inteiro, "MTCST" ficou quase ilegível. **Solução final**:
+     `filter: drop-shadow(0 0 0.6px rgba(255,255,255,0.85))
+     drop-shadow(0 0.5px 0.5px rgba(255,255,255,0.5))` — `drop-shadow`
+     (diferente de `text-shadow`) segue o canal alfa real do que está
+     desenhado (o texto já clipado pelo gradiente), então o brilho nasce
+     só na borda visível de cada letra, nunca por dentro; usar só 2
+     camadas (não 8) evitou o halo. Confirmado por screenshot: preto
+     sólido por dentro, contorno claro fino só por fora.
+- **Pills/chips coloridos com texto ilegível — achado generalizado
+  (2026-09-17)**: o Diego apontou primeiro as abas de dia Qua/Qui em
+  Turmas ("esses textos q estao nos quadrinhos coloridos precisam ser
+  branco, meio envidraçado", screenshot com setas) e, ao ver a correção,
+  generalizou: "a msm regra vale para os outros botoes q estiverem
+  coloridos" (com setas apontando o pill de horário "18:30 às 20:30" e o
+  chip de dia "Quinta" no card de Turmas). Causa raiz era uma só:
+  `estiloVidroTingido()` (função central que estiliza TODO pill/chip
+  tingido do app — abas de forno, pill de horário de Turmas, chip de dia
+  no card de Turmas, status de Oficinas, tag "Oficina" no detalhe) sempre
+  devolvia `color: rgbCor(corKey)` — a mesma cor do fundo tingido, só
+  opaca, baixo contraste em qualquer alpha. Corrigido na função em vez de
+  em cada botão (antes a correção das abas Qua/Qui tinha sido um override
+  só naquele call site, de propósito, por cautela de não saber se os
+  outros usos aguentavam texto branco — o pedido generalizado do Diego
+  confirmou que sim): `estiloVidroTingido` agora devolve sempre `color:
+  "#fff"` + `textShadow: "0 1px 2px rgba(0,0,0,0.35)"` por padrão.
+  Verificado ao vivo (computed style + screenshot) em todos os usos:
+  abas de forno, pill de horário e chip de dia em Turmas, status
+  "Agendada" em Oficinas — todos legíveis. Se um uso futuro de alpha bem
+  baixo (fundo quase branco) ficar difícil de ler com texto branco, é
+  esse ponto único que precisa de ajuste, não um override espalhado de
+  novo.
 - Prioridade mobile, desktop completo e confortável.
 
 ### 6.1 Sistema visual (revisado 2026-09-15/16 — 3 rodadas no mesmo período,
