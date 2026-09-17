@@ -81,14 +81,65 @@ estrutura fácil de crescer).
   escopo, mas só ajustes pontuais que não mudem a direção visual nem
   deixem a interface mais carregada (nada de auditoria completa de
   acessibilidade agora).
-- ⬜ **SHAPE** — próxima. Vai repensar nav/home/lista de turma/detalhe/
-  participantes/estados/ações, com identidade própria MTCST entre
-  VigaShoes e Apple (não cópia literal de nenhum), incluindo o sistema de
-  cor de identidade por turma/oficina — esse é o veredito central da
-  CRITIQUE que a SHAPE precisa endereçar (ver acima).
-- ⬜ **CRAFT** — não iniciada. Implementar preservando dado/função,
-  respeitando a decisão de arquivo único (ver acima).
+- ✅ **SHAPE — concluída e confirmada.** Brief completo em
+  `.impeccable/surfaces/demo-ateliedemo-jsx.md`. Direção final, fechada
+  depois de 6 rodadas de mockup visual (widget) com o Diego reagindo a
+  cada uma — resumo em "Fase SHAPE: iteração visual" logo abaixo, detalhe
+  completo no brief persistido.
+- 🔄 **CRAFT — em andamento.** Implementar o brief acima: `ProgressRing`
+  generalizado, paleta de identidade (tons de argila), material de vidro
+  líquido nos cards/pills/chip/nav, aplicado em Turmas/Oficinas/
+  Pagamentos/Alunos. Preservar dado/função, arquivo único.
 - ⬜ **POLISH** — não iniciada.
+
+### Fase SHAPE: iteração visual (2026-09-17)
+
+O Diego pediu pra visualizar o brief em vez de só ler texto — usei o
+`mcp__visualize__show_widget` pra fazer mockups HTML reais (fiéis aos
+tokens do app: creme/tinta/terracota, Inter+Space Grotesk) em vez de só
+descrever. 6 rodadas de ajuste, cada uma resolvida mostrando de novo, não
+só explicando:
+1. Fração do pacote ("3/4") precisava ficar **dentro** do anel, não do
+   lado — corrigido com o padrão certo (container `relative` do tamanho
+   do anel + texto `absolute inset-0` centralizado), igual o `TempGauge`
+   já faz.
+2. "A cor da turma só tem no quadradinho?" — não, o plano sempre incluiu
+   pill de horário e navegação também, só não tinha aparecido no mockup
+   ainda. Mostrado com pill + borda de card + chip + anel (4 lugares).
+3. Pedido de paleta "mais moderna e colorida, tipo duo tone" — testei uma
+   paleta vívida (turquesa/violeta/magenta/índigo). **Rejeitada**:
+   "estranho essas cores rosas e pink, quero tons terrosos, que tenha
+   mais a ver com argila". Trocado pra pigmentos de terra (sienna,
+   ardósia, musgo, café) — mais saturados que um primeiro rascunho muito
+   apagado que eu tinha testado internamente, mas sem entrar no
+   território vívido/joia que foi rejeitado.
+4. Pedido de transparência "igual widget da Apple" — testei
+   `backdrop-filter: blur` nos cards. O Diego mandou uma imagem de
+   referência (barra de navegação flutuante do iOS 18/"vidro líquido") e
+   depois outra (painel de widgets do visionOS) dizendo "não só
+   transparente" — a segunda imagem mostra um widget **sólido** e colorido
+   do lado de um painel de vidro, então a correção real era sobre
+   qualidade/peso do material, não sobre remover transparência.
+5. Tentei "sólido com profundidade 3D" (gradiente + sombra, sem blur) —
+   o Diego voltou: "quero transparentes, mas quero que pareça vidro e não
+   só um pouco transparente". A causa raiz: meu vidro anterior estava
+   sobre fundo liso (`--cream` só), sem nada de cor atrás pra realmente
+   desfocar — lia como "opacidade baixa", não como vidro de verdade.
+6. **Fechado**: vidro com receita completa — gradiente translúcido +
+   `backdrop-blur` forte + saturação extra + borda clara visível + brilho
+   interno no topo + sombra de dois níveis — **e manchas de gradiente
+   coloridas fixas atrás do conteúdo**, especificamente pra dar ao vidro
+   algo de verdade pra desfocar (sem isso o efeito não convence). Isso é
+   suporte funcional do material escolhido, registrado no brief como tal
+   — não é decoração solta, é o que faz "vidro" parecer vidro e não só
+   uma superfície semi-transparente lisa. Confirmado: "isso melhorou,
+   continue".
+
+**Lição pra próximas sessões**: quando o pedido é sobre aparência visual
+("moderno", "vidro", "cores"), mostrar mockup (`mcp__visualize__show_widget`,
+fiel aos tokens reais do app) resolve mais rápido que descrever em texto
+— o Diego corrigiu 3× uma leitura errada minha de pedidos anteriores só
+olhando o resultado visual, coisa que não tinha acontecido com texto.
 
 **Correções da fase CRITIQUE já aplicadas** (todas verificadas ao vivo no
 preview, não só por esbuild — ver entrada de sessão abaixo pro detalhe
