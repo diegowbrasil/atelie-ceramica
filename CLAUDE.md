@@ -383,6 +383,12 @@ função com outro parâmetro.
 
 - Menu lateral **estreito** (`w-32`, ícone + rótulo pequeno empilhado) —
   pediu redução 3×. Não alargar.
+- ~~Nav inferior mobile (`TABS_MOBILE`): Início, Turmas, Forno,
+  Solicitações, Mais~~ **Solicitações trocada por Oficinas (2026-09-17)**
+  — "qro q tenha inicio, turmas, forno, oficinas, mais, tire o
+  solicitações dali". Solicitações continua acessível, só saiu da barra
+  fixa — ainda está na lista completa (`NAV`) que abre pelo "Mais", com o
+  badge de contagem intacto.
 - ~~Sem margem à direita no conteúdo~~ **Revertido em 2026-09-17.** Fazia
   sentido só enquanto os cards eram retos e iam até a borda (regra da v1
   MTCST-literal); com cantos arredondados + sombra (v3, atual), `pr-0`

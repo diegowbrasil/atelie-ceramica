@@ -476,7 +476,7 @@ const NAV = [
   { id: "relatorios", label: "Relatórios", icon: BarChart3 },
   { id: "config", label: "Configurações", icon: Settings },
 ];
-const TABS_MOBILE = ["dashboard", "turmas", "forno", "solicitacoes"];
+const TABS_MOBILE = ["dashboard", "turmas", "forno", "oficinas"];
 
 /* ------------------------------------------------------------------ */
 /*  App principal                                                      */
