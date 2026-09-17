@@ -86,15 +86,29 @@ estrutura fácil de crescer).
   depois de 6 rodadas de mockup visual (widget) com o Diego reagindo a
   cada uma — resumo em "Fase SHAPE: iteração visual" logo abaixo, detalhe
   completo no brief persistido.
-- ✅ **CRAFT — primeira leva implementada e testada ao vivo.** `ProgressRing`
+- ✅ **CRAFT — concluída, e muito além do brief original.** `ProgressRing`
   generalizado, paleta de identidade, vidro líquido e as manchas de fundo
-  aplicados em Turmas, Oficinas (lista + detalhe), Alunos e Pagamentos,
-  mais a barra de navegação mobile. Detalhe completo na entrada de sessão
-  abaixo. **Ainda não coberto pelo brief**: Dashboard e Forno ficam de
-  fora de propósito (não eram o problema); "Ver forno"/sidebar
-  desktop/drawer mobile não receberam vidro (fora do escopo do brief,
-  que falava só da barra flutuante mobile).
-- ⬜ **POLISH** — não iniciada.
+  aplicados em Turmas, Oficinas (lista + detalhe), Alunos, Pagamentos e
+  Solicitações, mais a barra de navegação mobile e o drawer. Só que o
+  Diego seguiu revisando ao vivo (comparando com os mockups de referência)
+  bem além do que o brief da SHAPE previa, e isso virou uma leva enorme de
+  pedidos novos, todos já implementados e commitados: logo real da MTCST
+  embutido (substituindo o `VaseMark`), gráfico de curva do Forno removido
+  (nos dois lugares — painel principal e mini-card do Dashboard), correção
+  de layout (`pr-0` antigo cortando cantos arredondados), **2 fornos reais
+  e independentes** (mudança de arquitetura, não só visual — o ateliê tem
+  2 fornos físicos), e as 6 oficinas reais no lugar das fictícias. Ver o
+  histórico de commits pra detalhe de cada rodada — foram muitos, cada um
+  com contexto próprio no corpo do commit.
+- ✅ **POLISH — primeira passada feita via `/impeccable polish`.** Achado
+  real: nenhum elemento interativo tinha indicador de foco visível ao
+  navegar por teclado (Tab) — confirmado testando de verdade (tecla Tab
+  real, não suposição), corrigido com um anel `:focus-visible` global na
+  cor do accent. Também achou e corrigiu a tela Solicitações, que tinha
+  ficado de fora da leva de vidro (não estava na lista de telas do brief
+  original, mas é exatamente o mesmo padrão "lista de pessoas" que o
+  resto já tem). `StatusPecasCard` continua de propósito fora do vidro —
+  já documentado no brief como exceção, não é uma pendência.
 
 ### Fase SHAPE: iteração visual (2026-09-17)
 
