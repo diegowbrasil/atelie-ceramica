@@ -247,10 +247,30 @@ função com outro parâmetro.
   reais desde 2026-09-17 (ver §5), e o mini-gráfico saiu junto com o
   gráfico principal do Forno (pedido do Diego, "não precisa desse
   gráfico").
-- Calendário "Turmas da semana": colunas por dia, dia atual em laranja,
-  cards brancos com sombra, avatares empilhados, dias vazios com
-  "Sem aulas". **Colunas são clicáveis** → leva a Turmas naquele dia (dia
-  com oficina → leva a Oficinas). Implementado e testado.
+- ~~Calendário "Turmas da semana": colunas por dia, scroll horizontal no
+  mobile.~~ **Redesenhado como lista vertical (2026-09-17)** — pedido do
+  Diego: "isso qro um calendario como se fosse uma lista, nao qro q use
+  scroll para o lado". Um card só (`VIDRO_CARD` + `divide-y`), uma linha por
+  dia (SEG→DOM), sem scroll lateral em nenhum breakpoint. Selo do dia
+  (esquerda da linha) mostra sigla + **data real** (`DD/MM`, calculada de
+  `new Date()` via `datasDaSemanaAtual()`/`formatarDiaMes()` em
+  `AtelieDemo.jsx`, não mais um número fixo) — dia atual identificado
+  comparando a data real, não mais um id de dia fixo (`"TER"`) hardcoded.
+  Dias vazios mostram "Sem aulas", dias com aula(s)/oficina(s) empilham
+  sub-cards brancos abaixo do selo. **Linhas continuam clicáveis** → leva a
+  Turmas naquele dia (dia com oficina → leva a Oficinas). O mesmo par de
+  funções (`datasDaSemanaAtual`/`formatarDiaMes`) também alimenta a data
+  exata no cabeçalho do dia em Turmas ("Terça-feira · 15/09 · 18:30 às
+  20:30" — antes só "Terça-feira · 18:30 às 20:30"), pedido explícito do
+  Diego (2026-09-17): "nas turmas no dia da aula preciso q coloque o dia
+  exato... pq depois qro se precisar gerar um historico da pessoa d qual
+  dia ela veio, saber qual foi a terça feira". **Isso resolve só a exibição
+  da data** — o histórico de presença por data em si (registrar em qual
+  data exata cada presença foi marcada) ainda não existe;
+  `marcarPresenca`/`VAGAS_INICIAIS` (Turmas) continuam só com contador
+  agregado (`aula`/`total`), sem log de datas. Não construir essa parte sem
+  pedido explícito — o Diego sinalizou como necessidade futura ("depois"),
+  não decisão de escopo pra agora.
 
 ---
 

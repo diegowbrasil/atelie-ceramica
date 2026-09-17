@@ -191,19 +191,19 @@ function oficinasIniciais() {
   ];
 }
 const AGENDA_SEMANA = [
-  { dia: "SEG", num: 12, aulas: [] },
-  { dia: "TER", num: 13, aulas: [{ hora: "18:30 - 20:30", ocupados: 8, total: 12, nomes: ["Maria Oliveira","João Silva","Ana Paula","Pedro Santos"] }] },
-  { dia: "QUA", num: 14, aulas: [{ hora: "16:30 - 18:30", ocupados: 11, total: 12, nomes: ["Júlia Costa","Lucas Mendes","Carla Souza","Rafael Lima","Beatriz Almeida","Felipe Martins","Sofia Ramos"] }] },
-  { dia: "QUI", num: 15, aulas: [
+  { dia: "SEG", aulas: [] },
+  { dia: "TER", aulas: [{ hora: "18:30 - 20:30", ocupados: 8, total: 12, nomes: ["Maria Oliveira","João Silva","Ana Paula","Pedro Santos"] }] },
+  { dia: "QUA", aulas: [{ hora: "16:30 - 18:30", ocupados: 11, total: 12, nomes: ["Júlia Costa","Lucas Mendes","Carla Souza","Rafael Lima","Beatriz Almeida","Felipe Martins","Sofia Ramos"] }] },
+  { dia: "QUI", aulas: [
     { hora: "14:30 - 16:30", ocupados: 12, total: 12, nomes: ["Maria Oliveira","João Silva","Ana Paula","Pedro Santos","Júlia Costa","Lucas Mendes","Carla Souza","Rafael Lima"] },
     { hora: "18:30 - 20:30", ocupados: 9, total: 12, nomes: ["Beatriz Almeida","Felipe Martins","Sofia Ramos","Diego Alves","Nina Prado"] },
   ] },
-  { dia: "SEX", num: 16, aulas: [] },
-  { dia: "SÁB", num: 17, aulas: [
+  { dia: "SEX", aulas: [] },
+  { dia: "SÁB", aulas: [
     { hora: "10:00 - 13:00", oficina: "Oficina Modelagem", inscritos: 8 },
     { hora: "14:00 - 17:00", oficina: "Oficina Esmaltação", inscritos: 6 },
   ] },
-  { dia: "DOM", num: 18, aulas: [] },
+  { dia: "DOM", aulas: [] },
 ];
 const PIX_CHAVE = "ateliedeceramica@pix.com.br";
 
@@ -704,7 +704,7 @@ function Dashboard({ ir, fornadas, onAbrirDia, onAbrirOficinas, onAbrirForno }) 
         <Card className="p-4">
           <h3 className="mb-3 text-sm font-semibold">Próximas oficinas</h3>
           <ul className="space-y-3 text-sm">{OFICINAS_RESUMO.map((o) => (
-            <li key={o.nome} className="flex items-center justify-between"><span><span className="block font-medium">{o.nome}</span><span className="text-[var(--ink-soft)]">{o.data}</span></span><Badge tone="warning">Faltam {o.faltam}</Badge></li>
+            <li key={o.nome + o.data} className="flex items-center justify-between"><span><span className="block font-medium">{o.nome}</span><span className="text-[var(--ink-soft)]">{o.data}</span></span><Badge tone="warning">Faltam {o.faltam}</Badge></li>
           ))}</ul>
         </Card>
         <Card className="p-4">
@@ -725,53 +725,71 @@ function Dashboard({ ir, fornadas, onAbrirDia, onAbrirOficinas, onAbrirForno }) 
 }
 
 const DIA_ID_MAP = { SEG: "seg", TER: "ter", QUA: "qua", QUI: "qui", SEX: "sex", "SÁB": "sab", DOM: "dom" };
+const ORDEM_DIAS_ID = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
+/* Data real de cada dia da semana atual (segunda a domingo), calculada a
+   partir do dia do sistema — pedido do Diego (2026-09-17): precisa da data
+   exata (ex: "15/09") em vez de só o nome do dia, pra no futuro gerar
+   histórico de presença por aluno ("saber qual foi a terça-feira"). */
+function datasDaSemanaAtual(referencia = new Date()) {
+  const hoje = new Date(referencia);
+  hoje.setHours(0, 0, 0, 0);
+  const offsetSegunda = hoje.getDay() === 0 ? -6 : 1 - hoje.getDay();
+  const segunda = new Date(hoje);
+  segunda.setDate(hoje.getDate() + offsetSegunda);
+  const mapa = {};
+  ORDEM_DIAS_ID.forEach((id, i) => {
+    const d = new Date(segunda);
+    d.setDate(segunda.getDate() + i);
+    mapa[id] = d;
+  });
+  return mapa;
+}
+function formatarDiaMes(data) {
+  return `${String(data.getDate()).padStart(2, "0")}/${String(data.getMonth() + 1).padStart(2, "0")}`;
+}
 
 function AgendaSemanaCard({ onAbrirDia, onAbrirOficinas }) {
-  const hoje = "TER";
+  const datas = useMemo(() => datasDaSemanaAtual(), []);
+  const hojeFmt = formatarDiaMes(new Date());
   return (
     <Card className="p-5">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-base font-semibold">Turmas da semana</h3>
         <button className="border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink)] hover:bg-[var(--cream)]">Ver calendário completo</button>
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-1 md:grid md:grid-cols-7 md:overflow-visible md:pb-0">
+      <div className={"relative w-full min-w-0 divide-y divide-white/50 overflow-hidden " + VIDRO_CARD}>
         {AGENDA_SEMANA.map((d) => {
+          const diaId = DIA_ID_MAP[d.dia];
+          const dataFmt = formatarDiaMes(datas[diaId]);
+          const isHoje = dataFmt === hojeFmt;
           const vazio = d.aulas.length === 0;
-          const isHoje = d.dia === hoje;
           const temOficina = d.aulas.some((a) => a.oficina);
           const clicavel = !vazio;
           function clicarDia() {
             if (!clicavel) return;
             if (temOficina) onAbrirOficinas();
-            else onAbrirDia(DIA_ID_MAP[d.dia]);
+            else onAbrirDia(diaId);
           }
           return (
             <div
               key={d.dia}
-              onClick={clicarDia}
-              className={
-                "w-[150px] shrink-0 md:w-auto md:min-w-0 border p-3 transition-colors " +
-                (isHoje ? "border-[var(--ink-soft)] bg-[var(--cream-soft)]/50" : "border-[var(--line)] bg-[var(--cream)]/70") +
-                (clicavel ? " cursor-pointer hover:border-[var(--ink-soft)] hover:bg-[var(--cream-soft)]/40" : "")
-              }
+              onClick={clicavel ? clicarDia : undefined}
+              className={"flex w-full min-w-0 items-start gap-3 p-3.5 transition-colors " + (clicavel ? "cursor-pointer hover:bg-white/40" : "")}
             >
-              <div className="mb-3 flex items-center justify-between">
-                <span className={"inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold tracking-wide " + (isHoje ? ACCENT_SOLIDO : "bg-white text-[var(--ink-soft)] border border-[var(--line)]")}>
-                  {d.dia} <span className={isHoje ? "font-normal text-[var(--cream)]" : "font-normal text-[var(--line)]"}>{d.num}</span>
-                </span>
+              <div className={"flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl py-2.5 " + (isHoje ? ACCENT_SOLIDO : "border border-white/60 bg-white/40")}>
+                <span className={"text-[10px] font-bold uppercase tracking-wide " + (isHoje ? "text-[var(--cream)]" : "text-[var(--ink-soft)]")}>{d.dia}</span>
+                <span className={"text-sm font-semibold " + (isHoje ? "text-white" : "text-[var(--ink)]")}>{dataFmt}</span>
               </div>
-              <div className="space-y-2.5">
-                {vazio && (
-                  <div className="flex h-20 items-center justify-center border border-dashed border-[var(--ink-soft)] text-center text-[11px] text-[var(--ink-soft)]">Sem aulas</div>
-                )}
+              <div className="min-w-0 flex-1 space-y-2 pt-1">
+                {vazio && <div className="py-2 text-sm text-[var(--ink-soft)]">Sem aulas</div>}
                 {d.aulas.map((a, i) => a.oficina ? (
-                  <div key={i} className="border border-[var(--line)] bg-white p-3">
+                  <div key={i} className="min-w-0 rounded-2xl border border-[var(--line)] bg-white p-3">
                     <div className="text-xs font-bold text-[var(--ink)]">{a.hora}</div>
-                    <div className="mt-0.5 text-sm font-semibold text-[var(--ink)]">{a.oficina}</div>
+                    <div className="mt-0.5 truncate text-sm font-semibold text-[var(--ink)]">{a.oficina}</div>
                     <div className="mt-0.5 text-xs text-[var(--ink-soft)]">{a.inscritos} inscritos</div>
                   </div>
                 ) : (
-                  <div key={i} className="border border-[var(--line)] bg-white p-3">
+                  <div key={i} className="min-w-0 rounded-2xl border border-[var(--line)] bg-white p-3">
                     <div className="text-xs font-bold text-[var(--ink)]">{a.hora}</div>
                     <div className="mt-0.5 text-xs text-[var(--ink-soft)]">{a.ocupados}/{a.total} alunos</div>
                     <div className="mt-2 flex items-center -space-x-2">
@@ -1247,6 +1265,8 @@ function Turmas({ notificar, diaInicial = "ter" }) {
   const diaInfo = TURMAS_DIAS.find((d) => d.id === diaAtivo) || TURMAS_DIAS[1];
   const turmaInfo = diaInfo.turmas.find((t) => t.id === turmaAtiva) || diaInfo.turmas[0];
   const cor = corTurma(turmaInfo.id);
+  const datasSemana = useMemo(() => datasDaSemanaAtual(), []);
+  const dataTurmaFmt = formatarDiaMes(datasSemana[diaAtivo]);
   return (
     <div>
       <div className="mb-5 flex items-start justify-between">
@@ -1292,7 +1312,7 @@ function Turmas({ notificar, diaInicial = "ter" }) {
       <div className="[&>*]:min-w-0 grid gap-5 lg:grid-cols-[1fr_300px]">
         <div className="w-full min-w-0">
           <div className={"relative mb-4 flex flex-wrap items-center justify-between gap-2 px-4 py-3 " + VIDRO_CARD}>
-            <div><div className="text-sm font-semibold">{turmaInfo.dia} · {turmaInfo.hora}</div><div className="mt-1 flex flex-wrap items-center gap-2">
+            <div><div className="text-sm font-semibold">{turmaInfo.dia} · {dataTurmaFmt} · {turmaInfo.hora}</div><div className="mt-1 flex flex-wrap items-center gap-2">
               <Badge tone="success">{ocupadas}/12 alunos</Badge>
               <span className={"inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium " + VIDRO_PILL} style={estiloVidroTingido(cor)}>{turmaInfo.dia.split("-")[0]}</span>
             </div></div>

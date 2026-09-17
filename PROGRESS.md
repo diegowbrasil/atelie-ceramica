@@ -9,18 +9,34 @@
 
 ## Onde continuar agora
 
-**Última sessão:** 2026-09-16 (mesma sessão, bem longa, atravessou virada de
-dia e um reset de limite de uso do Diego no meio). Estado agora: as 3
-rodadas de direção visual (v1 MTCST-literal → v2 acento de volta → v3
-Apple) **estão concluídas**, o overflow mobile **está resolvido de vez**
-(causa raiz confirmada por medição), o redesign estrutural mobile-first
-(Turmas e Oficinas viraram lista de uma coluna, Forno ganhou mostrador
-circular) **está concluído**, e agora o trabalho ativo é um redesign
-completo e formal pedido pelo Diego usando o skill `/impeccable` em 5
-fases (INIT → CRITIQUE → SHAPE → CRAFT → POLISH) — ver "Fase atual"
-abaixo. **Área do Aluno continua começada e pausada no meio** (ver backlog
-no fim desta seção) — não é o foco agora, não terminada, não deixar o
-usuário achar que está.
+**Última sessão:** 2026-09-16/17 (mesma sessão, bem longa, atravessou
+virada de dia e um reset de limite de uso do Diego no meio). O redesign
+formal completo em 5 fases (INIT → CRITIQUE → SHAPE → CRAFT → POLISH) via
+`/impeccable` **está concluído** — ver "Fase atual" abaixo pro detalhe
+completo de cada fase. **Área do Aluno continua começada e pausada no
+meio** (ver backlog no fim desta seção) — não é o foco agora, não
+terminada, não deixar o usuário achar que está.
+
+**Depois do POLISH, mais uma rodada de iteração ao vivo (2026-09-17),
+fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
+1. `AgendaSemanaCard` ("Turmas da semana" no Dashboard) **redesenhado de
+   lista horizontal com scroll pra lista vertical, sem scroll lateral em
+   nenhum breakpoint** — "isso qro um calendario como se fosse uma lista,
+   nao qro q use scroll para o lado". Um `VIDRO_CARD` só com `divide-y`,
+   uma linha por dia.
+2. **Datas reais (DD/MM) no lugar de números soltos/hardcoded** — tanto no
+   selo de cada dia do `AgendaSemanaCard` quanto no cabeçalho do dia em
+   Turmas ("Terça-feira · 15/09 · 18:30 às 20:30"). Calculado a partir de
+   `new Date()` (`datasDaSemanaAtual()`/`formatarDiaMes()`), não mais mock
+   fixo — motivo dado pelo Diego: "pq depois qro se precisar gerar um
+   historico da pessoa d qual dia ela veio, saber qual foi a terça feira".
+   Ver detalhe técnico e o que **ainda falta** (log de presença por data
+   exata — não construído ainda, só a exibição da data) em CLAUDE.md §5,
+   bullet do Dashboard.
+3. De brinde, corrigido um `key` duplicado (`o.nome`) na lista "Próximas
+   oficinas" do Dashboard — reaparecia desde a troca pras oficinas reais
+   (duas ocorrências de "Kit Café da Manhã" em datas diferentes), achado
+   ao verificar o console durante o teste desta rodada.
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills
