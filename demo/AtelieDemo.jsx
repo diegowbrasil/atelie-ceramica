@@ -59,20 +59,26 @@ function corOficina(oficina) {
    pra classes literais no código-fonte, não pra strings montadas em JS. */
 function estiloVidroTingido(corKey) {
   return {
-    background: `linear-gradient(180deg, ${rgbCor(corKey, 0.34)}, ${rgbCor(corKey, 0.16)})`,
-    borderColor: rgbCor(corKey, 0.4),
+    background: `linear-gradient(180deg, ${rgbCor(corKey, 0.45)}, ${rgbCor(corKey, 0.22)})`,
+    borderColor: rgbCor(corKey, 0.45),
     color: rgbCor(corKey),
   };
 }
-const VIDRO_CARD = "rounded-[26px] border border-white/70 bg-gradient-to-b from-white/65 to-white/30 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.8),0_16px_32px_-10px_rgba(59,56,51,0.22),0_2px_6px_rgba(59,56,51,0.08)] backdrop-blur-2xl backdrop-saturate-150";
+const VIDRO_CARD = "rounded-[26px] border border-white/70 bg-gradient-to-b from-white/50 to-white/15 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.8),0_16px_32px_-10px_rgba(59,56,51,0.22),0_2px_6px_rgba(59,56,51,0.08)] backdrop-blur-2xl backdrop-saturate-150";
 const VIDRO_PILL = "rounded-full border backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.6)]";
 
 function ManchasFundo() {
+  /* Do tamanho do viewport inteiro (fixed), não de um "quadro" pequeno —
+     precisam ser grandes/fortes o bastante pra ler em tela cheia, inclusive
+     driblando a sidebar desktop opaca (128px) que cobre manchas encostadas
+     na borda esquerda. Testado e recalibrado depois que a primeira versão
+     (raios de 176-224px) ficou praticamente invisível em desktop. */
   return (
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-      <div className="absolute -right-16 -top-10 h-56 w-56 rounded-full blur-3xl" style={{ background: rgbCor("sienna", 0.32) }} />
-      <div className="absolute -left-20 top-64 h-48 w-48 rounded-full blur-3xl" style={{ background: rgbCor("ardosia", 0.28) }} />
-      <div className="absolute -right-12 bottom-28 h-44 w-44 rounded-full blur-3xl" style={{ background: rgbCor("musgo", 0.26) }} />
+      <div className="absolute -right-32 -top-32 h-[480px] w-[480px] rounded-full blur-3xl" style={{ background: rgbCor("sienna", 0.5) }} />
+      <div className="absolute left-24 -top-20 h-[380px] w-[380px] rounded-full blur-3xl" style={{ background: rgbCor("ardosia", 0.4) }} />
+      <div className="absolute -right-20 bottom-0 h-[420px] w-[420px] rounded-full blur-3xl" style={{ background: rgbCor("musgo", 0.42) }} />
+      <div className="absolute left-32 bottom-0 h-[360px] w-[360px] rounded-full blur-3xl" style={{ background: rgbCor("cafe", 0.32) }} />
     </div>
   );
 }
