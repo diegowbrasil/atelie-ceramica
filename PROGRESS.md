@@ -60,6 +60,13 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
    recorte da imagem), selo "Hoje" explícito no dia atual, e seta `›` nos
    cards de aula/oficina indicando que são clicáveis. Implementado 1:1 com
    a referência.
+6. **Dois ajustes finos no mesmo card, na sequência**: avatares empilhados
+   de 26px→30px com menos overlap ("ainda esta um pouco apertado as
+   pessoas embaixo"), e cada card ganhou a cor de identidade do seu dia
+   (Terça=sienna, Quarta=ardósia, Quinta=musgo — "e deixe cada card com
+   sua cor da semana"), reaproveitando `corTurma`/`CORES_IDENTIDADE` já
+   existentes. "Hoje" continua laranja de ação, não a cor de identidade do
+   dia (mesma separação accent-vs-identidade do resto do app).
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills

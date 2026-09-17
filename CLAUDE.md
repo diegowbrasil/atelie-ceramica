@@ -269,7 +269,21 @@ função com outro parâmetro.
   com oficina → leva a Oficinas); todo card do mesmo dia ainda aponta pro
   mesmo destino (não há deep-link pra uma turma específica dentro do dia —
   Quinta com 2 horários sempre abre no primeiro; não implementado por não
-  ter sido pedido). O mesmo par de
+  ter sido pedido). **Avatares empilhados aumentados de 26px pra 30px e
+  overlap reduzido (`-space-x-2` → `-space-x-1`)** — achado do Diego
+  vendo no celular: "ainda esta um pouco apertado as pessoas embaixo".
+  **Cada card ganhou a cor de identidade do próprio dia** (2026-09-17,
+  "e deixe cada card com sua cor da semana") — mesma cor que já marca a
+  turma daquele dia em Turmas/fundo (`corTurma` do primeiro horário):
+  Terça=sienna, Quarta=ardósia, Quinta=musgo, aplicada tanto no selo do
+  dia quanto num tingimento suave do card inteiro
+  (`estiloVidroTingido`/gradiente próprio, alpha bem mais baixo que nas
+  pills de Turmas — aqui é fundo calmo, não uma foto concorrendo por
+  contraste). "Hoje" continua com o laranja de ação — as duas famílias de
+  cor (identidade vs. ação) seguem separadas de propósito (CLAUDE.md
+  §6.1), então Quinta (hoje neste mock) mostra laranja, não musgo,
+  mesmo sendo o dia "verde". Dias sem turma fixa (Seg/Sex/Sáb/Dom) não
+  têm cor própria ainda, ficam neutros. O mesmo par de
   funções (`datasDaSemanaAtual`/`formatarDiaMes`) também alimenta a data
   exata no cabeçalho do dia em Turmas ("Terça-feira · 15/09 · 18:30 às
   20:30" — antes só "Terça-feira · 18:30 às 20:30"), pedido explícito do

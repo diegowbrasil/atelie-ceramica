@@ -811,14 +811,25 @@ function AgendaSemanaCard({ onAbrirDia, onAbrirOficinas }) {
             if (temOficina) onAbrirOficinas();
             else onAbrirDia(diaId);
           }
+          /* Cor de identidade do dia (2026-09-17, "e deixe cada card com
+             sua cor da semana") — mesma cor que já marca a turma daquele
+             dia em Turmas/fundo (corTurma do primeiro horário). "Hoje"
+             continua com o laranja de ação, não a cor de identidade — as
+             duas famílias de cor são propositalmente separadas (CLAUDE.md
+             §6.1). Dias sem turma fixa (Seg/Sex/Sáb/Dom) não têm cor
+             própria ainda, ficam neutros. */
+          const diaTurmasInfo = TURMAS_DIAS.find((td) => td.id === diaId);
+          const corDia = diaTurmasInfo?.turmas[0] ? corTurma(diaTurmasInfo.turmas[0].id) : null;
+          const estiloCard = !isHoje && corDia ? { background: `linear-gradient(180deg, ${rgbCor(corDia, 0.18)}, ${rgbCor(corDia, 0.08)})`, borderColor: rgbCor(corDia, 0.3) } : undefined;
           return (
             <div
               key={d.dia}
               className={"relative flex w-full min-w-0 items-start gap-3 p-3.5 " + VIDRO_CARD + (isHoje ? " border-[var(--accent)]/35" : "")}
+              style={estiloCard}
             >
-              <div className={"flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl py-2.5 " + (isHoje ? ACCENT_SOLIDO : "border border-white/60 bg-white/40")}>
-                <span className={"text-[10px] font-bold uppercase tracking-wide " + (isHoje ? "text-[var(--cream)]" : "text-[var(--ink-soft)]")}>{d.dia}</span>
-                <span className={"text-sm font-semibold " + (isHoje ? "text-white" : "text-[var(--ink)]")}>{dataFmt}</span>
+              <div className={"flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border py-2.5 " + (isHoje ? ACCENT_SOLIDO : corDia ? "" : "border-white/60 bg-white/40")} style={!isHoje && corDia ? estiloVidroTingido(corDia) : undefined}>
+                <span className={"text-[10px] font-bold uppercase tracking-wide " + (isHoje ? "text-[var(--cream)]" : !corDia ? "text-[var(--ink-soft)]" : "")}>{d.dia}</span>
+                <span className={"text-sm font-semibold " + (isHoje ? "text-white" : !corDia ? "text-[var(--ink)]" : "")}>{dataFmt}</span>
                 {isHoje && <span className="text-[9px] font-semibold uppercase tracking-wide text-white/85">Hoje</span>}
               </div>
               <div className="min-w-0 flex-1 space-y-2 pt-0.5">
@@ -845,9 +856,9 @@ function AgendaSemanaCard({ onAbrirDia, onAbrirOficinas }) {
                     <div className="min-w-0 flex-1">
                       <div className="text-xs font-bold text-[var(--ink)]">{a.hora}</div>
                       <div className="mt-0.5 text-xs text-[var(--ink-soft)]">{a.ocupados}/{a.total} alunos</div>
-                      <div className="mt-2 flex items-center -space-x-2">
-                        {a.nomes.slice(0, 4).map((n) => <Avatar key={n} nome={n} size={26} stacked />)}
-                        {a.nomes.length > 4 && <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[var(--cream-soft)] text-[10px] font-semibold text-[var(--ink)] ring-2 ring-white">+{a.nomes.length - 4}</span>}
+                      <div className="mt-2.5 flex items-center -space-x-1">
+                        {a.nomes.slice(0, 4).map((n) => <Avatar key={n} nome={n} size={30} stacked />)}
+                        {a.nomes.length > 4 && <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-[var(--cream-soft)] text-[11px] font-semibold text-[var(--ink)] ring-2 ring-white">+{a.nomes.length - 4}</span>}
                       </div>
                     </div>
                     <ChevronRight size={16} className="shrink-0 text-[var(--ink-soft)]" />
