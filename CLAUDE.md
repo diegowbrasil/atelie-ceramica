@@ -176,9 +176,18 @@ APP MTCST/
 
 ### Forno (ferramenta central)
 - Menu "Forno" abre o **painel de acompanhamento**, NUNCA a criação direta.
-- "+ Nova fornada": sem fornada ativa → página dedicada (não modal, não
-  drawer). Com fornada ativa → modal de conflito; confirmar salva a atual
-  como **Interrompida** (nunca apaga) e só então abre a nova.
+- **O ateliê tem 2 fornos físicos de verdade (2026-09-17, pedido do
+  Diego)** — o app acompanha 2 fornadas simultâneas e independentes, uma
+  por forno (`FORNOS`/`fornoId` em cada fornada). Um painel só, com abas
+  "Forno 1"/"Forno 2" (mesmo padrão visual das abas de dia de Turmas). Não
+  é mais "1 fornada ativa no app inteiro" — é 1 fornada ativa **por
+  forno**. Isso não estava no brief original; foi decisão nova do Diego
+  olhando o Dashboard, não a IA reabrindo nada por conta própria.
+- "+ Nova fornada" (dentro de um forno específico): sem fornada ativa
+  **nesse forno** → página dedicada (não modal, não drawer). Com fornada
+  ativa nesse forno → modal de conflito citando o forno pelo nome;
+  confirmar salva a atual como **Interrompida** (nunca apaga) e só então
+  abre a nova, no mesmo forno. O outro forno nunca é afetado.
 - Status: Em andamento · Finalizada · Interrompida · Cancelada.
 - Etapas: aquecendo → máx. atingida → patamar → resfriando → aguardando
   segura → liberado p/ abrir → finalizada.
@@ -233,7 +242,11 @@ função com outro parâmetro.
 ### Dashboard
 - KPIs compactos (coluna estreita, 2×2) — cliente reclamou 2× de ocuparem
   espaço demais. Não aumentar.
-- Card do forno ao lado dos KPIs, com mini gráfico embutido.
+- ~~Card do forno ao lado dos KPIs, com mini gráfico embutido~~ **2 cards
+  compactos (um por forno, `FornoResumoCard`), sem gráfico** — 2 fornos
+  reais desde 2026-09-17 (ver §5), e o mini-gráfico saiu junto com o
+  gráfico principal do Forno (pedido do Diego, "não precisa desse
+  gráfico").
 - Calendário "Turmas da semana": colunas por dia, dia atual em laranja,
   cards brancos com sombra, avatares empilhados, dias vazios com
   "Sem aulas". **Colunas são clicáveis** → leva a Turmas naquele dia (dia

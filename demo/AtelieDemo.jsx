@@ -128,43 +128,65 @@ const ALUNOS = [
   { nome: "Beatriz Almeida", turma: "Quarta 16:30", pacote: "novo pacote", tel: "(14) 99567-8901" },
 ];
 
+/* Agenda real passada pelo Diego em 2026-09-17 (substitui as oficinas
+   fictícias antigas). Preço e capacidade não foram informados — `valor`
+   fica `null` de propósito (a UI esconde a linha de preço quando é null,
+   não inventa número) e `vagas` mantém 12 como estimativa, mesma
+   capacidade de sempre; confirmar com o Diego se for diferente pra
+   essas datas específicas. Participantes começam vazios — são oficinas
+   reais que ainda não aconteceram, sem inscrito de verdade ainda. */
+const DESCRICAO_KIT_CAFE = "Nesta oficina você irá criar seu próprio kit café da manhã com peças feitas à mão. Vamos trabalhar com formas simples e funcionais, perfeitas para o dia a dia.";
+const RECEITA_KIT_CAFE = [
+  { item: "Cumbuca", peso: "650 g de argila" },
+  { item: "Pratinho", peso: "650 g de argila" },
+  { item: "Caneca", peso: "550 g de argila" },
+];
+function vagasVazias() {
+  return Array.from({ length: 12 }, (_, i) => ({ numero: i + 1, nome: null }));
+}
 function oficinasIniciais() {
   return [
     {
       id: "o1", nome: "Kit Café da Manhã", status: "Agendada", statusPecas: "secagem",
-      data: "24 de Maio de 2026", hora: "09:00 às 13:00", valor: 220,
-      vagas: 12,
-      descricao: "Nesta oficina você irá criar seu próprio kit café da manhã com peças feitas à mão. Vamos trabalhar com formas simples e funcionais, perfeitas para o dia a dia.",
-      receita: [
-        { item: "Cumbuca", peso: "650 g de argila" },
-        { item: "Pratinho", peso: "650 g de argila" },
-        { item: "Caneca", peso: "550 g de argila" },
-      ],
+      data: "10 de Outubro de 2026", hora: "16:00 às 19:00", valor: null, vagas: 12,
+      descricao: DESCRICAO_KIT_CAFE, receita: RECEITA_KIT_CAFE,
       observacoes: "Levar avental, toalha e muita criatividade!",
-      participantes: [
-        { numero: 1, nome: "Maria Oliveira", tipo: "dupla", duplaCom: null, pagamento: "pago" },
-        { numero: 2, nome: "Juliana Costa", tipo: "dupla", duplaCom: "Maria", pagamento: "pago" },
-        { numero: 3, nome: "Pedro Lima", tipo: "individual", pagamento: "pago" },
-        { numero: 4, nome: "Ana Paula", tipo: "individual", pagamento: "pendente" },
-        { numero: 5, nome: "Rafael Souza", tipo: "dupla", duplaCom: null, pagamento: "pago" },
-        { numero: 6, nome: "Camila Rocha", tipo: "dupla", duplaCom: "Rafael", pagamento: "pago" },
-        { numero: 7, nome: "Larissa Silva", tipo: "individual", pagamento: "pago" },
-        { numero: 8, nome: "João Marcos", tipo: "individual", pagamento: "pendente" },
-        { numero: 9, nome: "Fernanda T.", tipo: "dupla", duplaCom: null, pagamento: "pago" },
-        { numero: 10, nome: "Renata Costa", tipo: "dupla", duplaCom: "Fernanda", pagamento: "pago" },
-        { numero: 11, nome: null }, { numero: 12, nome: null },
-      ],
+      participantes: vagasVazias(),
     },
     {
-      id: "o2", nome: "Esmaltação Criativa", status: "Agendada", statusPecas: "biscoitadas",
-      data: "18 de Maio de 2026", hora: "14:00 às 17:00", valor: 180,
-      vagas: 12,
-      descricao: "Oficina de esmaltação livre sobre peças já biscoitadas — ideal para quem quer experimentar combinações de cor.",
-      receita: [{ item: "Peça biscoitada (fornecida)", peso: "1 peça por participante" }],
-      observacoes: "",
-      participantes: Array.from({ length: 12 }, (_, i) => i < 6
-        ? { numero: i + 1, nome: ["Beatriz Almeida","Felipe Martins","Sofia Ramos","Diego Alves","Nina Prado","Caio Duarte"][i], tipo: "individual", pagamento: i % 3 === 0 ? "pendente" : "pago" }
-        : { numero: i + 1, nome: null }),
+      id: "o2", nome: "Kit Café da Manhã", status: "Agendada", statusPecas: "secagem",
+      data: "24 de Outubro de 2026", hora: "16:00 às 19:00", valor: null, vagas: 12,
+      descricao: DESCRICAO_KIT_CAFE, receita: RECEITA_KIT_CAFE,
+      observacoes: "Levar avental, toalha e muita criatividade!",
+      participantes: vagasVazias(),
+    },
+    {
+      id: "o3", nome: "Kit Café da Manhã", status: "Agendada", statusPecas: "secagem",
+      data: "14 de Novembro de 2026", hora: "16:00 às 19:00", valor: null, vagas: 12,
+      descricao: DESCRICAO_KIT_CAFE, receita: RECEITA_KIT_CAFE,
+      observacoes: "Levar avental, toalha e muita criatividade!",
+      participantes: vagasVazias(),
+    },
+    {
+      id: "o4", nome: "Enfeites de Natal", status: "Agendada", statusPecas: "secagem",
+      data: "28 de Novembro de 2026", hora: "16:00 às 19:00", valor: null, vagas: 12,
+      descricao: "Essa oficina acontece em novembro para que as peças possam passar por todo o processo de secagem, queima e esmaltação e fiquem prontas a tempo do Natal.",
+      receita: [], observacoes: "",
+      participantes: vagasVazias(),
+    },
+    {
+      id: "o5", nome: "Kit Café da Manhã", status: "Agendada", statusPecas: "secagem",
+      data: "12 de Dezembro de 2026", hora: "16:00 às 19:00", valor: null, vagas: 12,
+      descricao: DESCRICAO_KIT_CAFE, receita: RECEITA_KIT_CAFE,
+      observacoes: "Levar avental, toalha e muita criatividade!",
+      participantes: vagasVazias(),
+    },
+    {
+      id: "o6", nome: "Peças Marmorizadas", status: "Agendada", statusPecas: "secagem",
+      data: "19 de Dezembro de 2026", hora: "16:00 às 19:00", valor: null, vagas: 12,
+      descricao: "", receita: [],
+      observacoes: "Última oficina do ateliê em 2026.",
+      participantes: vagasVazias(),
     },
   ];
 }
@@ -200,8 +222,8 @@ function pagamentosIniciais() {
 }
 
 const OFICINAS_RESUMO = [
-  { nome: "Kit Café da Manhã", data: "24 de maio · 09:00–13:00", faltam: "5 dias" },
-  { nome: "Esmaltação Criativa", data: "18 de maio · 14:00–17:00", faltam: "6 dias" },
+  { nome: "Kit Café da Manhã", data: "10 de outubro · 16:00–19:00", faltam: "23 dias" },
+  { nome: "Kit Café da Manhã", data: "24 de outubro · 16:00–19:00", faltam: "37 dias" },
 ];
 
 const SOLICITACOES_INICIAIS = [
@@ -1462,7 +1484,7 @@ function Oficinas({ oficinas, onAbrir }) {
                   </ProgressRing>
                 </div>
                 <p className="text-sm text-[var(--ink-soft)]">{o.data} · {o.hora}</p>
-                <p className="mt-1 text-sm text-[var(--ink-soft)]">R$ {o.valor} por pessoa</p>
+                {o.valor != null && <p className="mt-1 text-sm text-[var(--ink-soft)]">R$ {o.valor} por pessoa</p>}
               </div>
             </button>
           );
@@ -1543,7 +1565,7 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
           <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-[var(--ink-soft)]">
             <span className="flex items-center gap-1.5"><CalendarDays size={14} />{oficina.data}</span>
             <span className="flex items-center gap-1.5"><Clock size={14} />{oficina.hora}</span>
-            <span className="flex items-center gap-1.5"><CreditCard size={14} />R$ {oficina.valor} por pessoa</span>
+            {oficina.valor != null && <span className="flex items-center gap-1.5"><CreditCard size={14} />R$ {oficina.valor} por pessoa</span>}
             <span className="flex items-center gap-1.5"><Users size={14} />{oficina.vagas} vagas</span>
           </div>
         </div>
