@@ -811,39 +811,35 @@ function AgendaSemanaCard({ onAbrirDia, onAbrirOficinas }) {
             if (temOficina) onAbrirOficinas();
             else onAbrirDia(diaId);
           }
-          /* Cor de identidade do dia (2026-09-17, "e deixe cada card com
-             sua cor da semana") — mesma cor que já marca a turma daquele
-             dia em Turmas/fundo (corTurma do primeiro horário). "Hoje"
-             continua com o laranja de ação, não a cor de identidade — as
-             duas famílias de cor são propositalmente separadas (CLAUDE.md
-             §6.1). Dias sem turma fixa (Seg/Sex/Sáb/Dom) não têm cor
-             própria ainda, ficam neutros. */
+          /* Cor de identidade do dia, agora inclusive em "hoje" (2026-09-17,
+             correção do Diego depois de eu ter posto a foto só no selo
+             pequeno: "eu quis dizer nao onde ta escrito qua, e sim onde ta
+             azul ali, o fundo maior" — ele queria a FOTO no card inteiro,
+             não só no quadradinho de texto — "e o qui precisa ser verde
+             tbm e nao laranja" — reverte a regra geral de "hoje sempre usa
+             o laranja de ação, não a cor de identidade" (CLAUDE.md §6.1)
+             só pra esse card: aqui a cor do dia manda mesmo sendo hoje, o
+             laranja não aparece mais, só o rótulo "Hoje" continua
+             marcando qual é o dia atual. Mesmas fotos de Turmas
+             (FUNDOS_ARGILA). Dias sem turma fixa (Seg/Sex/Sáb/Dom) não têm
+             cor própria ainda, ficam neutros. */
           const diaTurmasInfo = TURMAS_DIAS.find((td) => td.id === diaId);
           const corDia = diaTurmasInfo?.turmas[0] ? corTurma(diaTurmasInfo.turmas[0].id) : null;
-          const estiloCard = !isHoje && corDia ? { background: `linear-gradient(180deg, ${rgbCor(corDia, 0.18)}, ${rgbCor(corDia, 0.08)})`, borderColor: rgbCor(corDia, 0.3) } : undefined;
           const fotoDia = corDia && FUNDOS_ARGILA[corDia];
+          const estiloCard = fotoDia ? { backgroundImage: `url(${fotoDia})`, backgroundSize: "cover", backgroundPosition: "center", borderColor: rgbCor(corDia, 0.4) } : undefined;
           return (
             <div
               key={d.dia}
-              className={"relative flex w-full min-w-0 items-start gap-3 p-3.5 " + VIDRO_CARD + (isHoje ? " border-[var(--accent)]/35" : "")}
+              className={"relative flex w-full min-w-0 items-start gap-3 p-3.5 " + VIDRO_CARD}
               style={estiloCard}
             >
-              {/* Selo do dia com a FOTO real de mesclagem de argila (não só
-                 a cor sólida) — só aqui, não no card/painel inteiro (pedido
-                 explícito do Diego: "nao o fundo todo do painel so esses
-                 quadrados apontados de cada dia da semana"). Mesmas fotos
-                 já usadas em Turmas (FUNDOS_ARGILA) — cover, sem parallax
-                 (selo pequeno de tamanho fixo, não precisa). Degradê escuro
-                 por cima garante contraste do texto branco em qualquer
-                 recorte da foto. */}
               <div
-                className={"relative flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-2xl border py-2.5 " + (isHoje ? ACCENT_SOLIDO : fotoDia ? "border-white/50" : "border-white/60 bg-white/40")}
-                style={isHoje ? undefined : fotoDia ? { backgroundImage: `url(${fotoDia})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+                className={"relative flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border py-2.5 " + (corDia ? "border-white/40" : "border-white/60 bg-white/40")}
+                style={corDia ? { background: `linear-gradient(180deg, ${rgbCor(corDia, 0.92)}, ${rgbCor(corDia, 0.78)})`, boxShadow: "inset 0 1.5px 0 rgba(255,255,255,0.4)" } : undefined}
               >
-                {!isHoje && fotoDia && <div className="absolute inset-0 bg-gradient-to-b from-black/15 to-black/40" />}
-                <span className={"relative text-[10px] font-bold uppercase tracking-wide " + (isHoje ? "text-[var(--cream)]" : fotoDia ? "text-white" : "text-[var(--ink-soft)]")}>{d.dia}</span>
-                <span className={"relative text-sm font-semibold " + (isHoje ? "text-white" : fotoDia ? "text-white" : "text-[var(--ink)]")}>{dataFmt}</span>
-                {isHoje && <span className="relative text-[9px] font-semibold uppercase tracking-wide text-white/85">Hoje</span>}
+                <span className={"text-[10px] font-bold uppercase tracking-wide " + (corDia ? "text-white" : "text-[var(--ink-soft)]")}>{d.dia}</span>
+                <span className={"text-sm font-semibold " + (corDia ? "text-white" : "text-[var(--ink)]")}>{dataFmt}</span>
+                {isHoje && <span className="text-[9px] font-semibold uppercase tracking-wide text-white/85">Hoje</span>}
               </div>
               <div className="min-w-0 flex-1 space-y-2 pt-0.5">
                 {vazio && (

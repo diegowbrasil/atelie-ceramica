@@ -277,22 +277,29 @@ função com outro parâmetro.
   turma daquele dia em Turmas/fundo (`corTurma` do primeiro horário):
   Terça=sienna, Quarta=ardósia, Quinta=musgo, aplicada tanto no selo do
   dia quanto num tingimento suave do card inteiro
-  (`estiloVidroTingido`/gradiente próprio, alpha bem mais baixo que nas
-  pills de Turmas — aqui é fundo calmo, não uma foto concorrendo por
-  contraste). "Hoje" continua com o laranja de ação — as duas famílias de
-  cor (identidade vs. ação) seguem separadas de propósito (CLAUDE.md
-  §6.1), então Quinta (hoje neste mock) mostra laranja, não musgo,
-  mesmo sendo o dia "verde". Dias sem turma fixa (Seg/Sex/Sáb/Dom) não
-  têm cor própria ainda, ficam neutros. **Depois, só o selo do dia (não o
-  card inteiro) ganhou a FOTO de mesclagem de argila** — o Diego apontou
-  com setas especificamente os quadradinhos SEG/TER/QUA/QUI e foi claro
-  ao corrigir o escopo: "nao o fundo todo do painel so esses quadrados
-  apontados de cada dia da semana". Reaproveita `FUNDOS_ARGILA` (as
-  mesmas fotos de Turmas), `background-size:cover` sem parallax (selo é
-  pequeno e de tamanho fixo, não precisa), com um degradê escuro
-  (`from-black/15 to-black/40`) por cima garantindo contraste do texto
-  branco em cima de qualquer recorte da foto. O resto do card (tingimento
-  suave de fundo do item 6 acima) não mudou. O mesmo par de
+  (`estiloVidroTingido`/gradiente próprio — versão inicial, ver estado
+  final abaixo). ~~"Hoje" continua com o laranja de ação, não a cor de
+  identidade (CLAUDE.md §6.1) — Quinta mostra laranja, não musgo.~~
+  ~~Depois, só o selo do dia (não o card inteiro) ganhou a FOTO de
+  mesclagem de argila, `background-size:cover` num quadradinho pequeno,
+  com degradê escuro por cima pro texto branco.~~ **Duas rodadas de ajuste
+  no mesmo dia, ambas do Diego reagindo ao resultado ao vivo — estado
+  final:**
+  1. "nao o fundo todo do painel so esses quadrados apontados de cada dia
+     da semana" → tentei só no selo pequeno primeiro.
+  2. "eu quis dizer nao onde ta escrito qua, e sim onde ta azul ali, o
+     fundo maior" — ele queria a foto no **card inteiro** (a área maior,
+     não o textinho do selo), só nunca quis o painel/dashboard inteiro.
+     **E**: "o qui precisa ser verde tbm e nao laranja" — reverte a regra
+     de "hoje usa o accent, não a cor de identidade" só pra esse card
+     específico; aqui a cor do dia manda mesmo em "hoje", o laranja saiu
+     de vez, só o texto "Hoje" continua marcando qual dia é o atual.
+  **Estado final**: card inteiro com `backgroundImage` da foto
+  (`FUNDOS_ARGILA[corDia]`, `cover`, sem parallax — card pequeno e de
+  altura variável, não precisa), selo do dia virou um chip sólido na cor
+  do dia (gradiente 92%→78% opaco, não mais a foto nem o degradê escuro —
+  ficou redundante com o card já mostrando a foto). Dias sem turma fixa
+  (Seg/Sex/Sáb/Dom) continuam neutros, sem cor própria ainda. O mesmo par de
   funções (`datasDaSemanaAtual`/`formatarDiaMes`) também alimenta a data
   exata no cabeçalho do dia em Turmas ("Terça-feira · 15/09 · 18:30 às
   20:30" — antes só "Terça-feira · 18:30 às 20:30"), pedido explícito do

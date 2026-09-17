@@ -67,12 +67,18 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
    sua cor da semana"), reaproveitando `corTurma`/`CORES_IDENTIDADE` já
    existentes. "Hoje" continua laranja de ação, não a cor de identidade do
    dia (mesma separação accent-vs-identidade do resto do app).
-7. **Selo do dia (só ele, não o card) ganhou a foto real de mesclagem de
-   argila** — Diego mandou print com setas apontando exatamente os
-   quadradinhos SEG/TER/QUA/QUI e confirmou o escopo: "nao o fundo todo
-   do painel so esses quadrados apontados de cada dia da semana".
-   Reaproveita as mesmas fotos de `FUNDOS_ARGILA` (Turmas), `cover` sem
-   parallax, degradê escuro por cima pro texto branco continuar legível.
+7. **Cada card do calendário semanal ganhou a foto real de mesclagem de
+   argila no fundo (card inteiro, não só o selo)** — 2 rodadas rápidas de
+   correção pelo Diego reagindo ao vivo: primeiro tentei só no selo
+   pequeno ("nao o fundo todo do painel so esses quadrados apontados"),
+   ele corrigiu — queria a foto na área maior do card, não no textinho
+   ("eu quis dizer nao onde ta escrito qua, e sim onde ta azul ali, o
+   fundo maior"), e junto: "o qui precisa ser verde tbm e nao laranja" —
+   Quinta (hoje) agora mostra musgo/verde igual aos outros dias, o laranja
+   de "hoje" saiu desse card específico (só o texto "Hoje" continua
+   marcando o dia atual). Selo virou um chip sólido na cor do dia (não
+   mais foto nem degradê — ficaria redundante com o card já mostrando a
+   foto). Detalhe técnico em CLAUDE.md §5.
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills
