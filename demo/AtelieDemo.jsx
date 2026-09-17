@@ -66,6 +66,13 @@ function estiloVidroTingido(corKey) {
 }
 const VIDRO_CARD = "rounded-[26px] border border-white/70 bg-gradient-to-b from-white/50 to-white/15 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.8),0_16px_32px_-10px_rgba(59,56,51,0.22),0_2px_6px_rgba(59,56,51,0.08)] backdrop-blur-2xl backdrop-saturate-150";
 const VIDRO_PILL = "rounded-full border backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.6)]";
+/* "Sólido" != chapado: mesmo o estado de ação/selecionado ganha gradiente +
+   brilho superior + sombra, a mesma qualidade de profundidade do vidro, só
+   sem o blur/translucidez — nunca um preenchimento de cor plana lisa. */
+const ACCENT_SOLIDO = "bg-gradient-to-b from-[#D2601F] to-[var(--accent)] text-white shadow-[inset_0_1.5px_0_rgba(255,255,255,0.35),0_3px_10px_-2px_rgba(194,65,12,0.45)]";
+/* Pill neutra pros dias sem turma (Seg/Sex/Sáb/Dom) — muda mas legível,
+   não texto quase invisível direto sobre o fundo colorido. */
+const VIDRO_PILL_NEUTRO = "rounded-full border border-white/50 bg-white/25 text-[var(--ink-soft)] backdrop-blur-md";
 
 function ManchasFundo() {
   /* Do tamanho do viewport inteiro (fixed), não de um "quadro" pequeno —
@@ -1187,12 +1194,24 @@ function Turmas({ notificar, diaInicial = "ter" }) {
     <div>
       <div className="mb-5 flex items-start justify-between">
         <div><h1 className="text-2xl font-semibold" style={FONT_DISPLAY}>Turmas</h1><p className="text-sm text-[var(--ink-soft)]">Gerencie suas turmas, alunos e presenças.</p></div>
-        <button className="hidden bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white sm:block" onClick={() => notificar("Cadastro de nova turma (demo)")}>+ Nova turma</button>
+        <button className={"hidden rounded-full px-4 py-2 text-sm font-medium sm:block " + ACCENT_SOLIDO} onClick={() => notificar("Cadastro de nova turma (demo)")}>+ Nova turma</button>
       </div>
       <div className="mb-3 flex gap-2 overflow-x-auto">
-        {TURMAS_DIAS.map((d) => (
-          <button key={d.id} onClick={() => selecionarDia(d)} disabled={!d.disponivel} className={"shrink-0 px-4 py-2 text-sm font-medium " + (diaAtivo === d.id ? "bg-[var(--accent)] text-white" : d.disponivel ? "bg-[var(--cream-soft)] text-[var(--ink-soft)]" : "bg-[var(--cream)] text-[var(--line)]")}>{d.label}</button>
-        ))}
+        {TURMAS_DIAS.map((d) => {
+          const ativo = diaAtivo === d.id;
+          const corDia = d.turmas[0] ? corTurma(d.turmas[0].id) : null;
+          return (
+            <button
+              key={d.id}
+              onClick={() => selecionarDia(d)}
+              disabled={!d.disponivel}
+              className={"shrink-0 rounded-full px-4 py-2 text-sm font-medium " + (ativo ? ACCENT_SOLIDO : d.disponivel ? VIDRO_PILL : VIDRO_PILL_NEUTRO)}
+              style={ativo ? undefined : d.disponivel ? estiloVidroTingido(corDia) : undefined}
+            >
+              {d.label}
+            </button>
+          );
+        })}
       </div>
       {diaInfo.turmas.length > 1 && (
         <div className="relative mb-5 flex gap-2">
@@ -1203,8 +1222,8 @@ function Turmas({ notificar, diaInicial = "ter" }) {
               <button
                 key={t.id}
                 onClick={() => setTurmaAtiva(t.id)}
-                className={"rounded-full px-3 py-1.5 text-xs font-medium " + (ativa ? "text-white" : VIDRO_PILL)}
-                style={ativa ? { background: rgbCor(corPill) } : estiloVidroTingido(corPill)}
+                className={"rounded-full px-3 py-1.5 text-xs font-medium " + (ativa ? ACCENT_SOLIDO : VIDRO_PILL)}
+                style={ativa ? undefined : estiloVidroTingido(corPill)}
               >
                 {t.hora}
               </button>
