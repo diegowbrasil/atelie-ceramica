@@ -86,10 +86,14 @@ estrutura fácil de crescer).
   depois de 6 rodadas de mockup visual (widget) com o Diego reagindo a
   cada uma — resumo em "Fase SHAPE: iteração visual" logo abaixo, detalhe
   completo no brief persistido.
-- 🔄 **CRAFT — em andamento.** Implementar o brief acima: `ProgressRing`
-  generalizado, paleta de identidade (tons de argila), material de vidro
-  líquido nos cards/pills/chip/nav, aplicado em Turmas/Oficinas/
-  Pagamentos/Alunos. Preservar dado/função, arquivo único.
+- ✅ **CRAFT — primeira leva implementada e testada ao vivo.** `ProgressRing`
+  generalizado, paleta de identidade, vidro líquido e as manchas de fundo
+  aplicados em Turmas, Oficinas (lista + detalhe), Alunos e Pagamentos,
+  mais a barra de navegação mobile. Detalhe completo na entrada de sessão
+  abaixo. **Ainda não coberto pelo brief**: Dashboard e Forno ficam de
+  fora de propósito (não eram o problema); "Ver forno"/sidebar
+  desktop/drawer mobile não receberam vidro (fora do escopo do brief,
+  que falava só da barra flutuante mobile).
 - ⬜ **POLISH** — não iniciada.
 
 ### Fase SHAPE: iteração visual (2026-09-17)
@@ -935,3 +939,102 @@ sidebar — 1 linha, nenhum outro impacto.
 
 **Próximos passos:** confirmar sobrenome da Hanna (opcional, cosmético) e
 seguir com a fase SHAPE — ver acima.
+
+---
+
+### 2026-09-17 (continuação) — Fase CRAFT: primeira leva implementada
+
+Implementei o brief da fase SHAPE (`.impeccable/surfaces/demo-ateliedemo-jsx.md`)
+em `demo/AtelieDemo.jsx`, validando com `esbuild` a cada edição e testando
+ao vivo no preview (`localhost:5183`, tive que reiniciar o servidor Vite —
+tinha caído em algum ponto da sessão) em viewport mobile (375px) antes de
+considerar concluído.
+
+**Fundação (tokens + helpers, perto de `TURMAS_DIAS`):**
+- 4 tokens CSS novos, RGB space-separated de propósito (`--turma-sienna-rgb`
+  etc.) — **não** string hex, pra não cair de novo na armadilha do §8
+  sobre `/NN` de opacidade não combinar com token hex.
+- `CORES_IDENTIDADE`/`CORES_ORDEM`/`TURMA_COR`/`TURMA_LABEL_COR`: mapa
+  fixo turma→cor pelas 4 turmas reais (`ter-1830` etc., conferido no
+  código, não pela memória), mais um mapa paralelo por rótulo-texto pro
+  cadastro de aluno, que só tem o texto "Terça 18:30" etc., não o id.
+- `corOficina(oficina)`: hash simples do `id` da oficina % 4 — determinístico,
+  sem precisar salvar a cor em lugar nenhum.
+- **Decisão técnica importante**: a cor é aplicada via `style={{}}` inline
+  (RGB calculado em JS), não via classe Tailwind dinâmica
+  (`` `bg-[rgb(var(--turma-${cor}-rgb))]` ``) — o JIT do Tailwind via CDN só
+  gera CSS pra classes **literais** presentes no código-fonte; uma string
+  montada em runtime não é confiável. Só a "receita" estrutural do vidro
+  (`backdrop-blur-2xl`, `backdrop-saturate-150`, `bg-gradient-to-b
+  from-white/65 to-white/30` etc.) usa classe Tailwind normal, porque essa
+  parte é sempre a mesma string literal, só a cor de tingimento varia.
+- `ProgressRing`: `TempGauge` generalizado (mesmo SVG/matemática), agora
+  aceita `color`/`trackColor`/`children` em vez de temperatura hardcoded.
+  Forno (`FornadaAtivaPainel`) foi migrado pra usar `ProgressRing` direto
+  com `--accent`, preservando exatamente o visual/comportamento anterior —
+  `TempGauge` não existe mais, sem duplicação.
+- `VIDRO_CARD`/`VIDRO_PILL`: classes Tailwind compartilhadas pra não
+  repetir a receita de vidro (blur+saturação+brilho+sombra) em cada tela.
+- `ManchasFundo`: 3 blobs de gradiente desfocados (`blur-3xl`), `position:
+  fixed`, `pointer-events-none`, renderizados uma vez no shell raiz —
+  é o que dá ao vidro algo de verdade pra desfocar (sem isso o efeito não
+  lê como vidro, confirmado nos mockups da fase SHAPE).
+
+**Por tela:**
+- **Turmas**: descobri ao ler o código (antes de implementar às cegas)
+  que a estrutura real não é um "4 pills sempre visíveis" como no mockup —
+  é abas de **dia** (Ter/Qua/Qui) + pills de **hora só aparecem quinta**
+  (2 turmas), regra de negócio já fechada no CLAUDE.md §5. Adaptei: chip
+  de identidade no card "Detalhes da turma" (sempre visível, todo dia),
+  pills de hora tingidas quando aparecem (quinta), anel de progresso em
+  cada aluno da lista (substituindo "X/4 aulas" solto), card da lista em
+  vidro. Testado nos 2 casos (dia com 1 turma e quinta com 2) — cor muda
+  corretamente junto com a turma ativa.
+- **Oficinas** (lista de oficinas, tela que eu tinha subestimado no brief
+  original): a barra de progresso reta (`ocupadas/vagas`) virou
+  `ProgressRing` — é a mesma métrica de fração-até-completar do resto do
+  app, fazia sentido incluir mesmo não estando no brief original. Chip de
+  identidade + card em vidro.
+- **OficinaDetalhe** (participantes): chip de identidade no cabeçalho,
+  card da lista em vidro, **sem anel** (decisão do brief — pago/pendente
+  não é fração, forçar anel ali seria decoração sem dado real).
+- **Alunos**: mudei o formato do campo `pacote` de string pré-formatada
+  (`"0/4 aulas"`) pra `{ aula, total }` estruturado — só assim dá pra
+  alimentar o `ProgressRing` sem parsear string. Lista começa vazia (regra
+  de negócio intacta, não mexida); testei cadastrando um aluno de teste
+  ao vivo no preview e confirmei que o anel nasce em 0% corretamente.
+  `ALUNOS` (a constante mock no topo do arquivo) é código morto — nunca
+  foi referenciada em lugar nenhum, não mexi nela.
+- **Pagamentos**: cards em vidro (lista de pendentes + histórico); **sem**
+  chip de identidade — os registros de pagamento não têm campo de turma
+  (só `tipo`: "Pacote 4 aulas"/"Aula avulsa"), e inventar esse campo
+  seria inventar dado, contra o próprio brief. StatCards (Pendente/
+  Recebido/Alunos/Ticket médio) não mudaram — não são "lista de pessoas",
+  fora do escopo do brief.
+- **Nav mobile**: virou uma pílula flutuante de vidro (antes era uma barra
+  reta colada nas bordas, quase opaca) — item ativo em `--accent` sólido
+  arredondado, resto em texto neutro sobre o vidro. Testado navegando
+  entre 5 telas diferentes, sem quebrar.
+
+**O que ficou de fora deste CRAFT** (não pedido pelo brief, não mexido):
+Dashboard, Forno, sidebar desktop, drawer mobile — nenhum ganhou vidro.
+
+**Testes realizados:** `esbuild` depois de cada edição (todas limpas).
+Testado ao vivo em `localhost:5183`, viewport mobile 375px: Turmas (dia
+único e quinta com 2 turmas), Oficinas (lista + detalhe), Alunos
+(cadastro real de teste), Pagamentos, nav flutuante em 5 telas. Conferido
+`backdrop-filter` computado de verdade via `getComputedStyle` (não só
+visual) — `blur(40px) saturate(1.5)` aplicando corretamente (Tailwind CDN
+JIT reconhece `backdrop-blur-2xl`/`backdrop-saturate-150` sem problema,
+uma incerteza que o próprio brief tinha marcado como "verificar na
+prática"). `scrollWidth === clientWidth` (375=375, sem overflow). 2 erros
+de HMR no console eram de um momento anterior da sessão (confirmado via
+`curl` direto no servidor: HTTP 200 em tudo, nada quebrado agora).
+
+**Problemas pendentes:** nenhum encontrado nesta leva. Sobrenome da Hanna
+ainda não veio do Diego (cosmético, avatar da sidebar mostra só "H").
+
+**Próximos passos:** revisar com o Diego (testar no preview/celular real),
+depois fase POLISH — tipografia/espaçamento/estados/contraste fina, ou
+CRAFT de continuação se ele quiser o mesmo tratamento em mais lugares
+(Dashboard, sidebar) antes de fechar a fase.

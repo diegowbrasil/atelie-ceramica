@@ -28,6 +28,55 @@ const TURMAS_DIAS = [
   { id: "dom", label: "Dom", disponivel: false, turmas: [] },
 ];
 
+/* Paleta de identidade por turma/oficina — pigmentos de argila, atribuição
+   automática (fase SHAPE, 2026-09-17). Nunca usar tons da família do
+   --accent (laranja-terracota) aqui — identidade de grupo e ação/dado-ao-vivo
+   são duas famílias de cor separadas, de propósito (ver CLAUDE.md §6.1). */
+const CORES_IDENTIDADE = {
+  sienna: "139 74 43",
+  ardosia: "74 97 120",
+  musgo: "95 107 58",
+  cafe: "74 52 42",
+};
+const CORES_ORDEM = ["sienna", "ardosia", "musgo", "cafe"];
+const TURMA_COR = { "ter-1830": "sienna", "qua-1630": "ardosia", "qui-1430": "musgo", "qui-1830": "cafe" };
+/* Mesmas 4 turmas, chave por rótulo em vez de id — usado onde o dado só
+   tem o texto (ex: cadastro de aluno), não o id de TURMAS_DIAS. */
+const TURMA_LABEL_COR = { "Terça 18:30": "sienna", "Quarta 16:30": "ardosia", "Quinta 14:30": "musgo", "Quinta 18:30": "cafe" };
+
+function rgbCor(corKey, alpha) {
+  const rgb = CORES_IDENTIDADE[corKey] || CORES_IDENTIDADE.sienna;
+  return alpha === undefined ? `rgb(${rgb})` : `rgb(${rgb} / ${alpha})`;
+}
+function corTurma(turmaId) { return TURMA_COR[turmaId] || "sienna"; }
+function corOficina(oficina) {
+  let h = 0;
+  for (let i = 0; i < oficina.id.length; i++) h = (h * 31 + oficina.id.charCodeAt(i)) | 0;
+  return CORES_ORDEM[Math.abs(h) % CORES_ORDEM.length];
+}
+/* Estilo inline (não classe Tailwind) porque a cor varia em tempo de
+   execução por turma/oficina — o scanner JIT do Tailwind (CDN) só gera CSS
+   pra classes literais no código-fonte, não pra strings montadas em JS. */
+function estiloVidroTingido(corKey) {
+  return {
+    background: `linear-gradient(180deg, ${rgbCor(corKey, 0.34)}, ${rgbCor(corKey, 0.16)})`,
+    borderColor: rgbCor(corKey, 0.4),
+    color: rgbCor(corKey),
+  };
+}
+const VIDRO_CARD = "rounded-[26px] border border-white/70 bg-gradient-to-b from-white/65 to-white/30 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.8),0_16px_32px_-10px_rgba(59,56,51,0.22),0_2px_6px_rgba(59,56,51,0.08)] backdrop-blur-2xl backdrop-saturate-150";
+const VIDRO_PILL = "rounded-full border backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.6)]";
+
+function ManchasFundo() {
+  return (
+    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+      <div className="absolute -right-16 -top-10 h-56 w-56 rounded-full blur-3xl" style={{ background: rgbCor("sienna", 0.32) }} />
+      <div className="absolute -left-20 top-64 h-48 w-48 rounded-full blur-3xl" style={{ background: rgbCor("ardosia", 0.28) }} />
+      <div className="absolute -right-12 bottom-28 h-44 w-44 rounded-full blur-3xl" style={{ background: rgbCor("musgo", 0.26) }} />
+    </div>
+  );
+}
+
 const VAGAS_INICIAIS = [
   { numero: 1, nome: "Maria Oliveira", aula: 3, total: 4, status: "confirmado", statusAula: "confirmado", presente: false },
   { numero: 2, nome: "João Silva", aula: 1, total: 4, status: "pendente", statusAula: "confirmado", presente: false },
@@ -399,6 +448,8 @@ export default function AtelieDemo() {
           --cream: #F2F2EB; --cream-soft: #E7E4DA; --line: #DEDAD1;
           --ink: #3B3833; --ink-soft: #6B655C;
           --accent: #C2410C; --accent-hover: #9A3412; --accent-soft: #F3E1D6;
+          --turma-sienna-rgb: 139 74 43; --turma-ardosia-rgb: 74 97 120;
+          --turma-musgo-rgb: 95 107 58; --turma-cafe-rgb: 74 52 42;
           --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Text', ui-sans-serif, system-ui, sans-serif;
           --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
           --font-display: 'Space Grotesk', var(--font-sans);
@@ -410,7 +461,9 @@ export default function AtelieDemo() {
         button, input, textarea, select { border-radius: 0.75rem; }
       `}</style>
 
-      <aside className="hidden md:flex md:w-32 md:shrink-0 md:flex-col md:border-r md:border-[var(--line)] md:bg-[var(--cream)] md:px-1.5 md:py-5">
+      <ManchasFundo />
+
+      <aside className="relative hidden md:flex md:w-32 md:shrink-0 md:flex-col md:border-r md:border-[var(--line)] md:bg-[var(--cream)] md:px-1.5 md:py-5">
         <div className="mb-6 flex justify-center px-1"><VaseMark /></div>
         <nav className="flex-1 space-y-0.5">
           {NAV.map((item) => (
@@ -489,17 +542,17 @@ export default function AtelieDemo() {
         </main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-[var(--line)] bg-white/95 px-1 py-1.5 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-around gap-1 rounded-full border border-white/70 bg-gradient-to-b from-white/70 to-white/35 px-2 py-2 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.8),0_10px_24px_-6px_rgba(59,56,51,0.22)] backdrop-blur-2xl backdrop-saturate-150 md:hidden">
         {TABS_MOBILE.map((id) => {
           const item = NAV.find((n) => n.id === id);
           const ativoTab = tela === id || (id === "forno" && tela === "fornoNova");
           return (
-            <button key={id} onClick={() => ir(id)} className={"flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] font-medium " + (ativoTab ? "text-[var(--accent)]" : "text-[var(--ink-soft)]")}>
+            <button key={id} onClick={() => ir(id)} className={"flex flex-col items-center gap-0.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors " + (ativoTab ? "bg-[var(--accent)] text-white" : "text-[var(--ink-soft)]")}>
               <item.icon size={20} strokeWidth={ativoTab ? 2.4 : 1.8} />{item.label}
             </button>
           );
         })}
-        <button onClick={() => setMenuAberto(true)} className="flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] font-medium text-[var(--ink-soft)]"><Menu size={20} />Mais</button>
+        <button onClick={() => setMenuAberto(true)} className="flex flex-col items-center gap-0.5 rounded-full px-3 py-1.5 text-[11px] font-medium text-[var(--ink-soft)]"><Menu size={20} />Mais</button>
       </nav>
 
       {toast && <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 bg-[var(--ink)] px-4 py-2.5 text-sm text-[var(--cream)] shadow-lg md:bottom-6">{toast}</div>}
@@ -822,25 +875,22 @@ function PainelForno({ ativa, fornadas, notificar, onNovaFornada, onDuplicar, on
   );
 }
 
-function TempGauge({ pct, temp, max, size = 176 }) {
-  const stroke = 12;
+function ProgressRing({ pct, size = 176, stroke = 12, color = "var(--accent)", trackColor = "var(--cream-soft)", children }) {
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (Math.min(Math.max(pct, 0), 100) / 100) * circumference;
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} strokeWidth={stroke} className="fill-none stroke-[var(--cream-soft)]" />
+        <circle cx={size / 2} cy={size / 2} r={radius} strokeWidth={stroke} fill="none" style={{ stroke: trackColor }} />
         <circle
-          cx={size / 2} cy={size / 2} r={radius} strokeWidth={stroke}
+          cx={size / 2} cy={size / 2} r={radius} strokeWidth={stroke} fill="none"
           strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
-          className="fill-none stroke-[var(--accent)] transition-[stroke-dashoffset] duration-700 ease-out"
+          style={{ stroke: color }}
+          className="transition-[stroke-dashoffset] duration-700 ease-out"
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="text-4xl font-semibold leading-none text-[var(--ink)]">{temp}°</div>
-        <div className="mt-1.5 text-xs text-[var(--ink-soft)]">de {max}°C</div>
-      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">{children}</div>
     </div>
   );
 }
@@ -871,7 +921,10 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
       <Card className="p-5">
         <div className="[&>*]:min-w-0 flex flex-col items-center gap-6 sm:flex-row sm:items-center">
           <div className="flex flex-col items-center gap-2">
-            <TempGauge pct={p.pct} temp={p.temperatura} max={fornada.config.temperaturaMaxima} />
+            <ProgressRing pct={p.pct}>
+              <div className="text-4xl font-semibold leading-none text-[var(--ink)]">{p.temperatura}°</div>
+              <div className="mt-1.5 text-xs text-[var(--ink-soft)]">de {fornada.config.temperaturaMaxima}°C</div>
+            </ProgressRing>
             {ultima && <div className="text-center text-xs text-[var(--ink-soft)]">Última informada: <span className="font-medium text-[var(--ink)]">{ultima.temp}°C</span> · {fmtRelativo(ultima.em, agora)}</div>}
           </div>
           <div className="[&>*]:min-w-0 grid w-full flex-1 grid-cols-1 gap-4 sm:grid-cols-3">
@@ -1123,6 +1176,7 @@ function Turmas({ notificar, diaInicial = "ter" }) {
   const ocupadas = vagas.filter((v) => v.nome).length;
   const diaInfo = TURMAS_DIAS.find((d) => d.id === diaAtivo) || TURMAS_DIAS[1];
   const turmaInfo = diaInfo.turmas.find((t) => t.id === turmaAtiva) || diaInfo.turmas[0];
+  const cor = corTurma(turmaInfo.id);
   return (
     <div>
       <div className="mb-5 flex items-start justify-between">
@@ -1135,19 +1189,33 @@ function Turmas({ notificar, diaInicial = "ter" }) {
         ))}
       </div>
       {diaInfo.turmas.length > 1 && (
-        <div className="mb-5 flex gap-2">
-          {diaInfo.turmas.map((t) => (
-            <button key={t.id} onClick={() => setTurmaAtiva(t.id)} className={"px-3 py-1.5 text-xs font-medium " + (turmaAtiva === t.id ? "bg-[var(--cream-soft)] text-[var(--ink)]" : "bg-[var(--cream-soft)] text-[var(--ink-soft)]")}>{t.hora}</button>
-          ))}
+        <div className="relative mb-5 flex gap-2">
+          {diaInfo.turmas.map((t) => {
+            const corPill = corTurma(t.id);
+            const ativa = turmaAtiva === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTurmaAtiva(t.id)}
+                className={"rounded-full px-3 py-1.5 text-xs font-medium " + (ativa ? "text-white" : VIDRO_PILL)}
+                style={ativa ? { background: rgbCor(corPill) } : estiloVidroTingido(corPill)}
+              >
+                {t.hora}
+              </button>
+            );
+          })}
         </div>
       )}
       {diaInfo.turmas.length <= 1 && <div className="mb-5" />}
       <div className="[&>*]:min-w-0 grid gap-5 lg:grid-cols-[1fr_300px]">
         <div className="w-full min-w-0">
           <Card className="mb-4 flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-            <div><div className="text-sm font-semibold">{turmaInfo.dia} · {turmaInfo.hora}</div><div className="mt-1 flex gap-2"><Badge tone="success">{ocupadas}/12 alunos</Badge><Badge tone="info">Turma fixa</Badge></div></div>
+            <div><div className="text-sm font-semibold">{turmaInfo.dia} · {turmaInfo.hora}</div><div className="mt-1 flex flex-wrap items-center gap-2">
+              <Badge tone="success">{ocupadas}/12 alunos</Badge>
+              <span className={"inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium " + VIDRO_PILL} style={estiloVidroTingido(cor)}>{turmaInfo.dia.split("-")[0]}</span>
+            </div></div>
           </Card>
-          <div className="w-full min-w-0 divide-y divide-[var(--line)] overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
+          <div className={"relative w-full min-w-0 divide-y divide-white/50 overflow-hidden " + VIDRO_CARD}>
             {vagas.map((v) => v.nome ? (
               <div key={v.numero} className="flex w-full min-w-0 items-center gap-3 p-3">
                 <Avatar nome={v.nome} size={40} />
@@ -1162,8 +1230,10 @@ function Turmas({ notificar, diaInicial = "ter" }) {
                     <span className="truncate text-sm font-medium">{v.nome}</span>
                     {v.status !== "confirmado" && <Badge tone={v.status === "ultima" ? "danger" : "warning"}>{v.status === "ultima" ? "Renovar" : "Pendente"}</Badge>}
                   </div>
-                  <div className="text-xs text-[var(--ink-soft)]">{v.aula}/{v.total} aulas</div>
                 </div>
+                <ProgressRing pct={(v.aula / v.total) * 100} size={40} stroke={5} color={rgbCor(cor)} trackColor={rgbCor(cor, 0.18)}>
+                  <span className="text-[10px] font-semibold" style={{ color: rgbCor(cor) }}>{v.aula}/{v.total}</span>
+                </ProgressRing>
                 <Toggle checked={v.presente} onChange={() => marcarPresenca(v.numero)} title={v.presente ? "Presente — toque para desfazer" : "Marcar presença"} />
               </div>
             ) : (
@@ -1257,14 +1327,28 @@ function Alunos() {
           <button onClick={() => setModal(true)} className="mt-2 bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--accent-hover)]">+ Cadastrar aluno</button>
         </Card>
       ) : (
-        <Card><ul className="divide-y divide-[var(--line)]">
-          {alunos.map((a, i) => (
-            <li key={i} className="flex items-center justify-between gap-3 px-4 py-3">
-              <div className="flex items-center gap-3"><Avatar nome={a.nome} /><div><div className="text-sm font-medium">{a.nome}</div><div className="text-xs text-[var(--ink-soft)]">{a.turma} · {a.tel}</div></div></div>
-              <Badge tone="info">{a.pacote}</Badge>
-            </li>
-          ))}
-        </ul></Card>
+        <div className={"relative divide-y divide-white/50 overflow-hidden " + VIDRO_CARD}>
+          {alunos.map((a, i) => {
+            const cor = TURMA_LABEL_COR[a.turma] || "sienna";
+            return (
+              <div key={i} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar nome={a.nome} />
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium">{a.nome}</div>
+                    <div className="flex items-center gap-1.5 text-xs text-[var(--ink-soft)]">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: rgbCor(cor) }} />
+                      {a.turma} · {a.tel}
+                    </div>
+                  </div>
+                </div>
+                <ProgressRing pct={(a.aula / a.total) * 100} size={40} stroke={5} color={rgbCor(cor)} trackColor={rgbCor(cor, 0.18)}>
+                  <span className="text-[10px] font-semibold" style={{ color: rgbCor(cor) }}>{a.aula}/{a.total}</span>
+                </ProgressRing>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {modal && (
@@ -1283,7 +1367,7 @@ function FormAluno({ onCancelar, onSalvar }) {
   const [turma, setTurma] = useState("Terça 18:30");
   const [total, setTotal] = useState(4);
   return (
-    <form onSubmit={(e) => { e.preventDefault(); if (!nome.trim()) return; onSalvar({ nome: nome.trim(), tel, turma, pacote: `0/${total} aulas` }); }}>
+    <form onSubmit={(e) => { e.preventDefault(); if (!nome.trim()) return; onSalvar({ nome: nome.trim(), tel, turma, aula: 0, total }); }}>
       <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Nome completo</label>
       <input autoFocus value={nome} onChange={(e) => setNome(e.target.value)} className="mb-3 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="Nome do aluno" />
       <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Telefone</label>
@@ -1316,18 +1400,22 @@ function Oficinas({ oficinas, onAbrir }) {
       <div className="grid gap-4 sm:grid-cols-2">
         {oficinas.map((o) => {
           const ocupadas = o.participantes.filter((p) => p.nome).length;
+          const cor = corOficina(o);
           return (
             <button key={o.id} onClick={() => onAbrir(o.id)} className="text-left">
-              <Card className="p-4 hover:border-[var(--ink-soft)]">
-                <div className="mb-2 flex items-start justify-between">
-                  <h3 className="font-medium">{o.nome}</h3>
-                  <Badge tone="info">{o.status}</Badge>
+              <div className={"relative min-w-0 p-4 " + VIDRO_CARD}>
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="truncate font-medium">{o.nome}</h3>
+                    <span className={"mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium " + VIDRO_PILL} style={estiloVidroTingido(cor)}>{o.status}</span>
+                  </div>
+                  <ProgressRing pct={(ocupadas / o.vagas) * 100} size={44} stroke={5} color={rgbCor(cor)} trackColor={rgbCor(cor, 0.18)}>
+                    <span className="text-[10px] font-semibold" style={{ color: rgbCor(cor) }}>{ocupadas}/{o.vagas}</span>
+                  </ProgressRing>
                 </div>
                 <p className="text-sm text-[var(--ink-soft)]">{o.data} · {o.hora}</p>
                 <p className="mt-1 text-sm text-[var(--ink-soft)]">R$ {o.valor} por pessoa</p>
-                <div className="mt-3 h-1.5 w-full overflow-hidden bg-[var(--cream-soft)]"><div className="h-full bg-[var(--accent)]" style={{ width: (ocupadas / o.vagas) * 100 + "%" }} /></div>
-                <p className="mt-1.5 text-xs text-[var(--ink-soft)]">{ocupadas}/{o.vagas} inscritos</p>
-              </Card>
+              </div>
             </button>
           );
         })}
@@ -1391,6 +1479,7 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
   const pendentes = preenchidos.filter((p) => p.pagamento === "pendente").length;
   const duplas = preenchidos.filter((p) => p.tipo === "dupla").length;
   const individuaisPreenchidos = preenchidos.filter((p) => p.tipo === "individual" || !p.duplaCom);
+  const cor = corOficina(oficina);
 
   return (
     <div>
@@ -1398,7 +1487,11 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
 
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2"><h1 className="text-2xl font-semibold" style={FONT_DISPLAY}>{oficina.nome}</h1><Badge tone="success">{oficina.status}</Badge></div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold" style={FONT_DISPLAY}>{oficina.nome}</h1>
+            <Badge tone="success">{oficina.status}</Badge>
+            <span className={"inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium " + VIDRO_PILL} style={estiloVidroTingido(cor)}>Oficina</span>
+          </div>
           <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-[var(--ink-soft)]">
             <span className="flex items-center gap-1.5"><CalendarDays size={14} />{oficina.data}</span>
             <span className="flex items-center gap-1.5"><Clock size={14} />{oficina.hora}</span>
@@ -1453,7 +1546,7 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
       </div>
 
       <h3 className="mb-3 text-sm font-semibold">Participantes ({oficina.vagas} vagas)</h3>
-      <div className="w-full min-w-0 divide-y divide-[var(--line)] overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
+      <div className={"relative w-full min-w-0 divide-y divide-white/50 overflow-hidden " + VIDRO_CARD}>
         {oficina.participantes.map((p) => p.nome ? (
           <div key={p.numero} className="flex w-full min-w-0 items-center gap-3 p-3">
             <Avatar nome={p.nome} size={40} />
@@ -1582,9 +1675,9 @@ function Pagamentos() {
         <StatCard icon={Clock} label="Ticket médio" value={"R$ " + Math.round((totalPendente + totalRecebido) / pagamentos.length)} />
       </div>
 
-      <Card className="mb-5 p-4">
+      <div className={"relative mb-5 p-4 " + VIDRO_CARD}>
         <h3 className="mb-3 text-sm font-semibold">Pendentes — cobrar</h3>
-        <ul className="divide-y divide-[var(--line)]">
+        <ul className="divide-y divide-white/50">
           {pendentes.map((p) => (
             <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
               <div className="flex items-center gap-3">
@@ -1601,11 +1694,11 @@ function Pagamentos() {
             </li>
           ))}
         </ul>
-      </Card>
+      </div>
 
-      <Card className="p-4">
+      <div className={"relative p-4 " + VIDRO_CARD}>
         <h3 className="mb-3 text-sm font-semibold">Histórico</h3>
-        <ul className="divide-y divide-[var(--line)]">
+        <ul className="divide-y divide-white/50">
           {pagamentos.map((p) => (
             <li key={p.id} className="flex items-center justify-between gap-2 py-2.5 text-sm">
               <div className="flex items-center gap-3">
@@ -1622,7 +1715,7 @@ function Pagamentos() {
             </li>
           ))}
         </ul>
-      </Card>
+      </div>
 
       {modal && (
         <Modal onClose={() => setModal(null)}>
