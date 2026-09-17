@@ -64,12 +64,26 @@ function estiloVidroTingido(corKey) {
     color: rgbCor(corKey),
   };
 }
-const VIDRO_CARD = "rounded-[26px] border border-white/70 bg-gradient-to-b from-white/50 to-white/15 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.8),0_16px_32px_-10px_rgba(59,56,51,0.22),0_2px_6px_rgba(59,56,51,0.08)] backdrop-blur-2xl backdrop-saturate-150";
-const VIDRO_PILL = "rounded-full border backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.6)]";
+/* Tom quente embutido no próprio gradiente (não branco puro) — antes
+   dependia só do que estivesse atrás pra colorir o vidro, e dois cards em
+   posições diferentes da página (pegando pontos diferentes das manchas de
+   fundo) liam como dois materiais diferentes (achado do Diego: "o
+   tratamento desses cards estão diferentes"). Com uma base própria, todo
+   card de vidro tem a mesma qualidade mínima consistente, e a mancha atrás
+   só soma variação, não é mais a única fonte da cor. */
+const VIDRO_CARD = "rounded-[26px] border border-white/80 bg-gradient-to-b from-[#FEFBF6]/90 to-[#FAF2E6]/65 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.85),0_16px_32px_-10px_rgba(59,56,51,0.2),0_2px_6px_rgba(59,56,51,0.07)] backdrop-blur-2xl backdrop-saturate-150";
+/* Sem backdrop-blur aqui de propósito — pills pequenas (dia/horário)
+   coladas lado a lado com blur cada uma causavam uma costura/risco visual
+   passageiro entre elas ao re-renderizar (achado do Diego: "esse risco
+   atrás de Qua e Qui... depois de alguns segundos some" — artefato de
+   composição de GPU do navegador com muitos elementos com blur adjacentes).
+   O gradiente+borda já dá a leitura de vidro numa pill pequena; blur real
+   fica reservado pros cards grandes, onde faz diferença de verdade. */
+const VIDRO_PILL = "rounded-full border shadow-[inset_0_1.5px_0_rgba(255,255,255,0.6)]";
 /* "Sólido" != chapado: mesmo o estado de ação/selecionado ganha gradiente +
    brilho superior + sombra, a mesma qualidade de profundidade do vidro, só
    sem o blur/translucidez — nunca um preenchimento de cor plana lisa. */
-const ACCENT_SOLIDO = "bg-gradient-to-b from-[#D2601F] to-[var(--accent)] text-white shadow-[inset_0_1.5px_0_rgba(255,255,255,0.35),0_3px_10px_-2px_rgba(194,65,12,0.45)] transition hover:brightness-95 active:brightness-90";
+const ACCENT_SOLIDO = "border border-white/40 bg-gradient-to-b from-[rgba(214,110,44,0.82)] to-[rgba(194,65,12,0.72)] text-white shadow-[inset_0_1.5px_0_rgba(255,255,255,0.4),0_3px_10px_-2px_rgba(194,65,12,0.4)] backdrop-blur-xl backdrop-saturate-150 transition hover:brightness-105 active:brightness-95";
 /* Pill neutra pros dias sem turma (Seg/Sex/Sáb/Dom) — muda mas legível,
    não texto quase invisível direto sobre o fundo colorido. */
 const VIDRO_PILL_NEUTRO = "rounded-full border border-white/50 bg-white/25 text-[var(--ink-soft)] backdrop-blur-md";
@@ -85,11 +99,16 @@ function ManchasFundo() {
      coladas no topo, se sobrepondo e derretendo pra um marrom-acinzentado
      escuro/embaçado bem em cima do cabeçalho (achado real do Diego,
      confirmado por screenshot: "essa área está toda apagada"). */
+  /* Mobile-first de propósito (regra do projeto: pensar no celular
+     primeiro) — as manchas eram dimensionadas pra caber bem em desktop
+     (md:) e isso as deixava grandes/fortes demais num viewport de 375px,
+     cobrindo o cabeçalho inteiro com a mancha no seu ponto mais forte.
+     Base pequena, cresce só a partir de md. */
   return (
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-      <div className="absolute -right-32 top-[-8%] h-[420px] w-[420px] rounded-full blur-3xl" style={{ background: rgbCor("sienna", 0.42) }} />
-      <div className="absolute -left-24 top-[38%] h-[380px] w-[380px] rounded-full blur-3xl" style={{ background: rgbCor("ardosia", 0.36) }} />
-      <div className="absolute -right-24 top-[72%] h-[400px] w-[400px] rounded-full blur-3xl" style={{ background: rgbCor("musgo", 0.38) }} />
+      <div className="absolute -right-16 top-24 h-56 w-56 rounded-full blur-3xl md:-right-32 md:top-[-8%] md:h-[420px] md:w-[420px]" style={{ background: rgbCor("sienna", 0.24) }} />
+      <div className="absolute -left-14 top-[42%] h-52 w-52 rounded-full blur-3xl md:-left-24 md:top-[38%] md:h-[380px] md:w-[380px]" style={{ background: rgbCor("ardosia", 0.2) }} />
+      <div className="absolute -right-14 top-[76%] h-56 w-56 rounded-full blur-3xl md:-right-24 md:top-[72%] md:h-[400px] md:w-[400px]" style={{ background: rgbCor("musgo", 0.22) }} />
     </div>
   );
 }
@@ -361,13 +380,12 @@ function Toggle({ checked, onChange, title }) {
     </button>
   );
 }
-function VaseMark() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 26 26" fill="none" className="text-[var(--ink)] shrink-0">
-      <path d="M10 3h6l1 3-1.5 1.5c1.7 1.6 2.8 3.4 2.8 6 0 5-3 8.5-5.3 8.5S8 18.5 8 13.5c0-2.6 1.1-4.4 2.8-6L9.3 6 10 3Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-      <path d="M9.3 6h7.4" stroke="currentColor" strokeWidth="1.4" />
-    </svg>
-  );
+/* Logotipo real da marca (wordmark "MTCST"), recortado/otimizado a partir
+   do arquivo que o Diego mandou — substitui o VaseMark (ícone de vaso
+   genérico usado como placeholder antes de existir um logo de verdade). */
+const LOGO_MTCST_SRC = "data:image/png;base64,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";
+function LogoMark({ className }) {
+  return <img src={LOGO_MTCST_SRC} alt="MTCST" className={className || "h-6 w-auto"} draggable={false} />;
 }
 function Modal({ children, onClose }) {
   return (
@@ -481,7 +499,7 @@ export default function AtelieDemo() {
       <ManchasFundo />
 
       <aside className="relative hidden md:flex md:w-32 md:shrink-0 md:flex-col md:border-r md:border-[var(--line)] md:bg-[var(--cream)] md:px-1.5 md:py-5">
-        <div className="mb-6 flex justify-center px-1"><VaseMark /></div>
+        <div className="mb-6 flex justify-center px-1"><LogoMark className="h-8 w-auto max-w-full" /></div>
         <nav className="flex-1 space-y-0.5">
           {NAV.map((item) => (
             <button key={item.id} onClick={() => ir(item.id)} title={item.label} className={"relative flex w-full flex-col items-center gap-0.5 rounded-2xl px-1 py-2 text-[10px] font-medium leading-tight transition-colors " + ((tela === item.id || (item.id === "forno" && tela === "fornoNova") || (item.id === "oficinas" && tela === "oficinaDetalhe")) ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--ink-soft)] hover:bg-white/60")}>
@@ -497,8 +515,8 @@ export default function AtelieDemo() {
       {menuAberto && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-black/30" onClick={() => setMenuAberto(false)} />
-          <div className="absolute left-0 top-0 h-full w-64 bg-white p-4 shadow-xl">
-            <div className="mb-6 flex items-center justify-between"><VaseMark /><button onClick={() => setMenuAberto(false)}><X size={20} /></button></div>
+          <div className="absolute left-0 top-0 h-full w-64 rounded-r-[26px] border-y border-r border-white/70 bg-gradient-to-b from-[#FBF4E9]/90 to-[#F2E3D0]/70 p-4 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.8),0_16px_32px_-10px_rgba(59,56,51,0.3)] backdrop-blur-2xl backdrop-saturate-150">
+            <div className="mb-6 flex items-center justify-between"><LogoMark className="h-7 w-auto" /><button onClick={() => setMenuAberto(false)}><X size={20} /></button></div>
             <nav className="space-y-1">
               {NAV.map((item) => (
                 <button key={item.id} onClick={() => ir(item.id)} className={"flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-medium " + (tela === item.id ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--ink-soft)]")}>
@@ -514,11 +532,11 @@ export default function AtelieDemo() {
       <div className="min-w-0 flex-1 pb-20 md:pb-0">
         <header className="flex items-center justify-between border-b border-[var(--line)] bg-white px-4 py-3 md:hidden">
           <button onClick={() => setMenuAberto(true)} aria-label="Abrir menu"><Menu size={22} /></button>
-          <VaseMark />
+          <LogoMark className="h-7 w-auto" />
           <Bell size={20} className="text-[var(--ink-soft)]" />
         </header>
 
-        <main className="w-full pl-4 pr-0 py-5 md:pl-6 md:pr-0 md:py-8">
+        <main className="w-full px-4 py-5 md:px-6 md:py-8">
           {tela === "dashboard" && <Dashboard ir={ir} ativa={ativa} onAbrirDia={abrirDiaTurmas} onAbrirOficinas={() => ir("oficinas")} />}
           {tela === "turmas" && <Turmas notificar={notificar} diaInicial={diaTurmaAlvo} />}
           {tela === "alunos" && <Alunos />}
@@ -916,23 +934,6 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
   const ultima = fornada.leituras[fornada.leituras.length - 1] || null;
   const p = calcularPrevisao(fornada.config, fornada.iniciadoEm, agora, ultima);
 
-  const grafico = useMemo(() => {
-    const pontos = [];
-    const inicio = fornada.iniciadoEm.getTime();
-    const fimJanela = inicio + 20 * 3600 * 1000;
-    for (let i = 0; i <= 24; i++) {
-      const t = new Date(inicio + (i / 24) * (fimJanela - inicio));
-      const pp = calcularPrevisao(fornada.config, fornada.iniciadoEm, t, null);
-      const leituraProxima = fornada.leituras.filter((l) => l.em <= t).slice(-1)[0];
-      pontos.push({
-        hora: fmtHora(t),
-        prevista: pp.temperatura,
-        real: t <= agora ? (leituraProxima ? leituraProxima.temp : pp.temperatura) : null,
-      });
-    }
-    return pontos;
-  }, [fornada, agora]);
-
   return (
     <>
       <Card className="p-5">
@@ -997,25 +998,6 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
           <button onClick={onFinalizar} className="flex items-center justify-center gap-2 bg-rose-50 py-3.5 text-sm font-semibold text-rose-600 hover:bg-rose-100">Finalizar fornada</button>
         </div>
       </div>
-
-      <Card className="mt-5 p-5">
-        <h3 className="mb-3 text-sm font-semibold">Curva da queima</h3>
-        <div className="h-80 w-full min-w-0 overflow-hidden">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={grafico}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#DEDAD1" />
-              <XAxis dataKey="hora" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} unit="°C" width={54} />
-              <Tooltip />
-              <Legend />
-              <ReferenceLine y={fornada.config.temperaturaMaxima} stroke="#8A8479" strokeDasharray="3 3" label={{ value: "Patamar", position: "insideTopLeft", fontSize: 11, fill: "#8A8479" }} />
-              <ReferenceLine y={fornada.config.temperaturaSegura} stroke="#60A5FA" strokeDasharray="3 3" label={{ value: "Abertura segura", position: "insideBottomLeft", fontSize: 11, fill: "#60A5FA" }} />
-              <Area type="monotone" dataKey="prevista" name="Curva prevista" stroke="#B8B2A6" fill="#EDEBE3" strokeDasharray="4 3" />
-              <Line type="monotone" dataKey="real" name="Temperatura real" stroke="#C2410C" strokeWidth={2.5} dot={{ r: 3 }} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
     </>
   );
 }
@@ -1200,7 +1182,7 @@ function Turmas({ notificar, diaInicial = "ter" }) {
         <div><h1 className="text-2xl font-semibold" style={FONT_DISPLAY}>Turmas</h1><p className="text-sm text-[var(--ink-soft)]">Gerencie suas turmas, alunos e presenças.</p></div>
         <button className={"hidden rounded-full px-4 py-2 text-sm font-medium sm:block " + ACCENT_SOLIDO} onClick={() => notificar("Cadastro de nova turma (demo)")}>+ Nova turma</button>
       </div>
-      <div className="mb-3 flex gap-2 overflow-x-auto">
+      <div className="mb-3 flex w-full gap-1 min-[380px]:gap-1.5">
         {TURMAS_DIAS.map((d) => {
           const ativo = diaAtivo === d.id;
           const corDia = d.turmas[0] ? corTurma(d.turmas[0].id) : null;
@@ -1209,7 +1191,7 @@ function Turmas({ notificar, diaInicial = "ter" }) {
               key={d.id}
               onClick={() => selecionarDia(d)}
               disabled={!d.disponivel}
-              className={"shrink-0 rounded-full px-4 py-2 text-sm font-medium " + (ativo ? ACCENT_SOLIDO : d.disponivel ? VIDRO_PILL : VIDRO_PILL_NEUTRO)}
+              className={"min-w-0 flex-1 rounded-full px-1.5 py-1.5 text-center text-xs font-medium " + (ativo ? ACCENT_SOLIDO : d.disponivel ? VIDRO_PILL : VIDRO_PILL_NEUTRO)}
               style={ativo ? undefined : d.disponivel ? estiloVidroTingido(corDia) : undefined}
             >
               {d.label}
