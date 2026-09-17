@@ -4,7 +4,7 @@ import {
   BarChart3, Settings, MessageSquare, Plus, MoreVertical, Thermometer,
   ChevronDown, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, Check, Clock,
   Snowflake, ShieldCheck, Flag, MessageCircle, GraduationCap as GradIcon,
-  Truck, Package, School, Coffee,
+  Truck, Package, School, Coffee, ArrowLeftRight, Phone, GripVertical,
 } from "lucide-react";
 /* ------------------------------------------------------------------ */
 /*  Dados fictícios base                                               */
@@ -50,6 +50,13 @@ function rgbCor(corKey, alpha) {
   return alpha === undefined ? `rgb(${rgb})` : `rgb(${rgb} / ${alpha})`;
 }
 function corTurma(turmaId) { return TURMA_COR[turmaId] || "sienna"; }
+function turmaPorId(turmaId) {
+  for (const d of TURMAS_DIAS) {
+    const t = d.turmas.find((t) => t.id === turmaId);
+    if (t) return t;
+  }
+  return null;
+}
 /* Rampa de cor incandescente por temperatura (vermelho escuro -> laranja ->
    amarelo-claro, a mesma progressão de corpo negro que se vê num forno/forja
    de verdade) — só usada no brilho pulsante do card do forno no Dashboard,
@@ -327,6 +334,25 @@ const VAGAS_POR_TURMA = {
     { numero: 12, nome: null },
   ],
 };
+/* Decora o roster real com `turmaOrigemId`/`provisorio` (2026-09-17,
+   feature de mover aluno entre turmas) — toda vaga ocupada nasce com a
+   turma de origem igual à própria turma e `provisorio: false`. Quando
+   `moverAluno` (em AtelieDemo) move alguém com "vaga provisória",
+   `turmaOrigemId` passa a apontar pra turma de origem de verdade
+   (preservada mesmo se a pessoa for movida de novo), diferente da turma
+   onde a linha está sendo exibida — é essa diferença que decide a borda
+   de identidade "de visita" na linha (ver Turmas). Roda uma vez, fora de
+   qualquer componente, pra virar o valor inicial de `vagasPorTurma`. */
+function comOrigem(vagasPorTurma) {
+  const resultado = {};
+  for (const turmaId of Object.keys(vagasPorTurma)) {
+    resultado[turmaId] = vagasPorTurma[turmaId].map((v) =>
+      v.nome ? { ...v, turmaOrigemId: turmaId, provisorio: false } : v
+    );
+  }
+  return resultado;
+}
+const VAGAS_POR_TURMA_INICIAL = comOrigem(VAGAS_POR_TURMA);
 
 /* Alunos reais (2026-09-17, mesma leva de dados de VAGAS_POR_TURMA) —
    "qro q vc cadastre essas pessoas... em alunos vai ter... os
@@ -683,11 +709,22 @@ function Badge({ tone = "neutral", children }) {
   };
   return <span className={"inline-flex max-w-full items-center whitespace-normal break-words rounded-full px-2.5 py-1 text-xs font-medium " + tones[tone]}>{children}</span>;
 }
-function Avatar({ nome, size = 40, stacked }) {
+/* `anelCor` (2026-09-17, feature de vaga provisória): contorno colorido
+   opcional em volta do avatar, cor da turma de ORIGEM de quem está de
+   visita numa turma diferente — achado do Diego vendo a Ju Pita movida:
+   "faltou a borda do card dela da cor original", a etiqueta de texto
+   sozinha (ver linha de aluno em Turmas) não estava chamando atenção o
+   suficiente. `boxShadow` em vez de `ring-*` do Tailwind porque a cor
+   varia em tempo de execução por turma (mesmo motivo de `estiloVidroTingido`
+   não usar classe fixa). */
+function Avatar({ nome, size = 40, stacked, anelCor }) {
   const iniciais = nome ? nome.split(" ").slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") : "?";
   return (
     <div
-      style={{ width: size, height: size, fontSize: Math.max(9, size * 0.36) }}
+      style={{
+        width: size, height: size, fontSize: Math.max(9, size * 0.36),
+        boxShadow: anelCor ? `0 0 0 2.5px ${anelCor}` : undefined,
+      }}
       className={"flex items-center justify-center overflow-hidden rounded-full bg-[var(--ink)] text-[var(--cream)] font-medium shrink-0 leading-none " + (stacked ? "ring-2 ring-white" : "")}
     >
       {iniciais}
@@ -818,6 +855,61 @@ export default function AtelieDemo() {
   const [fornoAlvoDash, setFornoAlvoDash] = useState(FORNOS[0].id);
   function abrirForno(fornoId) { setFornoAlvoDash(fornoId); ir("forno"); }
 
+  /* `vagasPorTurma` subiu de dentro de `Turmas` pra cá (2026-09-17) —
+     mesmo padrão de `fornadas`/`oficinas`. Precisou subir porque duas
+     features novas cruzam telas: clicar num aluno (em Turmas OU Alunos)
+     pra ver a página de detalhe, e mover aluno entre turmas (que edita o
+     roster de DUAS turmas ao mesmo tempo — Turmas só olhava a turma
+     ativa). Pedido do Diego: "e ainda nao consigo clicar no aluno e ver
+     a pagina dele. e qro poder arrastar um aluno de uma turma e passar
+     para a outra, porem depois de soltar vai aparecer uma mensagem,
+     vaga provisória... ou vai ser trasferido fixo". */
+  const [vagasPorTurma, setVagasPorTurma] = useState(VAGAS_POR_TURMA_INICIAL);
+  const [alunoSelecionado, setAlunoSelecionado] = useState(null);
+  function abrirAlunoDetalhe(aluno, origemTela) {
+    setAlunoSelecionado({ ...aluno, origemTela });
+    ir("alunoDetalhe");
+  }
+  /* "Arrastar e soltar" de verdade não é um bom encaixe pro ambiente do
+     artifact (sem lib de drag disponível — só react/lucide-react/
+     recharts/tailwindcss — e HTML5 DnD nativo tem suporte fraco em touch,
+     que é a prioridade do app). Implementado como ação por toque
+     (botão "mover" em cada aluno → modal escolhe turma destino → escolhe
+     provisório/fixo) que chega no mesmo resultado funcional do pedido.
+     Registrado em CLAUDE.md pra não parecer decisão silenciosa. */
+  function moverAluno(aluno, origemTurmaId, destinoTurmaId, tipo) {
+    setVagasPorTurma((vpt) => {
+      const origem = (vpt[origemTurmaId] || []).map((v) =>
+        v.numero === aluno.numero ? { numero: v.numero, nome: null } : v
+      );
+      const destino = vpt[destinoTurmaId] || [];
+      const novoNumero = Math.max(0, ...destino.map((v) => v.numero)) + 1;
+      const turmaOrigemFinal = tipo === "provisorio" ? (aluno.turmaOrigemId || origemTurmaId) : destinoTurmaId;
+      const movido = { ...aluno, numero: novoNumero, turmaOrigemId: turmaOrigemFinal, provisorio: tipo === "provisorio" };
+      return { ...vpt, [origemTurmaId]: origem, [destinoTurmaId]: [...destino, movido] };
+    });
+    const destinoInfo = turmaPorId(destinoTurmaId);
+    notificar(
+      tipo === "provisorio"
+        ? `${aluno.nome}: vaga provisória em ${destinoInfo?.dia.split("-")[0]} só esta semana.`
+        : `${aluno.nome}: transferido(a) fixo para ${destinoInfo?.dia.split("-")[0]}.`
+    );
+  }
+  /* Remover aluno arrastando pra uma lateral da tela (2026-09-17) —
+     "quando eu tiver segurando algum card e chegar proximo as laterias
+     q elas fiquem destacadas para eu saber q tem uma ação ali". Some da
+     turma sem entrar em nenhuma outra (diferente de `moverAluno`) — a
+     vaga volta a ficar vazia/disponível, mesma representação de "sem
+     nome" já usada no roster. Pede confirmação antes (ver `ModalRemover`
+     dentro de `Turmas`), não remove só pelo gesto. */
+  function removerAluno(aluno, turmaId) {
+    setVagasPorTurma((vpt) => ({
+      ...vpt,
+      [turmaId]: (vpt[turmaId] || []).map((v) => (v.numero === aluno.numero ? { numero: v.numero, nome: null } : v)),
+    }));
+    notificar(`${aluno.nome} removido(a) da turma.`);
+  }
+
   return (
     <div className="flex min-h-screen w-full bg-[var(--cream)] text-[var(--ink)]" style={{ fontFamily: "var(--font-sans)" }}>
       <style>{`
@@ -935,8 +1027,24 @@ export default function AtelieDemo() {
 
         <main className="w-full px-4 pb-5 pt-24 md:px-6 md:py-8">
           {tela === "dashboard" && <Dashboard ir={ir} fornadas={fornadas} onAbrirDia={abrirDiaTurmas} onAbrirOficinas={() => ir("oficinas")} onAbrirForno={abrirForno} />}
-          {tela === "turmas" && <Turmas notificar={notificar} diaInicial={diaTurmaAlvo} />}
-          {tela === "alunos" && <Alunos />}
+          {tela === "turmas" && (
+            <Turmas
+              notificar={notificar}
+              diaInicial={diaTurmaAlvo}
+              vagasPorTurma={vagasPorTurma}
+              setVagasPorTurma={setVagasPorTurma}
+              onAbrirAluno={abrirAlunoDetalhe}
+              onMoverAluno={moverAluno}
+              onRemoverAluno={removerAluno}
+            />
+          )}
+          {tela === "alunos" && <Alunos onAbrirAluno={abrirAlunoDetalhe} />}
+          {tela === "alunoDetalhe" && alunoSelecionado && (
+            <AlunoDetalhe
+              aluno={alunoSelecionado}
+              onVoltar={() => ir(alunoSelecionado.origemTela === "alunos" ? "alunos" : "turmas")}
+            />
+          )}
           {tela === "oficinas" && <Oficinas oficinas={oficinas} onAbrir={(id) => { setOficinaAbertaId(id); ir("oficinaDetalhe"); }} />}
           {tela === "oficinaDetalhe" && (
             <OficinaDetalhe
@@ -1664,7 +1772,7 @@ function Campo({ label, value, onChange }) {
 /*  Demais telas (inalteradas)                                         */
 /* ------------------------------------------------------------------ */
 
-function Turmas({ notificar, diaInicial = "ter" }) {
+function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma, onAbrirAluno, onMoverAluno, onRemoverAluno }) {
   const diaValido = TURMAS_DIAS.find((d) => d.id === diaInicial && d.disponivel) || TURMAS_DIAS.find((d) => d.id === "ter");
   const [diaAtivo, setDiaAtivo] = useState(diaValido.id);
   const [turmaAtiva, setTurmaAtiva] = useState(diaValido.turmas[0].id);
@@ -1675,8 +1783,244 @@ function Turmas({ notificar, diaInicial = "ter" }) {
      já usado pros 2 fornos independentes (estado fatiado por chave).
      `setVagas` mantém a assinatura antiga (`(vs) => vs.map(...)`) pra não
      precisar reescrever cadastrarAluno/toggleStatusAula/marcarPresenca —
-     só redireciona pra fatia da turma ativa. */
-  const [vagasPorTurma, setVagasPorTurma] = useState(VAGAS_POR_TURMA);
+     só redireciona pra fatia da turma ativa. **`vagasPorTurma` subiu pro
+     componente raiz (2026-09-17)** — clicar num aluno e mover entre
+     turmas precisam ser vistos de fora de uma turma só (mover edita o
+     roster de duas turmas ao mesmo tempo); `Turmas` recebe o estado e o
+     setter via props agora, o resto da lógica local não mudou. */
+  const [modalMover, setModalMover] = useState(null);
+  const [destinoPreEscolhido, setDestinoPreEscolhido] = useState(null);
+  const [destinoArraste, setDestinoArraste] = useState(null);
+  const [modalRemover, setModalRemover] = useState(null);
+  /* Faixas laterais como zona de remover (2026-09-17) — o Diego
+     clarificou o que "jogar pra fora da tela" queria dizer, com um
+     desenho marcando as bordas esquerda/direita em vermelho: "quando eu
+     tiver segurando algum card e chegar proximo as laterias q elas
+     fiquem destacadas para eu saber q tem uma ação ali". Soltar numa
+     lateral pede confirmação antes de remover (ação destrutiva de
+     verdade — segue o mesmo padrão do resto do app de nunca apagar sem
+     confirmar, ex.: modal de conflito de fornada) em vez de remover na
+     hora. */
+  const [lateralArraste, setLateralArraste] = useState(null);
+  const FAIXA_LATERAL_PX = 56;
+  /* Arrastar e soltar de verdade (2026-09-17) — primeira versão desta
+     feature foi só o botão + modal de 2 passos (escolher turma, depois
+     provisório/fixo), pensando que drag-and-drop não encaixava bem num
+     ambiente mobile-first sem lib. O Diego insistiu: "na vrdd eu qria
+     poder mover e arrastar o card e jogar la para a turma que eu
+     quisesse" / "nao tem como fazer isso?". Resposta: dá sim, só não
+     com a API nativa de HTML5 (`draggable`), que é praticamente só-mouse
+     — Pointer Events (`onPointerDown/Move/Up`) unificam mouse e toque de
+     verdade nos navegadores atuais, sem precisar de lib nenhuma. O
+     "alvo" de soltar são as pills de dia/horário lá em cima (é a única
+     lista de turmas visível na tela, já que só uma turma é exibida por
+     vez) — cada pill guarda seu próprio nó em `pillsRef` pra testar
+     colisão com a posição do ponteiro. Posição do "fantasma" (cópia
+     flutuante da linha) é escrita direto no DOM via `ghostRef`
+     (`style.transform`), sem `setState` a cada pixel — mesma técnica já
+     usada no parallax de fundo (ver `FundoArgilaParallax`), por causa da
+     mesma lição: re-renderizar a cada evento de ponteiro é pesado e
+     desnecessário quando só a posição visual muda. `setState` só
+     acontece quando o pill "alvo" muda (bem mais raro que cada pixel).
+     Handle único faz as duas coisas: toque curto sem mover abre o modal
+     de 2 passos de sempre (escolher turma → provisório/fixo); arrastar
+     de verdade e soltar sobre um pill pula direto pro passo 2, com a
+     turma já escolhida pelo pill onde soltou. */
+  const arrastoRef = useRef({ ativo: false, moveu: false, aluno: null, startX: 0, startY: 0, offsetX: 0, offsetY: 0, largura: 0 });
+  const ghostRef = useRef(null);
+  const ghostInnerRef = useRef(null);
+  const pillsRef = useRef({});
+  /* Pills de DIA com mais de uma turma (só Quinta hoje) não são alvo
+     direto de soltar — pairar sobre eles só troca a pré-visualização pra
+     revelar os sub-pills de horário embaixo, pra soltar num horário
+     específico. Ref separada porque a colisão com esses pills tem uma
+     consequência diferente da colisão com um alvo de verdade (ver
+     `moverArraste`). Pedido do Diego: "quando colocar encima de quinta
+     ja precisa mudar para quinta com as opções dos horarios embaixo pra
+     eu escolher onde deixar". */
+  const diaMultiRef = useRef({});
+  const [arrastandoAtivo, setArrastandoAtivo] = useState(false);
+  const [diaPreviewArraste, setDiaPreviewArraste] = useState(null);
+  const LIMIAR_ARRASTE = 8;
+
+  function iniciarArraste(e, v) {
+    const linha = e.currentTarget.closest("[data-linha-aluno]");
+    const rect = linha.getBoundingClientRect();
+    arrastoRef.current = {
+      ativo: true, moveu: false, aluno: v,
+      startX: e.clientX, startY: e.clientY,
+      offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top,
+      largura: rect.width,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+  function moverArraste(e) {
+    const a = arrastoRef.current;
+    if (!a.ativo) return;
+    const dx = e.clientX - a.startX, dy = e.clientY - a.startY;
+    if (!a.moveu && Math.hypot(dx, dy) > LIMIAR_ARRASTE) {
+      a.moveu = true;
+      if (ghostRef.current) ghostRef.current.style.display = "block";
+      if (ghostInnerRef.current) ghostInnerRef.current.style.width = a.largura + "px";
+      setArrastandoAtivo(true);
+    }
+    if (!a.moveu) return;
+    if (ghostRef.current) {
+      ghostRef.current.style.transform = `translate(${e.clientX - a.offsetX}px, ${e.clientY - a.offsetY}px)`;
+    }
+    let alvo = null;
+    for (const [turmaId, no] of Object.entries(pillsRef.current)) {
+      if (!no || turmaId === turmaAtiva) continue;
+      const r = no.getBoundingClientRect();
+      if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) { alvo = turmaId; break; }
+    }
+    setDestinoArraste((atual) => (atual === alvo ? atual : alvo));
+    /* Pairar sobre o pill de um DIA com mais de uma turma (só Quinta hoje)
+       não resolve um alvo direto — só troca a pré-visualização pra revelar
+       os sub-pills de horário, que aí sim viram alvos de verdade no loop
+       de cima assim que aparecerem (mesma `pillsRef`). Só entra em preview
+       se o ponteiro não achou um alvo direto (evita ficar trocando a
+       pré-visualização enquanto já está em cima de um sub-pill de outro
+       dia, por exemplo). */
+    let diaPreview = null;
+    if (!alvo) {
+      for (const [diaId, no] of Object.entries(diaMultiRef.current)) {
+        if (!no) continue;
+        const r = no.getBoundingClientRect();
+        if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) { diaPreview = diaId; break; }
+      }
+    }
+    setDiaPreviewArraste((atual) => (atual === diaPreview ? atual : diaPreview));
+    /* Faixas laterais (remover) têm prioridade sobre qualquer pill —
+       fazem parte da borda da TELA, não competem por área com os pills
+       lá em cima. */
+    const lateral = e.clientX <= FAIXA_LATERAL_PX ? "esquerda" : e.clientX >= window.innerWidth - FAIXA_LATERAL_PX ? "direita" : null;
+    setLateralArraste((atual) => (atual === lateral ? atual : lateral));
+    /* Card encolhe assim que paira sobre um alvo válido (turma ou
+       lateral de remover), não só no momento de soltar — pedido do Diego:
+       "quando eu mover o aluno para a turma qro q o card do aluno
+       diminua quando deixar encima de alguma turma... e fizesse a
+       animação como se tivesse entrando na turma". `ghostInnerRef` é um
+       elemento separado do que recebe a posição (`ghostRef`) só pra
+       poder ter uma `transition` suave no scale sem atrasar o
+       acompanhamento do dedo (que precisa ser instantâneo). Os pills já
+       crescem (`scale-125`/`ring-2`) quando são o alvo — junto com o
+       encolhimento do card, dá a leitura de "sendo puxado pra dentro". */
+    if (ghostInnerRef.current) {
+      ghostInnerRef.current.style.transform = (alvo || lateral) ? "scale(0.55)" : "scale(1)";
+      ghostInnerRef.current.style.opacity = (alvo || lateral) ? "0.75" : "1";
+    }
+  }
+  /* Soltar sobre um alvo válido não fecha o fantasma na hora — encolhe e
+     "afunila" pro centro do pill antes de sumir (pedido do Diego: "faça
+     uma animação de afunilar depois q eu deixar encima de algo"), só
+     então abre o modal. CSS transition escrita direto no `style` do
+     `ghostRef` (mesma técnica de manipular o DOM direto do resto do
+     arraste), não `setState`/classe, porque é uma animação de um objeto
+     só, de curta duração, disparada uma vez — não precisa do ciclo de
+     render do React pra isso. */
+  function animarAfunilarEFechar(destinoId, aluno) {
+    const pillNo = pillsRef.current[destinoId];
+    if (ghostRef.current && ghostInnerRef.current && pillNo) {
+      const r = pillNo.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const ghost = ghostRef.current, inner = ghostInnerRef.current;
+      /* "Afunilar" termina do TAMANHO do pill de destino (não sumindo num
+         ponto) — pedido do Diego: "q ele afunili e fique qs do tamanho
+         da turma". Escala calculada pela largura real do pill contra a
+         largura real do fantasma, não um número fixo — funciona igual
+         pra qualquer pill (dia ou horário), do tamanho que for. */
+      const larguraGhost = inner.getBoundingClientRect().width || r.width;
+      const escalaFinal = Math.max(0.3, Math.min(1, r.width / larguraGhost));
+      ghost.style.transition = "transform 260ms cubic-bezier(.4,0,1,1)";
+      ghost.style.transform = `translate(${cx}px, ${cy}px)`;
+      inner.style.transition = "transform 260ms cubic-bezier(.4,0,1,1), opacity 180ms ease-in 100ms";
+      inner.style.transform = `translate(-50%, -50%) scale(${escalaFinal})`;
+      inner.style.opacity = "0";
+      setTimeout(() => {
+        ghost.style.display = "none";
+        ghost.style.transition = "";
+        inner.style.transition = "";
+        inner.style.opacity = "1";
+        setDestinoPreEscolhido(destinoId);
+        setModalMover(aluno);
+      }, 260);
+    } else {
+      if (ghostRef.current) ghostRef.current.style.display = "none";
+      setDestinoPreEscolhido(destinoId);
+      setModalMover(aluno);
+    }
+  }
+  function animarSaidaLateral(lado, aluno) {
+    const ghost = ghostRef.current, inner = ghostInnerRef.current;
+    if (ghost && inner) {
+      const deslocamento = lado === "esquerda" ? -220 : 220;
+      ghost.style.transition = "transform 220ms ease-in";
+      ghost.style.transform += ` translate(${deslocamento}px, 0)`;
+      inner.style.transition = "transform 220ms ease-in, opacity 220ms ease-in";
+      inner.style.transform += " scale(0.6)";
+      inner.style.opacity = "0";
+      setTimeout(() => {
+        ghost.style.display = "none";
+        ghost.style.transition = "";
+        inner.style.transition = "";
+        inner.style.opacity = "1";
+        setModalRemover(aluno);
+      }, 220);
+    } else {
+      setModalRemover(aluno);
+    }
+  }
+  function soltarArraste(e) {
+    const a = arrastoRef.current;
+    if (!a.ativo) return;
+    if (a.moveu) {
+      /* Arrastou de verdade: só abre o modal (com a animação de afunilar,
+         já no passo 2, turma escolhida pelo pill) se soltou em cima de um
+         alvo válido — soltar em qualquer outro lugar (inclusive fora da
+         tela/tela do app) cancela em silêncio: o fantasma só some e a
+         linha original volta ao normal, sem mexer em nenhum dado. Pedido
+         do Diego, confirmando esse comportamento: "e se eu jogar pra
+         arrastar e jogar pra fora da tela ela sai... caso eu coloque
+         errado" — o card NUNCA é removido só por causa do gesto, só
+         quando o modal é confirmado de verdade (`onMoverAluno`). */
+      if (lateralArraste) {
+        animarSaidaLateral(lateralArraste, a.aluno);
+      } else if (destinoArraste) {
+        animarAfunilarEFechar(destinoArraste, a.aluno);
+      } else {
+        if (ghostRef.current) ghostRef.current.style.display = "none";
+      }
+    } else {
+      if (ghostRef.current) ghostRef.current.style.display = "none";
+      setModalMover(a.aluno);
+    }
+    arrastoRef.current = { ativo: false, moveu: false, aluno: null, startX: 0, startY: 0, offsetX: 0, offsetY: 0, largura: 0 };
+    setArrastandoAtivo(false);
+    setDestinoArraste(null);
+    setDiaPreviewArraste(null);
+    setLateralArraste(null);
+  }
+  /* Rede de segurança (2026-09-17): `setPointerCapture` garante que o
+     handle recebe move/up mesmo fora dele, mas se o ponteiro sair da
+     JANELA de verdade durante o arraste (não só da área do app) alguns
+     navegadores nunca disparam o `pointerup` no elemento. Sem isso, o
+     estado ficava "preso" arrastando pra sempre — a linha continuava
+     esmaecida (opacity-40) e parecia ter sumido. `window` sempre recebe
+     esses eventos, então serve de fallback que sempre limpa o estado,
+     mesmo se o handle nunca receber o evento dele. */
+  useEffect(() => {
+    if (!arrastandoAtivo) return;
+    function limparSeAtivo() { if (arrastoRef.current.ativo) soltarArraste(); }
+    window.addEventListener("pointerup", limparSeAtivo);
+    window.addEventListener("pointercancel", limparSeAtivo);
+    window.addEventListener("blur", limparSeAtivo);
+    return () => {
+      window.removeEventListener("pointerup", limparSeAtivo);
+      window.removeEventListener("pointercancel", limparSeAtivo);
+      window.removeEventListener("blur", limparSeAtivo);
+    };
+  }, [arrastandoAtivo]);
   const vagas = vagasPorTurma[turmaAtiva] || [];
   function setVagas(atualizar) {
     setVagasPorTurma((vpt) => ({ ...vpt, [turmaAtiva]: typeof atualizar === "function" ? atualizar(vpt[turmaAtiva] || []) : atualizar }));
@@ -1741,21 +2085,46 @@ function Turmas({ notificar, diaInicial = "ter" }) {
         <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-2xl font-bold uppercase tracking-wide" style={FONT_DISPLAY}>Turmas</h1>
         <button className={"hidden rounded-full px-4 py-2 text-sm font-medium sm:block " + ACCENT_SOLIDO} onClick={() => notificar("Cadastro de nova turma (demo)")}>+ Nova turma</button>
       </div>
-      <div className="relative mb-3 flex w-full gap-1 min-[380px]:gap-1.5">
+      {/* `z-[60]` durante o arraste (maior que o z-50 do fantasma, ver
+         `ghostRef` abaixo) — pedido do Diego: "quando eu arrastar o card
+         da pessoa para uma turma, a turma precisa estar por cima pra eu
+         conseguir visualizar" (o fantasma translúcido tapava o pill e o
+         destaque dele quando o dedo passava bem em cima). */}
+      <div className={"relative mb-3 flex w-full gap-1 min-[380px]:gap-1.5" + (arrastandoAtivo ? " z-[60]" : "")}>
         {TURMAS_DIAS.map((d) => {
           const ativo = diaAtivo === d.id;
+          const multiTurma = d.turmas.length > 1;
+          const turmaAlvoDia = !multiTurma ? (d.turmas[0]?.id || null) : null;
           const corDia = d.turmas[0] ? corTurma(d.turmas[0].id) : null;
+          const emPreview = multiTurma && diaPreviewArraste === d.id;
+          const emArraste = (turmaAlvoDia && destinoArraste === turmaAlvoDia) || emPreview;
+          /* `relative z-10` junto do `scale-125` (2026-09-17) — sem isso o
+             crescimento ficava visualmente puxado pra esquerda, achado do
+             Diego com desenho: "qro q essa diminuição seja centralizada e
+             nao q ele arraste o botao inteiro e fique essa esquerda
+             maior". Causa real: o `scale()` em si já cresce simétrico a
+             partir do centro (não é geometria torta) — o que ficava
+             assimétrico era a ORDEM DE PINTURA. Pills sem z-index pintam
+             na ordem do DOM, então o pill maior cobria o vizinho da
+             esquerda (que veio antes) mas ficava coberto pelo da direita
+             (que vem depois) — dava a leitura de "cresceu só pra um
+             lado". `z-10` garante que o pill em destaque pinta por cima
+             dos dois vizinhos igualmente. */
           return (
             <button
               key={d.id}
+              ref={(no) => {
+                if (turmaAlvoDia) pillsRef.current[turmaAlvoDia] = no;
+                if (multiTurma) diaMultiRef.current[d.id] = no;
+              }}
               onClick={() => selecionarDia(d)}
               disabled={!d.disponivel}
-              className={"min-w-0 flex-1 rounded-full px-1.5 py-1.5 text-center text-xs font-medium " + (ativo ? ACCENT_SOLIDO : d.disponivel ? VIDRO_PILL : VIDRO_PILL_NEUTRO)}
+              className={"min-w-0 flex-1 rounded-full px-1.5 py-1.5 text-center text-xs font-medium transition-transform " + (ativo ? ACCENT_SOLIDO : d.disponivel ? VIDRO_PILL : VIDRO_PILL_NEUTRO) + (emArraste ? " relative z-10 origin-center scale-125 ring-2 ring-white" : "")}
               style={
                 ativo
                   ? undefined
                   : d.disponivel
-                  ? estiloVidroTingido(corDia, 0.85, 0.65)
+                  ? estiloVidroTingido(corDia, emArraste ? 1 : 0.85, emArraste ? 0.85 : 0.65)
                   : undefined
               }
             >
@@ -1764,25 +2133,38 @@ function Turmas({ notificar, diaInicial = "ter" }) {
           );
         })}
       </div>
-      {diaInfo.turmas.length > 1 && (
-        <div className="relative mb-5 flex gap-2">
-          {diaInfo.turmas.map((t) => {
-            const corPill = corTurma(t.id);
-            const ativa = turmaAtiva === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setTurmaAtiva(t.id)}
-                className={"rounded-full px-3 py-1.5 text-xs font-medium " + (ativa ? ACCENT_SOLIDO : VIDRO_PILL)}
-                style={ativa ? undefined : estiloVidroTingido(corPill)}
-              >
-                {t.hora}
-              </button>
-            );
-          })}
-        </div>
-      )}
-      {diaInfo.turmas.length <= 1 && <div className="mb-5" />}
+      {/* Sub-pills de horário: mostradas pra turma ativa normalmente, mas
+         durante um arraste ativo trocam pra pré-visualizar o dia sob o
+         ponteiro (`diaPreviewArraste`) mesmo que seja um dia diferente do
+         que está aberto — pedido do Diego: "quando colocar encima de
+         quinta ja precisa mudar para quinta com as opções dos horarios
+         embaixo pra eu escolher onde deixar". Fora de um arraste,
+         `diaPreviewArraste` é sempre null, então isso se comporta
+         exatamente como antes (mostra só a turma realmente ativa). */}
+      {(() => {
+        const diaExibido = (arrastandoAtivo && diaPreviewArraste) ? (TURMAS_DIAS.find((d) => d.id === diaPreviewArraste) || diaInfo) : diaInfo;
+        if (diaExibido.turmas.length <= 1) return <div className="mb-5" />;
+        return (
+          <div className={"relative mb-5 flex gap-2" + (arrastandoAtivo ? " z-[60]" : "")}>
+            {diaExibido.turmas.map((t) => {
+              const corPill = corTurma(t.id);
+              const ativa = turmaAtiva === t.id && diaExibido === diaInfo;
+              const emArraste = destinoArraste === t.id;
+              return (
+                <button
+                  key={t.id}
+                  ref={(no) => { pillsRef.current[t.id] = no; }}
+                  onClick={() => setTurmaAtiva(t.id)}
+                  className={"rounded-full px-3 py-1.5 text-xs font-medium transition-transform " + (ativa ? ACCENT_SOLIDO : VIDRO_PILL) + (emArraste ? " relative z-10 origin-center scale-125 ring-2 ring-white" : "")}
+                  style={ativa ? undefined : estiloVidroTingido(corPill, emArraste ? 1 : 0.45, emArraste ? 0.85 : 0.22)}
+                >
+                  {t.hora}
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
       <div className="[&>*]:min-w-0 grid gap-5 lg:grid-cols-[1fr_300px]">
         <div className="w-full min-w-0">
           <div className={"relative mb-4 flex flex-wrap items-center justify-between gap-2 px-4 py-3 " + VIDRO_CARD}>
@@ -1795,13 +2177,50 @@ function Turmas({ notificar, diaInicial = "ter" }) {
             className={"relative w-full min-w-0 divide-y divide-white/50 overflow-hidden " + VIDRO_CARD}
             style={{ borderColor: rgbCor(cor, 0.75), borderWidth: 2 }}
           >
-            {vagas.map((v) => v.nome ? (
-              <div key={v.numero} className="flex w-full min-w-0 items-center gap-3 p-3">
+            {vagas.map((v) => {
+              const visitante = v.nome && v.provisorio && v.turmaOrigemId !== turmaAtiva;
+              /* Provisório: a cor de origem substitui a cor da turma atual
+                 em TUDO nessa linha (contorno E anel de progresso) — não
+                 mistura as duas. Achado do Diego vendo os dois contornos
+                 competindo: "o contorno azul precisa substituir o da cor
+                 original naquele local, nao pode ficar os 2 contornos
+                 juntos". */
+              const corLinha = visitante ? corTurma(v.turmaOrigemId) : cor;
+              return v.nome ? (
+              <div
+                key={v.numero}
+                data-linha-aluno
+                className={
+                  "flex w-full min-w-0 items-center gap-2 p-3 transition-opacity " +
+                  (arrastandoAtivo && arrastoRef.current.aluno === v ? "opacity-40 " : "") +
+                  /* "O entorno" pedido pelo Diego (com desenho: contorno
+                     ao redor da LINHA inteira, não só o avatar) — linha
+                     de quem está provisório numa turma que não é a dele
+                     ganha borda arredondada própria, destacada das linhas
+                     normais ao redor (que só têm o traço fino do
+                     `divide-y` do container). */
+                  (visitante ? "rounded-2xl border-2 my-1" : "")
+                }
+                style={visitante ? { borderColor: rgbCor(corTurma(v.turmaOrigemId)) } : undefined}
+              >
                 <Avatar nome={v.nome} size={40} />
-                <div className="min-w-0 flex-1">
+                {/* Zona clicável (nome + status do pacote) leva pro detalhe do
+                   aluno — pedido do Diego: "ainda nao consigo clicar no
+                   aluno e ver a pagina dele". É um `div` (não `button`)
+                   porque precisa aninhar o botão real do chip de status
+                   ("confirmado"/"ausente") sem violar HTML (button dentro
+                   de button é inválido) — `stopPropagation` nesse chip
+                   evita que o toque nele também dispare a navegação. */}
+                <div
+                  className="min-w-0 flex-1 cursor-pointer"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onAbrirAluno({ ...v, turmaAtualId: turmaAtiva }, "turmas")}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrirAluno({ ...v, turmaAtualId: turmaAtiva }, "turmas"); } }}
+                >
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <button
-                      onClick={() => toggleStatusAula(v.numero)}
+                      onClick={(e) => { e.stopPropagation(); toggleStatusAula(v.numero); }}
                       title={v.statusAula === "confirmado" ? "Confirmado p/ próxima aula — toque p/ marcar ausente" : "Ausente na próxima aula — toque p/ confirmar"}
                       aria-label={v.statusAula === "confirmado" ? "Confirmado para a próxima aula. Toque para marcar ausente." : "Ausente na próxima aula. Toque para confirmar."}
                       className={"h-2.5 w-2.5 shrink-0 rounded-full " + (v.statusAula === "confirmado" ? "bg-emerald-500" : "bg-rose-500")}
@@ -1809,9 +2228,46 @@ function Turmas({ notificar, diaInicial = "ter" }) {
                     <span className="truncate text-sm font-medium">{v.nome}</span>
                     {v.status !== "confirmado" && <Badge tone={v.status === "ultima" ? "danger" : "warning"}>{v.status === "ultima" ? "Renovar" : "Pendente"}</Badge>}
                   </div>
+                  {/* Aluno "de visita" (vaga provisória) — a borda do card
+                     inteiro mostra a cor da turma ATUAL (todo mundo aqui),
+                     essa etiqueta mostra a cor da turma de ORIGEM só pra
+                     quem está de passagem. Pedido do Diego: "os alunos q
+                     estiverem provisorios em outra turma ele acompanha a
+                     borda da turma dele [de origem]". */}
+                  {v.provisorio && v.turmaOrigemId !== turmaAtiva && (() => {
+                    const origem = turmaPorId(v.turmaOrigemId);
+                    const corOrigem = corTurma(v.turmaOrigemId);
+                    return (
+                      <div className="mt-1 flex items-center gap-1.5 text-[11px] font-medium" style={{ color: rgbCor(corOrigem) }}>
+                        <span className="h-2 w-2 shrink-0 rounded-full border border-white/70" style={{ background: rgbCor(corOrigem) }} />
+                        Provisório · turma de {origem ? origem.dia.split("-")[0] : "origem"}
+                      </div>
+                    );
+                  })()}
                 </div>
-                <ProgressRing pct={(v.aula / v.total) * 100} size={40} stroke={5} color={rgbCor(cor)} trackColor={rgbCor(cor, 0.18)}>
-                  <span className="text-[10px] font-semibold" style={{ color: rgbCor(cor) }}>{v.aula}/{v.total}</span>
+                {/* Handle único: toque curto (sem arrastar) abre o modal de
+                   sempre (escolher turma → provisório/fixo); pressionar e
+                   arrastar de verdade até um pill de dia/horário solta
+                   direto no passo 2, turma já escolhida pelo pill. Pointer
+                   Events em vez da API nativa de `draggable` porque essa
+                   API é praticamente só-mouse — pointer events cobrem
+                   toque de verdade também, sem lib nenhuma. `touchAction:
+                   "none"` evita o navegador competir com o gesto tentando
+                   rolar a página enquanto arrasta no celular. */}
+                <button
+                  onPointerDown={(e) => iniciarArraste(e, v)}
+                  onPointerMove={moverArraste}
+                  onPointerUp={soltarArraste}
+                  onPointerCancel={soltarArraste}
+                  title="Toque para mover para outra turma, ou arraste até o dia/horário desejado"
+                  aria-label={`Mover ${v.nome} para outra turma`}
+                  style={{ touchAction: "none" }}
+                  className="shrink-0 cursor-grab rounded-full p-1.5 text-[var(--ink-soft)] hover:bg-[var(--cream)] active:cursor-grabbing"
+                >
+                  <GripVertical size={15} />
+                </button>
+                <ProgressRing pct={(v.aula / v.total) * 100} size={40} stroke={5} color={rgbCor(corLinha)} trackColor={rgbCor(corLinha, 0.18)}>
+                  <span className="text-[10px] font-semibold" style={{ color: rgbCor(corLinha) }}>{v.aula}/{v.total}</span>
                 </ProgressRing>
                 <Toggle checked={v.presente} onChange={() => marcarPresenca(v.numero)} title={v.presente ? "Presente — toque para desfazer" : "Marcar presença"} />
               </div>
@@ -1821,7 +2277,8 @@ function Turmas({ notificar, diaInicial = "ter" }) {
                 <span className="min-w-0 flex-1 text-sm text-[var(--ink-soft)]">Vaga {v.numero} disponível</span>
                 <span className="shrink-0 border border-[var(--ink-soft)] px-2 py-1 text-xs font-medium text-[var(--ink)]">Cadastrar aluno</span>
               </button>
-            ))}
+            );
+            })}
           </div>
         </div>
         <div className="space-y-4">
@@ -1851,10 +2308,153 @@ function Turmas({ notificar, diaInicial = "ter" }) {
         </div>
       </div>
 
+      {/* Fantasma que segue o dedo/mouse durante o arraste — escondido por
+         padrão (`display:none`, só aparece via `ghostRef.current.style`
+         quando o movimento passa do limiar em `moverArraste`), posição
+         escrita direto no DOM a cada evento de ponteiro, sem `setState`
+         (mesma técnica do parallax de fundo, ver comentário acima).
+         Vidro translúcido de verdade (mesma receita do resto do app,
+         `bg-white/55` + `backdrop-blur`) em vez de branco sólido — achado
+         do Diego: "quando eu mover precisa ser algo transparente pra q
+         eu consiga visualizar" (o card embaixo, pra saber onde soltar,
+         ficava tapado). */}
+      {/* Dois elementos separados de propósito: o de fora (`ghostRef`) só
+         cuida de POSIÇÃO (translate, sem transition — precisa ser
+         instantâneo pra acompanhar o dedo sem atraso); o de dentro
+         (`ghostInnerRef`) cuida do visual + `scale` COM transition curta,
+         usado tanto pra encolher ao pairar sobre um alvo quanto pro
+         "afunilar" final ao soltar (ver `moverArraste`/
+         `animarAfunilarEFechar`/`animarSaidaLateral`) — combinar as duas
+         coisas numa `transform` só não dava pra ter transition no scale
+         sem também atrasar a posição. */}
+      <div ref={ghostRef} className="pointer-events-none fixed left-0 top-0 z-50 hidden" style={{ display: "none" }}>
+        <div
+          ref={ghostInnerRef}
+          className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/55 p-3 shadow-[0_20px_40px_-10px_rgba(59,56,51,0.4)] backdrop-blur-md backdrop-saturate-150"
+          style={{ transition: "transform 150ms ease-out, opacity 150ms ease-out", transformOrigin: "center" }}
+        >
+          {arrastoRef.current.aluno && (
+            <>
+              <Avatar nome={arrastoRef.current.aluno.nome} size={36} />
+              <span className="truncate text-sm font-medium">{arrastoRef.current.aluno.nome}</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Faixas laterais = zona de remover, só aparecem/reagem durante um
+         arraste ativo. Vermelho porque é ação destrutiva (padrão de cor
+         já usado no resto do app pra "recusar"/perigo — Badge tone
+         "danger", botão "Recusar" das solicitações). */}
+      {arrastandoAtivo && (
+        <>
+          <div
+            className={"pointer-events-none fixed left-0 top-0 z-40 h-full transition-all " + (lateralArraste === "esquerda" ? "w-16 bg-gradient-to-r from-rose-500/70 to-transparent" : "w-3 bg-gradient-to-r from-rose-500/25 to-transparent")}
+          />
+          <div
+            className={"pointer-events-none fixed right-0 top-0 z-40 h-full transition-all " + (lateralArraste === "direita" ? "w-16 bg-gradient-to-l from-rose-500/70 to-transparent" : "w-3 bg-gradient-to-l from-rose-500/25 to-transparent")}
+          />
+          {lateralArraste && (
+            <div className={"pointer-events-none fixed top-1/2 z-40 -translate-y-1/2 rounded-full bg-rose-600 p-2.5 text-white shadow-lg " + (lateralArraste === "esquerda" ? "left-2" : "right-2")}>
+              <X size={18} />
+            </div>
+          )}
+        </>
+      )}
+
+      {modalRemover && (
+        <Modal onClose={() => setModalRemover(null)}>
+          <h3 className="mb-1 text-base font-semibold">Remover {modalRemover.nome}?</h3>
+          <p className="mb-4 text-sm text-[var(--ink-soft)]">A vaga volta a ficar disponível em {turmaInfo.dia.split("-")[0]} · {turmaInfo.hora}. Essa ação não pode ser desfeita.</p>
+          <div className="flex gap-2">
+            <button onClick={() => setModalRemover(null)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
+            <button
+              onClick={() => { onRemoverAluno(modalRemover, turmaAtiva); setModalRemover(null); }}
+              className="flex-1 bg-rose-600 py-2.5 text-sm font-medium text-white hover:bg-rose-700"
+            >
+              Remover
+            </button>
+          </div>
+        </Modal>
+      )}
+
       {modalVaga && (
         <ModalCadastrarAluno numero={modalVaga} onClose={() => setModalVaga(null)} onSalvar={(dados) => cadastrarAluno(modalVaga, dados)} />
       )}
+      {modalMover && (
+        <ModalMoverAluno
+          aluno={modalMover}
+          turmaAtualId={turmaAtiva}
+          destinoInicial={destinoPreEscolhido}
+          onClose={() => { setModalMover(null); setDestinoPreEscolhido(null); }}
+          onConfirmar={(destinoId, tipo) => { onMoverAluno(modalMover, turmaAtiva, destinoId, tipo); setModalMover(null); setDestinoPreEscolhido(null); }}
+        />
+      )}
     </div>
+  );
+}
+
+/* Mover aluno entre turmas (2026-09-17) — "qro poder arrastar um aluno de
+   uma turma e passar para a outra, porem depois de soltar vai aparecer
+   uma mensagem, vaga provisória... ou vai ser trasferido fixo". Dois jeitos
+   de chegar aqui (ver handle de arrastar na linha do aluno, em `Turmas`):
+   toque curto abre direto no passo 1 (escolher turma, `destinoInicial`
+   nulo); arrastar de verdade até um pill e soltar já chega com
+   `destinoInicial` preenchido, pulando pro passo 2. Passo 2 sempre
+   pergunta: vaga provisória (só essa semana, a linha volta a mostrar a
+   cor da turma de origem quando entrar na nova) ou transferência fixa (a
+   turma de origem muda pra a nova, sem marcação especial). */
+function ModalMoverAluno({ aluno, turmaAtualId, destinoInicial, onClose, onConfirmar }) {
+  const [destinoId, setDestinoId] = useState(destinoInicial || null);
+  const opcoesDestino = TURMAS_DIAS.flatMap((d) => d.turmas).filter((t) => t.id !== turmaAtualId);
+  return (
+    <Modal onClose={onClose}>
+      <h3 className="mb-1 text-base font-semibold">Mover {aluno.nome}</h3>
+      {!destinoId ? (
+        <>
+          <p className="mb-3 text-sm text-[var(--ink-soft)]">Para qual turma?</p>
+          <div className="space-y-2">
+            {opcoesDestino.map((t) => {
+              const cor = corTurma(t.id);
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setDestinoId(t.id)}
+                  className="flex w-full items-center gap-3 border border-[var(--line)] px-3 py-2.5 text-left text-sm font-medium hover:bg-[var(--cream)]"
+                >
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: rgbCor(cor) }} />
+                  {t.dia.split("-")[0]} · {t.hora}
+                </button>
+              );
+            })}
+          </div>
+          <button onClick={onClose} className="mt-4 w-full border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
+        </>
+      ) : (
+        <>
+          <p className="mb-3 text-sm text-[var(--ink-soft)]">
+            Mover para {turmaPorId(destinoId)?.dia.split("-")[0]} · {turmaPorId(destinoId)?.hora} — é definitivo ou só essa semana?
+          </p>
+          <div className="space-y-2">
+            <button
+              onClick={() => onConfirmar(destinoId, "provisorio")}
+              className="w-full border border-[var(--line)] px-3 py-3 text-left hover:bg-[var(--cream)]"
+            >
+              <span className="block text-sm font-medium">Vaga provisória</span>
+              <span className="block text-xs text-[var(--ink-soft)]">Só esta semana — continua fixo na turma de origem.</span>
+            </button>
+            <button
+              onClick={() => onConfirmar(destinoId, "fixo")}
+              className={"w-full px-3 py-3 text-left " + ACCENT_SOLIDO}
+            >
+              <span className="block text-sm font-medium">Transferir fixo</span>
+              <span className="block text-xs opacity-90">A turma nova vira a turma dele(a) a partir de agora.</span>
+            </button>
+          </div>
+          <button onClick={() => setDestinoId(null)} className="mt-4 w-full border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Voltar</button>
+        </>
+      )}
+    </Modal>
   );
 }
 
@@ -1884,11 +2484,15 @@ function ModalCadastrarAluno({ numero, onClose, onSalvar }) {
 
 /* Linha de aluno — extraído em componente próprio (2026-09-17) porque
    agora renderiza em dois contextos: dentro do grupo da turma e na lista
-   plana de resultado de busca. */
-function LinhaAluno({ a }) {
+   plana de resultado de busca. Virou `<button>` clicável na mesma leva
+   das páginas de detalhe (2026-09-17, "ainda nao consigo clicar no
+   aluno e ver a pagina dele") — sem elemento interativo aninhado aqui
+   (diferente da linha de Turmas), dá pra usar `<button>` de verdade sem
+   violar HTML. */
+function LinhaAluno({ a, onClick }) {
   const cor = TURMA_LABEL_COR[a.turma] || "sienna";
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-3">
+    <button onClick={onClick} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-[var(--cream)]">
       <div className="flex min-w-0 items-center gap-3">
         <Avatar nome={a.nome} />
         <div className="min-w-0">
@@ -1906,6 +2510,87 @@ function LinhaAluno({ a }) {
       <ProgressRing pct={(a.aula / a.total) * 100} size={40} stroke={5} color={rgbCor(cor)} trackColor={rgbCor(cor, 0.18)}>
         <span className="text-[10px] font-semibold" style={{ color: rgbCor(cor) }}>{a.aula}/{a.total}</span>
       </ProgressRing>
+    </button>
+  );
+}
+
+/* Página de detalhe do aluno (2026-09-17) — "e ainda nao consigo clicar
+   no aluno e ver a pagina dele... telefone, um historico das presenças
+   informação sobre os pacotes e se esta pago ou nao". Aberta a partir de
+   dois pontos de entrada diferentes (linha de Turmas ou linha de Alunos,
+   ver `onAbrirAluno`/`abrirAlunoDetalhe` em `AtelieDemo`), que passam
+   formatos de dado ligeiramente diferentes: Turmas manda
+   `turmaAtualId`/`turmaOrigemId`/`provisorio`/`statusAula`/`presente`
+   (tudo que o roster real tem); Alunos manda só `tel`/`turma` (rótulo em
+   texto, sem id) porque `ALUNOS_REAIS` é outra fonte de dado, mais
+   simples. O componente tolera os dois formatos em vez de exigir um
+   único formato — não unifica as duas fontes de dado (fora do escopo do
+   que foi pedido agora). **Não inventa histórico de presença por data**
+   (isso ainda não existe de verdade em nenhuma das duas fontes, só o
+   estado da semana atual) — mostra isso com uma legenda explícita em vez
+   de fingir que é um histórico completo. */
+function AlunoDetalhe({ aluno, onVoltar }) {
+  const turmaAtualInfo = aluno.turmaAtualId ? turmaPorId(aluno.turmaAtualId) : null;
+  const turmaLabel = turmaAtualInfo ? `${turmaAtualInfo.dia.split("-")[0]} · ${turmaAtualInfo.hora}` : (aluno.turma || "—");
+  const cor = aluno.turmaAtualId ? corTurma(aluno.turmaAtualId) : (TURMA_LABEL_COR[aluno.turma] || "sienna");
+  const origemInfo = aluno.turmaOrigemId ? turmaPorId(aluno.turmaOrigemId) : null;
+  const ehProvisorio = !!(aluno.provisorio && aluno.turmaOrigemId && aluno.turmaOrigemId !== aluno.turmaAtualId);
+  const pct = aluno.total ? (aluno.aula / aluno.total) * 100 : 0;
+  return (
+    <div>
+      <button onClick={onVoltar} className="mb-4 flex items-center gap-1 text-sm font-medium text-[var(--ink-soft)] hover:text-[var(--ink)]"><ChevronLeft size={16} />Voltar</button>
+
+      <div className={"relative mb-4 flex items-center gap-4 p-5 " + VIDRO_CARD}>
+        <Avatar nome={aluno.nome} size={56} />
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-xl font-bold uppercase tracking-wide" style={FONT_DISPLAY}>{aluno.nome}</h1>
+          <div className="mt-1 flex items-center gap-1.5 text-sm text-[var(--ink-soft)]">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: rgbCor(cor) }} />
+            {turmaLabel}
+          </div>
+        </div>
+        <ProgressRing pct={pct} size={52} stroke={5} color={rgbCor(cor)} trackColor={rgbCor(cor, 0.18)}>
+          <span className="text-xs font-semibold" style={{ color: rgbCor(cor) }}>{aluno.aula}/{aluno.total}</span>
+        </ProgressRing>
+      </div>
+
+      {ehProvisorio && (
+        <div className={"relative mb-4 flex items-center gap-2.5 p-3.5 " + VIDRO_CARD} style={estiloVidroTingido(corTurma(aluno.turmaOrigemId), 0.2, 0.08)}>
+          <ArrowLeftRight size={16} className="shrink-0" style={{ color: rgbCor(corTurma(aluno.turmaOrigemId)) }} />
+          <span className="text-sm"><strong>Vaga provisória</strong> nesta turma — turma de origem: {origemInfo ? `${origemInfo.dia.split("-")[0]} · ${origemInfo.hora}` : "—"}</span>
+        </div>
+      )}
+
+      <div className={"relative mb-4 p-4 " + VIDRO_CARD}>
+        <h3 className="mb-3 text-sm font-semibold">Dados de contato</h3>
+        <div className="flex items-center gap-2.5 text-sm">
+          <Phone size={15} className="shrink-0 text-[var(--ink-soft)]" />
+          {aluno.tel || <span className="text-[var(--ink-soft)]">Telefone não informado</span>}
+        </div>
+      </div>
+
+      <div className={"relative mb-4 p-4 " + VIDRO_CARD}>
+        <h3 className="mb-3 text-sm font-semibold">Pacote e pagamento</h3>
+        <dl className="grid grid-cols-2 gap-y-3 text-sm">
+          <dt className="text-[var(--ink-soft)]">Aula atual</dt><dd className="text-right font-medium">{aluno.aula} de {aluno.total}</dd>
+          <dt className="text-[var(--ink-soft)]">Pagamento</dt>
+          <dd className="text-right">
+            {aluno.status === "pendente" ? <Badge tone="warning">Pendente</Badge> : aluno.status === "ultima" ? <Badge tone="danger">Renovar</Badge> : <Badge tone="success">Em dia</Badge>}
+          </dd>
+        </dl>
+      </div>
+
+      {aluno.statusAula !== undefined && (
+        <div className={"relative p-4 " + VIDRO_CARD}>
+          <h3 className="mb-1 text-sm font-semibold">Presença</h3>
+          <p className="mb-3 text-xs text-[var(--ink-soft)]">Histórico de presença por data ainda não existe — mostrando só o estado da semana atual.</p>
+          <div className="flex items-center gap-2 text-sm">
+            <span className={"h-2.5 w-2.5 shrink-0 rounded-full " + (aluno.statusAula === "confirmado" ? "bg-emerald-500" : "bg-rose-500")} />
+            {aluno.statusAula === "confirmado" ? "Confirmado(a) para a próxima aula" : "Ausente na próxima aula"}
+            {aluno.presente && <span className="text-[var(--ink-soft)]"> · já marcado(a) como presente</span>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1920,7 +2605,7 @@ function LinhaAluno({ a }) {
    plana só dos resultados (faz mais sentido procurar um nome sem
    precisar saber de cabeça em qual turma a pessoa está). */
 const TURMAS_ORDEM_LABELS = Object.keys(TURMA_LABEL_COR);
-function Alunos() {
+function Alunos({ onAbrirAluno }) {
   const [alunos, setAlunos] = useState(ALUNOS_REAIS);
   const [modal, setModal] = useState(false);
   const [busca, setBusca] = useState("");
@@ -1970,7 +2655,7 @@ function Alunos() {
               <div className={"relative px-6 py-10 text-center text-sm text-[var(--ink-soft)] " + VIDRO_CARD}>Nenhum aluno encontrado para "{busca}".</div>
             ) : (
               <div className={"relative divide-y divide-white/50 overflow-hidden " + VIDRO_CARD}>
-                {resultados.map((a, i) => <LinhaAluno key={a.nome + i} a={a} />)}
+                {resultados.map((a, i) => <LinhaAluno key={a.nome + i} a={a} onClick={() => onAbrirAluno(a, "alunos")} />)}
               </div>
             )
           ) : (
@@ -1995,7 +2680,7 @@ function Alunos() {
                     </button>
                     {aberta && (
                       <div className="divide-y divide-white/50 border-t border-white/50">
-                        {doGrupo.map((a, i) => <LinhaAluno key={a.nome + i} a={a} />)}
+                        {doGrupo.map((a, i) => <LinhaAluno key={a.nome + i} a={a} onClick={() => onAbrirAluno(a, "alunos")} />)}
                       </div>
                     )}
                   </div>

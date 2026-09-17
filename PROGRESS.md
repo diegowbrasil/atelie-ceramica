@@ -203,6 +203,25 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
     título não é trivial com um botão assimétrico do lado — solução via
     `absolute` + `translate`, verificado por `getBoundingClientRect`) em
     CLAUDE.md §6.
+16. **Página de detalhe do aluno + mover/remover aluno entre turmas com
+    arrastar-e-soltar de verdade** — retomou os 2 pedidos que ficavam
+    pendentes desde o item 10/14 ("continue a parte dos alunos"). Lift de
+    `vagasPorTurma` pro componente raiz (mesmo padrão de
+    `fornadas`/`oficinas`), tela nova `AlunoDetalhe` (aberta a partir de
+    Turmas OU Alunos), e uma feature de arraste construída do zero com
+    Pointer Events (sem lib, HTML5 `draggable` nativo é fraco em toque) —
+    o Diego pediu drag de verdade depois que eu tinha proposto só um
+    botão+modal por achar que arrastar não encaixava num ambiente sem
+    lib: "nao tem como fazer isso?". Muitas rodadas de refinamento ao
+    vivo na mesma sessão (fantasma vira vidro translúcido, pills de
+    Quinta revelam sub-horários ao pairar, animação de "afunilar" ao
+    soltar que termina do tamanho do pill, card encolhe/pill cresce
+    continuamente durante o arraste — não só ao soltar, faixas laterais
+    viraram zona de remover com confirmação, rede de segurança pra
+    ponteiro saindo da janela). Detalhe técnico completo — vale ler antes
+    de mexer nessa área de novo — em CLAUDE.md §5 (Turmas: "arrastar e
+    soltar de verdade — saga completa"; Alunos: resumo da arquitetura da
+    página de detalhe).
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills

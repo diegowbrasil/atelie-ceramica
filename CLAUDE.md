@@ -265,18 +265,16 @@ a maior parte das pendências acima ao vivo, no chat:**
   acima — consistente com a regra de §6 de não ter saudação/nome de app
   nos headers.
 
-**Ainda pendente de verdade (não é só falta de dado, é feature que não
-existe)** — pedido explícito do Diego, ainda não implementado nesta
-sessão: **"e quando eu clicar no aluno la em turma, va para a pagina do
+**Página de detalhe do aluno — implementada (2026-09-17)**, pedido
+original: "e quando eu clicar no aluno la em turma, va para a pagina do
 aluno com as informações, telefone, um historico das presenças
-informação sobre os pacotes e se esta pago ou nao"** — uma tela de
-detalhe do aluno, aberta ao clicar num aluno em Turmas, com histórico de
-presença datado de verdade (não só o pacote corrente). Isso é o mesmo
-"histórico de presença por data" que já tinha sido sinalizado como
-necessidade futura lá no item de data exata do Dashboard, agora virando
-pedido concreto — ver PROGRESS.md pro estado de implementação exato
-(pode estar em andamento/incompleto dependendo de quando este arquivo
-foi lido).
+informação sobre os pacotes e se esta pago ou nao". Ver resumo completo
+da arquitetura em §5 Alunos. **O histórico de presença por data em si
+continua sem existir de verdade** — a tela mostra só o estado da semana
+atual, com legenda explícita disso, não um log datado (isso exigiria
+`marcarPresenca` passar a gravar quando cada presença foi marcada, não
+só incrementar um contador — não construído, o Diego sinalizou como
+necessidade futura, não pediu essa parte agora).
 
 As seções extras que o Diego mandou junto com o roster (**Pacotes em
 andamento em aberto**, **Aulas pontuais**, **Pacotes finalizados** —
@@ -295,18 +293,126 @@ rgbCor(cor, 0.75)` + `borderWidth: 2` via `style` inline no card
 já desenha, resto do vidro (fundo/sombra/blur) intacto. Verificado ao
 vivo trocando entre Terça (sienna)/Quinta 14:30 (musgo) — a cor do
 contorno acompanha a aba ativa.
-**Segunda parte do mesmo pedido, ainda NÃO implementada**: "cada turma os
-alunos tem o contorno da cor da sua turma ai os alunos q estiverem
-provisorios em outra turma ele acompanha a borda da turma dele" — um
-aluno movido temporariamente pra outra turma (feature "vaga provisória",
-ver pedido de mover aluno entre turmas em §5 Alunos, também não
-implementado) deveria mostrar, dentro da lista da turma onde está
-temporariamente, um contorno na cor da turma de ORIGEM dele, não da
-turma atual. Não dá pra construir isso agora: não existe ainda nenhum
-dado de "turma de origem" nem de "está aqui provisoriamente" —
-`VAGAS_POR_TURMA` não tem esse conceito. Fica pendente junto com o
-recurso de mover aluno entre turmas (mesma peça de trabalho, mesmo
-pré-requisito de subir `vagasPorTurma` pro componente raiz).
+
+**Segunda parte do mesmo pedido — implementada junto com a feature de
+mover aluno (2026-09-17)**: "cada turma os alunos tem o contorno da cor
+da sua turma ai os alunos q estiverem provisorios em outra turma ele
+acompanha a borda da turma dele". Três rodadas até o estado final:
+1. Primeira tentativa: anel colorido só no avatar (`Avatar` ganhou prop
+   `anelCor`). **Corrigida na hora, com desenho**: "quando digo o
+   entorno seria assim" — ele queria um contorno ao redor da LINHA
+   INTEIRA, não só o avatar.
+2. Trocado pra borda arredondada própria (`rounded-2xl border-2 my-1`)
+   na `<div>` da linha inteira, destacando-a das linhas normais vizinhas
+   (que só têm o traço fino do `divide-y` do container).
+3. **Achado real, mesma tela**: o anel de progresso (`ProgressRing`) da
+   linha continuava na cor da turma ATUAL (a mesma cor do contorno do
+   card inteiro), competindo visualmente com o novo contorno da turma de
+   ORIGEM na mesma linha — "o contorno azul precisa substituir o da cor
+   original naquele local, nao pode ficar os 2 contornos juntos". Fix:
+   uma variável `corLinha` (borda da linha + `ProgressRing` + texto do
+   anel) que resolve pra `corTurma(v.turmaOrigemId)` quando a pessoa é
+   visitante, substituindo a cor da turma atual em TUDO daquela linha,
+   não só no contorno.
+
+**Arrastar e soltar de verdade (2026-09-17) — saga completa.** Primeira
+versão do "mover aluno" foi só o handle + modal de 2 passos (escolher
+turma → provisório/fixo), pensando que drag-and-drop de verdade não
+encaixava bem num ambiente mobile-first sem lib (`react`/`lucide-react`/
+`recharts`/`tailwindcss` são os únicos imports disponíveis no artifact).
+O Diego insistiu: "na vrdd eu qria poder mover e arrastar o card e jogar
+la para a turma que eu quisesse" / "nao tem como fazer isso?". Resposta:
+dá sim — a API nativa de HTML5 (`draggable`) é praticamente só-mouse
+(suporte fraco a toque, que é a prioridade do app), mas **Pointer Events**
+(`onPointerDown`/`Move`/`Up`) unificam mouse e toque de verdade nos
+navegadores atuais, sem precisar de lib nenhuma. Implementado em
+`Turmas`, várias rodadas de refinamento na mesma sessão, cada uma
+reagindo ao resultado ao vivo:
+1. **Mecânica base**: handle (`GripVertical`) por aluno faz duas coisas
+   com um limiar de 8px de movimento — toque curto sem passar do limiar
+   abre o modal de sempre (passo 1: escolher turma); arrastar de verdade
+   mostra um "fantasma" (cópia flutuante da linha, `ghostRef`) seguindo o
+   ponteiro, testa colisão contra as pills de dia/horário (únicas turmas
+   visíveis na tela por vez, já que só uma turma renderiza de cada vez) e
+   solta direto no passo 2 (turma já escolhida) se soltar em cima de uma
+   válida — soltar em qualquer outro lugar cancela em silêncio, sem
+   mexer em dado nenhum. Posição do fantasma escrita direto no DOM
+   (`style.transform`) a cada evento de ponteiro, sem `setState` — mesma
+   técnica/motivo do parallax de fundo (`FundoArgilaParallax`): re-render
+   a cada pixel é caro e desnecessário.
+2. **"Coloque encima de quinta ja precisa mudar para quinta com as
+   opções dos horarios embaixo"** — pairar sobre o pill do dia "Qui"
+   (2 turmas) não resolve um alvo direto; só troca a pré-visualização
+   (`diaPreviewArraste`) revelando os sub-pills de horário (14:30/18:30),
+   que aí sim viram alvos de verdade assim que aparecem. `diaMultiRef`
+   (nova ref, só pros pills de dia com mais de uma turma) separada de
+   `pillsRef` (alvos diretos) porque a colisão com cada uma tem uma
+   consequência diferente.
+3. **"Quando eu mover precisa ser algo transparente pra q eu consiga
+   visualizar"** — o fantasma era `bg-white` opaco, tapando o card
+   embaixo. Trocado pro vidro translúcido padrão do app (`bg-white/55`
+   + `backdrop-blur-md`).
+4. **"Quando eu arrastar o card da pessoa para uma turma, a turma
+   precisa estar por cima pra eu conseguir visualizar"** — o fantasma
+   (`z-50`) tapava o pill de destino, inclusive o destaque dele. Fix:
+   os containers das pills ganham `z-[60]` só durante um arraste ativo.
+5. **"Faça uma animação de afunilar depois q eu deixar encima de
+   algo"** — soltar sobre um alvo válido não fecha o fantasma na hora:
+   ele encolhe e desliza pro centro do pill antes de sumir, só então abre
+   o modal (`animarAfunilarEFechar`). Depois, 2 correções no mesmo
+   efeito: (a) **"qro q ele afunili e fique qs do tamanho da turma"** —
+   trocado de um scale fixo (sumia num ponto) pra uma escala calculada
+   pela largura real do pill contra a largura do fantasma, termina do
+   tamanho do alvo, não invisível; (b) as pills também crescem
+   (`scale-125`) quando são o alvo — **achado de stacking, com
+   desenho**: "qro q essa diminuição seja centralizada e nao q ele
+   arraste o botao inteiro e fique essa esquerda maior". O `scale()` já
+   crescia simétrico a partir do centro (não era geometria torta); o que
+   ficava assimétrico era a ORDEM DE PINTURA — pill sem z-index pinta na
+   ordem do DOM, então o vizinho da esquerda (que vem antes) ficava
+   coberto enquanto o da direita (que vem depois) cobria o pill maior de
+   volta, lendo como "cresceu só pra um lado". Fix: `relative z-10` no
+   pill em destaque, pinta por cima dos dois vizinhos igualmente.
+6. **"Quando eu mover o aluno para a turma qro q o card do aluno diminua
+   quando deixar encima de alguma turma e a turma selecionada faça um
+   aumento... qro a interação conforme eu arrasto"** — o encolher/crescer
+   não podia ser só no momento de SOLTAR, precisava reagir continuamente
+   enquanto o dedo paira sobre um alvo válido. Fantasma virou 2 elementos
+   aninhados: o de fora (`ghostRef`) só cuida de posição (translate, sem
+   transition — precisa ser instantâneo, sem atraso perceptível seguindo
+   o dedo); o de dentro (`ghostInnerRef`) cuida do visual + `scale` COM
+   transition curta (150ms), que `moverArraste` já encolhe
+   (`scale(0.55)`) assim que o ponteiro entra numa zona de alvo válido —
+   combinar as duas coisas numa `transform` só não permitia transition no
+   scale sem atrasar também a posição.
+7. **"E se eu jogar pra arrastar e jogar pra fora da tela ela sai...
+   caso eu coloque errado"**, depois clarificado com desenho: **"seria
+   nas laterais ali indicadas como vermelho, ai quando eu tiver
+   segurando algum card e chegar proximo as laterais q elas fiquem
+   destacadas para eu saber q tem uma ação ali"** — as duas bordas
+   (esquerda/direita) da tela viraram zona de **remover** aluno da
+   turma: destacam em vermelho (gradiente, mais forte quando o ponteiro
+   entra nos últimos `FAIXA_LATERAL_PX` = 56px da borda) durante um
+   arraste ativo, e soltar ali pede confirmação (`ModalRemover`) antes de
+   esvaziar a vaga — nunca remove só pelo gesto, mesmo padrão de nunca
+   apagar sem confirmar do resto do app (ex.: modal de conflito de
+   fornada).
+8. **Rede de segurança**: `setPointerCapture` garante que o handle
+   recebe move/up mesmo fora dele, mas se o ponteiro sair da JANELA de
+   verdade durante o arraste, alguns navegadores nunca disparam o
+   `pointerup` no elemento — o estado ficava preso "arrastando pra
+   sempre" (linha esmaecida sem voltar ao normal). `window` sempre recebe
+   esses eventos; um `useEffect` que só existe enquanto `arrastandoAtivo`
+   registra `pointerup`/`pointercancel`/`blur` no `window` como fallback
+   que sempre limpa o estado.
+
+**Não é arrastar-e-soltar nativo do navegador** (`draggable`/`ondragstart`)
+em lugar nenhum — é Pointer Events com toda a mecânica de detecção de
+colisão, fantasma e animação escrita à mão. Se pedirem pra estender esse
+padrão pra outra tela (ex.: mover peça de oficina, reordenar algo), o
+código de `Turmas` (`iniciarArraste`/`moverArraste`/`soltarArraste`/
+`animarAfunilarEFechar`/`animarSaidaLateral`) é a referência a copiar, não
+reinventar do zero.
 
 ### Forno (ferramenta central)
 - Menu "Forno" abre o **painel de acompanhamento**, NUNCA a criação direta.
@@ -387,31 +493,41 @@ função com outro parâmetro.
   gira). Linha de aluno virou componente próprio `LinhaAluno({ a })`,
   reaproveitado nos dois modos (busca e turma aberta) pra não duplicar o
   JSX do card.
-- **Ainda pendente, pedido explícito do Diego, não implementado**: "e ainda
-  nao consigo clicar no aluno e ver a pagina dele. e qro poder arrastar um
-  aluno de uma turma e passar para a outra, porem depois de soltar vai
-  aparecer uma mensagem, vaga provisória (no sentido de q só essa semana
-  ele vai pra essa nova turma, ou vai ser trasferido fixo para essa
-  turma)". Dois pedidos distintos, nenhum dos dois começado ainda:
-  1. **Página de detalhe do aluno** — clicar num aluno (em Turmas OU em
-     Alunos) abre uma tela com telefone, histórico de presença datado,
-     status de pacote/pagamento. Mesmo pedido já registrado em §5 Turmas
-     ("ainda pendente de verdade") — é a mesma feature, cross-referenciada
-     nos dois lugares porque o Diego pediu o clique a partir dos dois
-     pontos de entrada.
-  2. **Mover aluno entre turmas** — depois de mover, perguntar se é "vaga
-     provisória" (só essa semana) ou transferência fixa. Isso exige
-     `vagasPorTurma`/`alunos` deixarem de ser estado local de cada
-     componente e subirem pro componente raiz `AtelieDemo` (mesmo padrão
-     de lift já usado pra `fornadas`/`oficinas`), pra Turmas e Alunos
-     lerem/escreverem o mesmo dado. **Avaliar arrastar-e-soltar (HTML5
-     DnD) antes de implementar**: o ambiente de artifact só tem
-     `react`/`lucide-react`/`recharts`/`tailwindcss` disponíveis, sem lib
-     de drag — HTML5 DnD nativo tem suporte fraco em touch/mobile, que é a
-     prioridade do app. Provável que valha propor um equivalente por
-     toque ("mover de turma" num menu/ação do próprio card) em vez de
-     tentar drag-and-drop nativo — **confirmar com o Diego antes de
-     construir**, não decidir a substituição silenciosamente.
+- **Página de detalhe do aluno + mover entre turmas — implementado
+  (2026-09-17)**, depois do pedido "e ainda nao consigo clicar no aluno e
+  ver a pagina dele. e qro poder arrastar um aluno de uma turma e passar
+  para a outra, porem depois de soltar vai aparecer uma mensagem, vaga
+  provisória... ou vai ser trasferido fixo". Resumo da arquitetura (ver
+  também §5 Turmas, "arrastar e soltar de verdade" pro histórico completo
+  da saga de refinamento do gesto em si):
+  - **`vagasPorTurma` subiu de `Turmas` pro componente raiz `AtelieDemo`**
+    (mesmo padrão de `fornadas`/`oficinas`) — necessário porque mover um
+    aluno edita o roster de DUAS turmas ao mesmo tempo, e a página de
+    detalhe também precisa ser aberta a partir de Alunos, fora de
+    `Turmas`. `Turmas` recebe `vagasPorTurma`/`setVagasPorTurma` via
+    props agora, resto da lógica local (`setVagas`, `cadastrarAluno`,
+    `toggleStatusAula`, `marcarPresenca`) não mudou.
+  - **`AlunoDetalhe`** (tela nova, `tela === "alunoDetalhe"`): avatar,
+    nome, turma atual, anel de pacote, telefone (ou "não informado"),
+    pacote/pagamento, e presença **da semana atual só** — com legenda
+    explícita ("histórico de presença por data ainda não existe"), não
+    finge ter um histórico datado que não existe de verdade. Aberta a
+    partir de Turmas OU de Alunos (`onAbrirAluno`/`abrirAlunoDetalhe`),
+    que são duas fontes de dado ligeiramente diferentes
+    (`vagasPorTurma` vs `ALUNOS_REAIS`) — o componente tolera os dois
+    formatos em vez de forçar unificação das fontes (fora do escopo
+    pedido agora). "Voltar" volta pra tela de onde veio (`origemTela`).
+  - **Mover entre turmas**: cada aluno ganhou um handle (`GripVertical`)
+    que serve dois propósitos — toque curto abre `ModalMoverAluno`
+    (escolher turma destino → provisório/fixo); arrastar de verdade solta
+    direto no passo 2. `moverAluno(aluno, origemId, destinoId, tipo)` (no
+    componente raiz) tira do roster de origem (vira vaga vazia) e insere
+    no destino com `numero` novo; `turmaOrigemId` só é sobrescrito em
+    transferência **fixa** — em **provisória** preserva a origem original
+    mesmo que a pessoa já tivesse sido movida antes.
+  - **Remover da turma**: arrastar até uma lateral da tela (zona
+    vermelha) pede confirmação (`ModalRemover`) antes de esvaziar a vaga
+    — nunca remove só pelo gesto.
 
 ### Dashboard
 - KPIs compactos (coluna estreita, 2×2) — cliente reclamou 2× de ocuparem
