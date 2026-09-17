@@ -79,6 +79,19 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
    marcando o dia atual). Selo virou um chip sólido na cor do dia (não
    mais foto nem degradê — ficaria redundante com o card já mostrando a
    foto). Detalhe técnico em CLAUDE.md §5.
+8. **Sábado ganhou uma 5ª cor ("carvão", preto/branco) e isso expôs um
+   dado errado** — `AGENDA_SEMANA` (mock do Dashboard) ainda tinha 2
+   oficinas fictícias no Sábado da semana atual, sobrando da troca pras
+   oficinas reais de mais cedo na sessão (essa troca mexeu em
+   `oficinasIniciais()`, não nesse mock separado). O Diego notou:
+   "lembre as datas das oficinas, nao tem oficina desses dias ai, só a
+   partir de outubro" — corrigido pra `aulas: []`, com mensagem de dia
+   vazio própria ("Oficinas voltam em outubro!"). De caminho, o texto do
+   estado vazio ("Sem aulas" + frase) ficou ilegível flutuando solto em
+   cima da foto preto-e-branco (alto contraste demais) — o Diego pediu o
+   "mesmo tratamento das outras": texto agora dentro da mesma caixa branca
+   opaca que os cards de aula/oficina já usam, corrigido de forma geral
+   (não só pro Sábado). Detalhe técnico em CLAUDE.md §5.
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills

@@ -299,7 +299,31 @@ função com outro parâmetro.
   altura variável, não precisa), selo do dia virou um chip sólido na cor
   do dia (gradiente 92%→78% opaco, não mais a foto nem o degradê escuro —
   ficou redundante com o card já mostrando a foto). Dias sem turma fixa
-  (Seg/Sex/Sáb/Dom) continuam neutros, sem cor própria ainda. O mesmo par de
+  ainda ficam neutros, **exceto Sábado** — ver próximo item.
+  **Sábado ganhou uma 5ª cor, "carvão" (preto/branco), e a agenda ficou
+  factualmente errada nesse processo (2026-09-17)**: o Diego mandou uma
+  foto de mesclagem preto-e-branco pro card de Sábado — `CORES_IDENTIDADE`
+  ganhou `carvao: "38 38 36"` **fora** de `CORES_ORDEM` de propósito (não
+  entra na rotação de cor de `corOficina()`, só é usada via um mapa à
+  parte, `COR_DIA_EXTRA = { SÁB: "carvao" }`, já que Sábado não é dia de
+  turma fixa — `TURMAS_DIAS` não tem cor pra ele). Ao implementar, o Diego
+  notou que `AGENDA_SEMANA` (mock do calendário do Dashboard, diferente de
+  `oficinasIniciais()`) ainda tinha "Oficina Modelagem"/"Oficina
+  Esmaltação" fictícias no Sábado da semana atual: "lembre as datas das
+  oficinas, nao tem oficina desses dias ai, só a partir de outubro" —
+  sobrara da troca pras oficinas reais (2026-09-17, mais cedo na sessão),
+  que atualizou `oficinasIniciais()` mas não esse mock separado. Corrigido
+  pra `aulas: []`; `MENSAGEM_DIA_VAZIO` ganhou `SÁB: "Oficinas voltam em
+  outubro!"`. **Não reintroduzir oficina fictícia em `AGENDA_SEMANA`.**
+  **Achado de contraste na mesma leva**: o texto do estado vazio ("Sem
+  aulas" + frase) flutuava direto sobre o fundo do card — com as manchas
+  suaves de antes isso lia bem, mas a foto preto-e-branco de Sábado é alto
+  contraste demais e o texto sumia em cima das ondas pretas. Corrigido de
+  forma geral (não só pro Sábado): o bloco do estado vazio agora mora
+  dentro da mesma caixa branca opaca (`rounded-2xl border bg-white p-3`)
+  que os cards de aula/oficina já usavam — consistente com o resto do
+  app (nada mais flutua solto em cima de um fundo ocupado) e resolve o
+  problema pra qualquer foto, não só a preto-e-branco. O mesmo par de
   funções (`datasDaSemanaAtual`/`formatarDiaMes`) também alimenta a data
   exata no cabeçalho do dia em Turmas ("Terça-feira · 15/09 · 18:30 às
   20:30" — antes só "Terça-feira · 18:30 às 20:30"), pedido explícito do
