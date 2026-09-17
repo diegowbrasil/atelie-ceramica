@@ -193,6 +193,16 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
       ainda, não existe esse dado (mesmo pré-requisito do recurso de
       mover aluno entre turmas, ver item de pendências abaixo).
       CLAUDE.md §5.
+15. **Títulos de Oficinas/Turmas/Forno centralizados + subtítulos
+    removidos, e "Próximas oficinas" ganhou o fundo foto do card de
+    Sábado** — pedido rápido em 2 mensagens: primeiro pediu o card mais
+    pra cima no Dashboard, minutos depois voltou atrás só na posição
+    ("deixe no lugar q estava, porem mantenha a modificação do fundo") —
+    o fundo ficou, a posição (ao lado de "Solicitações pendentes", no
+    fim da página) é a original. Detalhe técnico (a centralização do
+    título não é trivial com um botão assimétrico do lado — solução via
+    `absolute` + `translate`, verificado por `getBoundingClientRect`) em
+    CLAUDE.md §6.
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills

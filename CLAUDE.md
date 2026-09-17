@@ -625,6 +625,21 @@ rodadas de correção:**
    cabeçalho (não usa `FundoArgilaParallax` — barra pequena de altura
    fixa, sem parallax, só a foto direto com posição ajustada à mão).
 
+**"Próximas oficinas" ganhou o mesmo tratamento de foto do card de Sábado
+(2026-09-17)** — "coloque um fundo para esse card das proximas oficinas
+igual ali no sabado". Mesma receita do Sábado (`AgendaSemanaCard`):
+`VIDRO_CARD` com `backgroundImage: url(FUNDOS_ARGILA.carvao)` +
+`borderColor: rgbCor("carvao", 0.4)`, conteúdo (título + lista) dentro de
+uma caixa branca opaca por cima (não flutua direto sobre a foto
+preto-e-branco — mesma lição de contraste já documentada acima).
+**Posição: chegou a subir pra cima de "Turmas da semana"** no mesmo
+pedido ("coloque esse card das proxima oficina la pra cima no painel
+geral"), mas minutos depois o Diego voltou atrás só nisso: "deixe o
+proximas oficinas no lugar q estava msm, porem matenha essa modificação
+do fundo" — voltou pro lugar original (último bloco da página, `grid
+md:grid-cols-2` ao lado de "Solicitações pendentes"), o fundo/foto é a
+única mudança que ficou.
+
 ---
 
 ## 6. Preferências de UI (o cliente já cobrou — respeitar)
@@ -789,6 +804,25 @@ rodadas de correção:**
   baixo (fundo quase branco) ficar difícil de ler com texto branco, é
   esse ponto único que precisa de ajuste, não um override espalhado de
   novo.
+- **Títulos de página centralizados de verdade em Oficinas/Turmas/Forno,
+  subtítulos removidos (2026-09-17)** — "tire esse subtexto e deixe todos
+  os titulos centralizados no meio, oficinas, turmas, forno". As 3 telas
+  tinham `<h1>` alinhado à esquerda + botão de ação à direita
+  (`flex justify-between`); centralizar o `<h1>` com esse layout não é
+  trivial quando o botão do lado tem largura diferente do espaço vazio do
+  outro lado (testado: `grid grid-cols-[1fr_auto_1fr]`, que funciona bem
+  no cabeçalho mobile onde os dois lados são estreitos, deixaria o título
+  visivelmente fora do centro aqui, porque a coluna do botão "puxa" mais
+  largura que a coluna vazia). Solução: container `relative` +
+  `<h1 className="absolute left-1/2 top-1/2 -translate-x-1/2
+  -translate-y-1/2">`, que centraliza em relação à largura TOTAL do
+  container, e o botão continua em fluxo normal (`justify-end`) por cima.
+  Confirmado por `getBoundingClientRect` (não só olho): centro do `<h1>`
+  bate exatamente com o centro do viewport nas 3 telas, sem sobrepor o
+  botão. Forno e Oficinas também perderam o parágrafo de subtítulo
+  (“Acompanhe sua fornada em tempo real.” / “Eventos avulsos com
+  inscrição e pagamento.”) — Turmas já não tinha subtítulo desde uma
+  rodada anterior.
 - Prioridade mobile, desktop completo e confortável.
 
 ### 6.1 Sistema visual (revisado 2026-09-15/16 — 3 rodadas no mesmo período,

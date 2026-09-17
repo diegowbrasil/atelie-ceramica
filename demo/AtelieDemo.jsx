@@ -1074,12 +1074,26 @@ function Dashboard({ ir, fornadas, onAbrirDia, onAbrirOficinas, onAbrirForno }) 
          o KPI "Pagamentos pendentes" no topo do painel já cobre o
          resumo "de relance" que esse card tentava dar. */}
       <div className="[&>*]:min-w-0 grid gap-4 md:grid-cols-2">
-        <Card className="p-4">
-          <h3 className="mb-3 text-sm font-semibold">Próximas oficinas</h3>
-          <ul className="space-y-3 text-sm">{OFICINAS_RESUMO.map((o) => (
-            <li key={o.nome + o.data} className="flex items-center justify-between"><span><span className="block font-medium">{o.nome}</span><span className="text-[var(--ink-soft)]">{o.data}</span></span><Badge tone="warning">Faltam {o.faltam}</Badge></li>
-          ))}</ul>
-        </Card>
+        {/* "Próximas oficinas" ganhou o mesmo tratamento de foto do card de
+           Sábado (2026-09-17): "coloque um fundo para esse card das
+           proximas oficinas igual ali no sabado". Mesma receita do Sábado
+           em AgendaSemanaCard: foto "carvão" (FUNDOS_ARGILA) cobrindo o
+           VIDRO_CARD, conteúdo dentro de uma caixa branca opaca por cima
+           (mesma lição de contraste já aplicada lá — texto direto sobre a
+           foto preto-e-branco não lê bem). Chegou a subir de posição (pra
+           cima da agenda semanal) na mesma leva, mas o Diego pediu de volta
+           pro lugar original minutos depois: "deixe o proximas oficinas no
+           lugar q estava msm, porem matenha essa modificação do fundo" —
+           só o fundo ficou, a posição (aqui, ao lado de "Solicitações
+           pendentes") é a mesma de sempre. */}
+        <div className={"relative min-w-0 p-3 " + VIDRO_CARD} style={{ backgroundImage: `url(${FUNDOS_ARGILA.carvao})`, backgroundSize: "cover", backgroundPosition: "center", borderColor: rgbCor("carvao", 0.4) }}>
+          <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
+            <h3 className="mb-3 text-sm font-semibold">Próximas oficinas</h3>
+            <ul className="space-y-3 text-sm">{OFICINAS_RESUMO.map((o) => (
+              <li key={o.nome + o.data} className="flex items-center justify-between"><span><span className="block font-medium">{o.nome}</span><span className="text-[var(--ink-soft)]">{o.data}</span></span><Badge tone="warning">Faltam {o.faltam}</Badge></li>
+            ))}</ul>
+          </div>
+        </div>
         <Card className="p-4">
           <h3 className="mb-3 text-sm font-semibold">Solicitações pendentes</h3>
           <ul className="space-y-3 text-sm">{SOLICITACOES_INICIAIS.map((s) => (
@@ -1299,11 +1313,8 @@ function PainelForno({ fornadas, notificar, fornoInicial, onNovaFornada, onDupli
 
   return (
     <div>
-      <div className="mb-5 flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold uppercase tracking-wide" style={FONT_DISPLAY}>Forno</h1>
-          <p className="text-sm text-[var(--ink-soft)]">Acompanhe sua fornada em tempo real.</p>
-        </div>
+      <div className="relative mb-5 flex min-h-[2.75rem] items-center justify-end gap-3">
+        <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-2xl font-bold uppercase tracking-wide" style={FONT_DISPLAY}>Forno</h1>
         <button onClick={() => onNovaFornada(fornoSel)} className={"flex shrink-0 items-center gap-1.5 px-4 py-2.5 text-sm font-medium " + ACCENT_SOLIDO}>
           <Plus size={16} strokeWidth={2.5} />Nova fornada
         </button>
@@ -1716,7 +1727,7 @@ function Turmas({ notificar, diaInicial = "ter" }) {
   return (
     <div className="relative">
       <FundoArgilaParallax cor={corDiaAtivo} />
-      <div className="relative mb-5 flex items-start justify-between">
+      <div className="relative mb-5 flex min-h-[2.75rem] items-center justify-end">
         {/* Maiúsculo + mesma fonte-display do resto do app (Space Grotesk,
            FONT_DISPLAY) — pedido do Diego: "so deixe o texto turmas tudo
            maiusculo com a msm fonte do logo". O logo é uma imagem
@@ -1724,8 +1735,10 @@ function Turmas({ notificar, diaInicial = "ter" }) {
            usei a fonte de título já estabelecida em vez de tentar
            adivinhar/importar uma fonte nova só por semelhança visual — se
            tiver o nome/arquivo da fonte real do logo, dá pra trocar
-           depois. Subtítulo removido, "AQUI ... tire o subtexto". */}
-        <div><h1 className="text-2xl font-bold uppercase tracking-wide" style={FONT_DISPLAY}>Turmas</h1></div>
+           depois. Subtítulo removido, "AQUI ... tire o subtexto". Centralizado
+           (2026-09-17): "tire esse subtexto e deixe todos os titulos
+           centralizados no meio, oficinas, turmas, forno". */}
+        <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-2xl font-bold uppercase tracking-wide" style={FONT_DISPLAY}>Turmas</h1>
         <button className={"hidden rounded-full px-4 py-2 text-sm font-medium sm:block " + ACCENT_SOLIDO} onClick={() => notificar("Cadastro de nova turma (demo)")}>+ Nova turma</button>
       </div>
       <div className="relative mb-3 flex w-full gap-1 min-[380px]:gap-1.5">
@@ -2041,8 +2054,8 @@ function Oficinas({ oficinas, onAbrir }) {
   return (
     <div className="relative">
       <FundoArgilaParallax cor="carvao" />
-      <div className="relative mb-5 flex items-start justify-between">
-        <div><h1 className="text-2xl font-bold uppercase tracking-wide" style={FONT_DISPLAY}>Oficinas</h1><p className="text-sm text-[var(--ink-soft)]">Eventos avulsos com inscrição e pagamento.</p></div>
+      <div className="relative mb-5 flex min-h-[2.75rem] items-center justify-end">
+        <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-2xl font-bold uppercase tracking-wide" style={FONT_DISPLAY}>Oficinas</h1>
         <button className={"px-4 py-2 text-sm font-medium " + ACCENT_SOLIDO}>+ Nova oficina</button>
       </div>
       <div className="relative grid gap-4 sm:grid-cols-2">
