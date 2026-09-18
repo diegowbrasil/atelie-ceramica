@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-09-18T13:38:47.855Z",
+        "reason": "User confirmed Inter is intentional - documented in CLAUDE.md section 6.1 as the deliberate body-text face in a three-role typography system (Inter body, Bebas Neue titles, IBM Plex Mono readouts); flagged and re-confirmed multiple times this session"
+      }
+    ]
+  }
+}
