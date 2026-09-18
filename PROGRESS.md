@@ -316,6 +316,46 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
     (Turmas/Forno/Oficinas/Pagamentos/Solicitações) listando o que ainda
     não é autoservido — ver achados abaixo, em "Auditoria de autonomia".
 
+**Auditoria de autonomia (2026-09-18) — achados e o que foi implementado
+em resposta.** Varredura pedida pelo Diego: "faça uma busca e me fale oq
+precisa adicionar para eu ter mais essa autonomia... e me faça perguntas
+se eu qro essa adição ou nao". Achados (tudo confirmado lendo o código,
+não suposição): "Aprovar"/"Recusar" solicitação só notificava, nunca
+persistia; tela de Pagamentos não tinha setter de estado nenhum, "marcar
+como pago" nem cabia ali; botão "+" de Nova Oficina e "Editar oficina"
+sem `onClick` nenhum, clicar não fazia nada; participante de oficina não
+podia ser editado/removido depois de cadastrado; "Cancelar fornada" não
+existia (status já estava no enum, mas nenhuma ação o usava); e não
+dava pra corrigir o conteúdo de uma fornada já iniciada sem duplicar.
+O Diego escolheu as 4 frentes (todas as opções oferecidas) — implementadas
+e testadas ao vivo nesta sessão:
+- **Solicitações de verdade**: aprovar insere a pessoa na turma pedida
+  (com pacote a confirmar), recusar remove da lista, as duas ações
+  persistem de verdade agora. Detalhe técnico completo em CLAUDE.md §5,
+  nova seção "Solicitações".
+- **Pagamentos editável + busca**: marcar como pago, busca por nome, e
+  um bug real corrigido no caminho (mensagem de cobrança sempre saía
+  "R$ null" pra pendentes reais, sem condicional pro valor não
+  informado). Detalhe em CLAUDE.md §5, Pagamentos.
+- **Oficinas criar/editar**: `ModalOficina` (mesmo formulário pros dois
+  modos), participante editável/removível pela primeira vez. Detalhe em
+  CLAUDE.md §5, Oficinas.
+- **Forno cancelar/editar conteúdo**: botão discreto de cancelar (não
+  compete com os 3 botões grandes já estabelecidos), editar categorias/
+  detalhes de uma fornada em andamento sem duplicar. Detalhe em
+  CLAUDE.md §5, Forno.
+
+**De brinde, no meio da auditoria, três pedidos novos do Diego (não
+faziam parte da lista original, vieram enquanto eu implementava):**
+- Ações rápidas de pagamento (cobrar/marcar como pago) direto na página
+  de detalhe do aluno, sem precisar ir até Pagamentos.
+- Uma seção de "Avisos" fixados no topo do Dashboard (mensagem +
+  destinatário admin/alunos) — passou por 3 rodadas de redesenho visual
+  no mesmo dia até virar a faixa fina com ticker que existe agora.
+  Histórico completo (incluindo um achado de sintaxe real — crase dentro
+  de comentário CSS quebrando a template literal do `<style>`) em
+  CLAUDE.md §5 Dashboard, "Avisos fixados no topo".
+
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills
 install` só trouxe um `SKILL.md` parcial, sem os scripts/reference

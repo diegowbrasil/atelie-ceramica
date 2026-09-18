@@ -523,6 +523,22 @@ const AGENDA_SEMANA = [
   { dia: "DOM", aulas: [] },
 ];
 const PIX_CHAVE = "ateliedeceramica@pix.com.br";
+/* Extraídas de dentro de `Pagamentos` (2026-09-18) — precisavam ser
+   reaproveitáveis também em `AlunoDetalhe` (pedido: "no card dos alunos,
+   quando tiver pagamentos q eu consiga colocar como pago tbm ou cobrar
+   no whatts"). **Corrigido no caminho**: a mensagem sempre incluía
+   "valor: R$ {p.valor}" sem condicional — `valor` é `null` pra TODOS os
+   pagamentos derivados do roster real (nunca informado nesta leva de
+   dados), então a mensagem sempre saía "R$ null" pra cobranças reais.
+   Bug pré-existente (não notado porque ninguém tinha clicado "Cobrar no
+   WhatsApp" com dado real ainda), corrigido junto por estar exatamente
+   nesse código. */
+function mensagemCobranca(nome, valor) {
+  return `Oi ${nome.split(" ")[0]}! Vi que seu pacote de cerâmica foi finalizado 😊 Quer renovar? Segue a chave Pix: ${PIX_CHAVE}${valor != null ? ` — valor: R$ ${valor}` : ""}. Qualquer dúvida me chama por aqui!`;
+}
+function abrirWhatsAppCobranca(telefone, nome, valor) {
+  window.open(`https://wa.me/${telefone || ""}?text=${encodeURIComponent(mensagemCobranca(nome, valor))}`, "_blank");
+}
 
 /* Pagamentos pendentes derivados do roster real das turmas (2026-09-17,
    "qro q crie um historico, q entre em pagamentos os pacotes
@@ -535,10 +551,21 @@ const PIX_CHAVE = "ateliedeceramica@pix.com.br";
    (não inventar número/preço); a tela e o botão "Cobrar no WhatsApp"
    tratam isso (ver Pagamentos()). `data` usa a data real do dia da
    turma (mesma função datasDaSemanaAtual/formatarDiaMes de Turmas). */
-function pagamentosIniciais() {
+/* Recebe `vagasPorTurma` como parâmetro (2026-09-18) — antes lia a
+   CONSTANTE `VAGAS_POR_TURMA` (fixa, nunca muda) direto, então a tela de
+   Pagamentos (e o KPI do Dashboard) sempre mostrava os pendentes do
+   momento em que o app carregou, mesmo depois de editar o pagamento de
+   alguém pela página de detalhe (isso edita o STATE `vagasPorTurma`, não
+   a constante — as duas eram fontes diferentes sem ninguém ter notado
+   até "Pagamentos" precisar refletir edição ao vivo). Passar o state
+   como argumento faz essa função recalcular a cada render a partir da
+   fonte real, sem duplicar estado próprio pra "quem já foi marcado como
+   pago" — o item simplesmente some da lista quando `status` deixa de
+   ser "pendente" no state. */
+function pagamentosIniciais(vagasPorTurma) {
   const datas = datasDaSemanaAtual();
   const pendentes = [];
-  for (const [turmaId, vagas] of Object.entries(VAGAS_POR_TURMA)) {
+  for (const [turmaId, vagas] of Object.entries(vagasPorTurma)) {
     const diaId = turmaId.split("-")[0];
     const dataFmt = formatarDiaMes(datas[diaId]);
     for (const v of vagas) {
@@ -564,10 +591,18 @@ const OFICINAS_RESUMO = [
   { nome: "Kit Café da Manhã", data: "24 de outubro · 16:00–19:00", faltam: "37 dias" },
 ];
 
+/* `turmaId` acrescentado (2026-09-18, ver "Solicitações de verdade" no
+   handler `aprovarSolicitacao`) — o dado nunca teve isso estruturado
+   (só um texto livre em `tipo`, às vezes citando a turma, às vezes não:
+   "Quer participar da turma" não dizia QUAL). Sem esse dado, "Aprovar"
+   não tinha como saber onde colocar a pessoa. Esse mock nunca fez parte
+   da leva de dados reais do Diego (só as 4 turmas fixas/roster são
+   reais) — atribuir uma turma a cada solicitação fictícia é ajuste do
+   mock, não invenção de dado de negócio real. */
 const SOLICITACOES_INICIAIS = [
-  { id: "sol1", nome: "Beatriz Almeida", tipo: "Quer participar da turma", quando: "12/05 às 10:23" },
-  { id: "sol2", nome: "Felipe Martins", tipo: "Quer participar da turma", quando: "12/05 às 09:15" },
-  { id: "sol3", nome: "Lucas Mendes", tipo: "Solicitou reposição · Quinta 18:30", quando: "11/05 às 20:02" },
+  { id: "sol1", nome: "Beatriz Almeida", tipo: "Quer participar da turma", quando: "12/05 às 10:23", turmaId: "ter-1830" },
+  { id: "sol2", nome: "Felipe Martins", tipo: "Quer participar da turma", quando: "12/05 às 09:15", turmaId: "qua-1630" },
+  { id: "sol3", nome: "Lucas Mendes", tipo: "Solicitou reposição · Quinta 18:30", quando: "11/05 às 20:02", turmaId: "qui-1830" },
 ];
 
 /* Aluno "logado" no demo — não há autenticação real, é um recorte fixo dos
@@ -806,6 +841,50 @@ export default function AtelieDemo() {
   const [modalConflito, setModalConflito] = useState(null); // fornoId em conflito, ou null
   const [oficinas, setOficinas] = useState(oficinasIniciais);
   const [oficinaAbertaId, setOficinaAbertaId] = useState(null);
+  /* Criar/editar oficina (2026-09-18) — auditoria de autonomia: o "+"
+     (Nova oficina) e o "Editar oficina" não tinham NENHUM `onClick`,
+     clicar não fazia nada. `modalOficina` guarda `"nova"` (formulário em
+     branco) ou a própria oficina (formulário preenchido, editando) — o
+     mesmo `ModalOficina` serve pros dois modos. */
+  const [modalOficina, setModalOficina] = useState(null);
+  function criarOficina(dados) {
+    const nova = {
+      id: "o" + Date.now(), status: "Agendada", statusPecas: "secagem",
+      receita: [], observacoes: "",
+      ...dados,
+      participantes: Array.from({ length: dados.vagas }, (_, i) => ({ numero: i + 1, nome: null })),
+    };
+    setOficinas((os) => [nova, ...os]);
+    notificar(`Oficina "${dados.nome}" criada.`);
+    setModalOficina(null);
+  }
+  /* Editar preserva `participantes`/`receita`/`statusPecas` (fora do
+     formulário) — só ajusta o array de vagas se `vagas` mudou. Encolher
+     nunca apaga uma vaga OCUPADA (protege dado real de participante já
+     inscrito); só remove vagas vazias do fim, e recusa (mantém o número
+     antigo) se não houver vazias suficientes pra encolher até o pedido. */
+  function editarOficina(id, dados) {
+    setOficinas((os) => os.map((o) => {
+      if (o.id !== id) return o;
+      let participantes = o.participantes;
+      let vagasFinal = dados.vagas;
+      if (vagasFinal > o.vagas) {
+        const extras = Array.from({ length: vagasFinal - o.vagas }, (_, i) => ({ numero: o.vagas + i + 1, nome: null }));
+        participantes = [...o.participantes, ...extras];
+      } else if (vagasFinal < o.vagas) {
+        const removeriaOcupada = o.participantes.slice(vagasFinal).some((p) => p.nome);
+        if (removeriaOcupada) {
+          notificar("Não dá pra reduzir vagas abaixo do número de participantes já inscritos.");
+          vagasFinal = o.vagas;
+        } else {
+          participantes = o.participantes.slice(0, vagasFinal);
+        }
+      }
+      return { ...o, ...dados, vagas: vagasFinal, participantes };
+    }));
+    notificar("Oficina atualizada.");
+    setModalOficina(null);
+  }
 
   function notificar(msg) { setToast(msg); setTimeout(() => setToast(null), 2200); }
 
@@ -858,6 +937,48 @@ export default function AtelieDemo() {
   function finalizarFornada(fornadaId) {
     setFornadas((fs) => fs.map((f) => f.id === fornadaId ? { ...f, status: "finalizada", finalizadoEm: new Date() } : f));
     notificar("Fornada finalizada e salva no histórico.");
+  }
+  /* "Cancelar fornada" (2026-09-18, auditoria de autonomia) — o status
+     "cancelada" já existia no enum/`STATUS_LABEL` desde sempre, mas
+     NENHUMA ação do app o define — só dava pra Finalizar (queima
+     concluída de verdade) ou substituir por Interrompida (ao iniciar
+     outra no mesmo forno). Faltava um jeito de encerrar uma fornada
+     começada por engano, sem fingir que ela "finalizou" de verdade.
+     Mesmo padrão de `finalizarFornada` — só muda `status`, nunca apaga. */
+  function cancelarFornada(fornadaId) {
+    setFornadas((fs) => fs.map((f) => f.id === fornadaId ? { ...f, status: "cancelada", finalizadoEm: new Date() } : f));
+    notificar("Fornada cancelada.");
+  }
+  /* Corrigir o conteúdo (categorias/detalhes) de uma fornada JÁ EM
+     ANDAMENTO sem precisar duplicar — "Duplicar configuração" cria uma
+     fornada NOVA, não serve pra corrigir um erro de digitação na atual.
+     De propósito, só mexe em `categorias`/`detalhesConteudo`, nunca em
+     `config` (temperatura/tempo) — mudar isso RETROATIVAMENTE
+     recalcularia toda a curva de previsão já em andamento, categoria de
+     mudança bem mais delicada que corrigir "o que tem dentro do forno". */
+  function editarConteudoFornada(fornadaId, { categorias, detalhesConteudo }) {
+    setFornadas((fs) => fs.map((f) => f.id === fornadaId ? { ...f, categorias, detalhesConteudo } : f));
+    notificar("Conteúdo do forno atualizado.");
+  }
+  /* Avisos fixados (2026-09-18) — "qro implementar, uma seção de avisos,
+     q eu coloque uma mensagem ou programa e vai ficar como um aviso fixo
+     na tela inicial no topo, posso escolher pra mim como um lembrete, ou
+     para os alunos". Lista vazia por padrão (não é dado real pré-
+     existente, é uma feature nova). `destinatario: "admin" | "alunos"`
+     só marca a intenção/categoria por enquanto — a Área do Aluno ainda
+     não existe de verdade (ver PROGRESS.md, pausada nesta sessão), então
+     um aviso "para os alunos" não tem pra onde ir além daqui ainda; a UI
+     deixa isso explícito (etiqueta "Para os alunos" no próprio card do
+     admin) em vez de fingir que já está sendo entregue a alguém. */
+  const [avisos, setAvisos] = useState([]);
+  const [modalAviso, setModalAviso] = useState(false);
+  function criarAviso(texto, destinatario) {
+    setAvisos((as) => [{ id: "av" + Date.now(), texto, destinatario, criadoEm: new Date() }, ...as]);
+    notificar("Aviso fixado.");
+    setModalAviso(false);
+  }
+  function removerAviso(id) {
+    setAvisos((as) => as.filter((a) => a.id !== id));
   }
 
   function ir(t) { setTela(t); setMenuAberto(false); window.scrollTo(0, 0); }
@@ -1016,6 +1137,66 @@ export default function AtelieDemo() {
     setAlunoSelecionado(null);
     ir(aluno.origemTela === "alunos" ? "alunos" : "turmas");
   }
+  /* Solicitações de verdade (2026-09-18) — pedido do Diego, auditoria de
+     autonomia: "Aprovar"/"Recusar" só chamavam `notificar(...)`, a
+     solicitação nunca saía da lista e aprovar não colocava ninguém em
+     turma nenhuma. `SOLICITACOES_INICIAIS` subiu pra `useState` (mesmo
+     padrão de `vagasPorTurma`/`alunosLista`/`fornadas`/`oficinas`).
+     "Recusar" é simples (só tira da lista). "Aprovar" precisa de UM dado
+     que a solicitação não carrega — o pacote (4/8/12) — então abre um
+     modal pequeno (`ModalAprovarSolicitacao`, mesmo padrão visual de
+     `ModalCadastrarAluno`) só pra confirmar isso antes de criar a vaga.
+     **Simplificação deliberada**: os dois tipos de solicitação (pedido
+     de vaga nova vs. "reposição") são tratados IGUAL — inserem a pessoa
+     como vaga ocupada nova na turma pedida. Uma "reposição" de verdade
+     seria uma transferência PROVISÓRIA de alguém que já é aluno de outra
+     turma (mesmo mecanismo do `moverAluno`), mas o dado de solicitação
+     só tem um nome solto, sem referência a uma vaga já existente pra
+     mover — não dá pra inferir isso com segurança sem inventar uma
+     ligação que não existe. Se isso importar na prática, é um pedido
+     separado (a UI de aprovar precisaria oferecer "essa pessoa já é
+     aluna? de qual turma?" como passo extra). */
+  const [solicitacoes, setSolicitacoes] = useState(SOLICITACOES_INICIAIS);
+  const [modalAprovarSolicitacao, setModalAprovarSolicitacao] = useState(null);
+  function recusarSolicitacao(sol) {
+    setSolicitacoes((ss) => ss.filter((s) => s.id !== sol.id));
+    notificar(`Solicitação de ${sol.nome} recusada.`);
+  }
+  function aprovarSolicitacao(sol, total) {
+    setVagasPorTurma((vpt) => {
+      const destino = vpt[sol.turmaId] || [];
+      const novoNumero = Math.max(0, ...destino.map((v) => v.numero)) + 1;
+      const nova = { numero: novoNumero, nome: sol.nome, aula: 0, total, status: "confirmado", statusAula: "confirmado", presente: false, turmaOrigemId: sol.turmaId, provisorio: false };
+      return { ...vpt, [sol.turmaId]: [...destino, nova] };
+    });
+    setSolicitacoes((ss) => ss.filter((s) => s.id !== sol.id));
+    const turmaInfo = turmaPorId(sol.turmaId);
+    notificar(`${sol.nome}: aprovado(a) em ${turmaInfo?.dia.split("-")[0]} · ${turmaInfo?.hora}.`);
+    setModalAprovarSolicitacao(null);
+  }
+  /* Pagamentos editável (2026-09-18) — mesma auditoria de autonomia. A
+     tela de Pagamentos não tinha setter nenhum (`const [pagamentos] =
+     useState(...)`, sem par) — "marcar como pago" nem cabia ali. Como
+     `pagamentosIniciais` passou a derivar de `vagasPorTurma` (state) em
+     vez da constante fixa, marcar como pago é só atualizar o `status` da
+     vaga de origem pra fora de "pendente" — o item some da lista de
+     pendentes sozinho, sem precisar de um estado próprio de "quem já foi
+     marcado". `id` do pagamento é sempre `${turmaId}-${numero}`
+     (montado em `pagamentosIniciais`); `turmaId` em si já tem um hífen
+     (ex: "ter-1830"), então separar pelo ÚLTIMO hífen (não o primeiro)
+     é o jeito seguro de recuperar os dois pedaços. */
+  function marcarPagamentoRecebido(pagamentoId) {
+    const idx = pagamentoId.lastIndexOf("-");
+    const turmaId = pagamentoId.slice(0, idx);
+    const numero = Number(pagamentoId.slice(idx + 1));
+    setVagasPorTurma((vpt) => ({
+      ...vpt,
+      [turmaId]: (vpt[turmaId] || []).map((v) =>
+        v.numero === numero ? { ...v, status: v.aula === v.total ? "ultima" : "confirmado" } : v
+      ),
+    }));
+    notificar("Pagamento marcado como recebido.");
+  }
 
   return (
     <div className="flex min-h-screen w-full bg-[var(--cream)] text-[var(--ink)]" style={{ fontFamily: "var(--font-sans)" }}>
@@ -1051,6 +1232,13 @@ export default function AtelieDemo() {
           50%{box-shadow:0 0 0 1px rgb(var(--glow-rgb) / 0.6), 0 0 16px 1px rgb(var(--glow-rgb) / 0.32);}
         }
         .forno-fresco{animation:brasaFornoFrio 3.6s ease-in-out infinite;}
+        /* Aviso fixado (2026-09-18) — "se for uma mensagem maior, q ela
+           fique passando" (rolando tipo ticker, não cortando com "..."):
+           o texto é duplicado no JSX (ver componente LinhaAviso) e a
+           animação desloca exatamente 50% (a largura de UMA cópia),
+           criando um loop contínuo sem pulo perceptível no fim. */
+        @keyframes avisoPassando{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+        .aviso-passando{animation:avisoPassando 12s linear infinite;}
         /* Apple-ish default: soft rounding on every button/field unless a
            utility class (e.g. rounded-full on Toggle/Avatar) wins on specificity. */
         button, input, textarea, select { border-radius: 0.75rem; }
@@ -1133,7 +1321,17 @@ export default function AtelieDemo() {
         </header>
 
         <main className="w-full px-4 pb-5 pt-24 md:px-6 md:py-8">
-          {tela === "dashboard" && <Dashboard ir={ir} fornadas={fornadas} onAbrirDia={abrirDiaTurmas} onAbrirOficinas={() => ir("oficinas")} onAbrirForno={abrirForno} />}
+          {tela === "dashboard" && (
+            <Dashboard
+              ir={ir} fornadas={fornadas} vagasPorTurma={vagasPorTurma} onAbrirDia={abrirDiaTurmas} onAbrirOficinas={() => ir("oficinas")} onAbrirForno={abrirForno}
+              solicitacoes={solicitacoes}
+              onAprovarSolicitacao={(s) => setModalAprovarSolicitacao(s)}
+              onRecusarSolicitacao={recusarSolicitacao}
+              avisos={avisos}
+              onNovoAviso={() => setModalAviso(true)}
+              onRemoverAviso={removerAviso}
+            />
+          )}
           {tela === "turmas" && (
             <Turmas
               notificar={notificar}
@@ -1143,6 +1341,9 @@ export default function AtelieDemo() {
               onAbrirAluno={abrirAlunoDetalhe}
               onMoverAluno={moverAluno}
               onRemoverAluno={removerAluno}
+              solicitacoes={solicitacoes}
+              onAprovarSolicitacao={(s) => setModalAprovarSolicitacao(s)}
+              onRecusarSolicitacao={recusarSolicitacao}
             />
           )}
           {tela === "alunos" && <Alunos alunos={alunosLista} setAlunos={setAlunosLista} onAbrirAluno={abrirAlunoDetalhe} />}
@@ -1154,17 +1355,24 @@ export default function AtelieDemo() {
               onExcluir={excluirAlunoDetalhe}
             />
           )}
-          {tela === "oficinas" && <Oficinas oficinas={oficinas} onAbrir={(id) => { setOficinaAbertaId(id); ir("oficinaDetalhe"); }} />}
+          {tela === "oficinas" && <Oficinas oficinas={oficinas} onAbrir={(id) => { setOficinaAbertaId(id); ir("oficinaDetalhe"); }} onNovaOficina={() => setModalOficina("nova")} />}
           {tela === "oficinaDetalhe" && (
             <OficinaDetalhe
               oficina={oficinas.find((o) => o.id === oficinaAbertaId)}
               notificar={notificar}
               onVoltar={() => ir("oficinas")}
+              onEditarOficina={() => setModalOficina(oficinas.find((o) => o.id === oficinaAbertaId))}
               onCadastrarParticipante={(numero, dados) => {
                 setOficinas((os) => os.map((o) => o.id !== oficinaAbertaId ? o : {
                   ...o, participantes: o.participantes.map((p) => p.numero === numero ? { numero, ...dados } : p),
                 }));
                 notificar("Participante cadastrado.");
+              }}
+              onRemoverParticipante={(numero) => {
+                setOficinas((os) => os.map((o) => o.id !== oficinaAbertaId ? o : {
+                  ...o, participantes: o.participantes.map((p) => p.numero === numero ? { numero, nome: null } : p),
+                }));
+                notificar("Participante removido.");
               }}
               onAtualizarStatusPecas={(novoStatus) => {
                 setOficinas((os) => os.map((o) => o.id !== oficinaAbertaId ? o : { ...o, statusPecas: novoStatus }));
@@ -1180,13 +1388,21 @@ export default function AtelieDemo() {
               onAtualizarTemp={atualizarTemperatura}
               onAdicionarObs={adicionarObservacao}
               onFinalizar={finalizarFornada}
+              onCancelar={cancelarFornada}
+              onEditarConteudo={editarConteudoFornada}
             />
           )}
           {tela === "fornoNova" && (
             <NovaFornada rascunho={rascunho} onVoltar={() => ir("forno")} onIniciar={iniciarFornada} />
           )}
-          {tela === "solicitacoes" && <Solicitacoes notificar={notificar} />}
-          {tela === "pagamentos" && <Pagamentos />}
+          {tela === "solicitacoes" && (
+            <Solicitacoes
+              solicitacoes={solicitacoes}
+              onAprovarSolicitacao={(s) => setModalAprovarSolicitacao(s)}
+              onRecusarSolicitacao={recusarSolicitacao}
+            />
+          )}
+          {tela === "pagamentos" && <Pagamentos vagasPorTurma={vagasPorTurma} onMarcarPago={marcarPagamentoRecebido} />}
           {(tela === "relatorios" || tela === "config") && <EmBreve tela={tela} />}
         </main>
       </div>
@@ -1218,7 +1434,130 @@ export default function AtelieDemo() {
           </div>
         </Modal>
       )}
+
+      {modalAprovarSolicitacao && (
+        <ModalAprovarSolicitacao
+          solicitacao={modalAprovarSolicitacao}
+          onClose={() => setModalAprovarSolicitacao(null)}
+          onConfirmar={(total) => aprovarSolicitacao(modalAprovarSolicitacao, total)}
+        />
+      )}
+
+      {modalOficina && (
+        <ModalOficina
+          oficina={modalOficina === "nova" ? null : modalOficina}
+          onClose={() => setModalOficina(null)}
+          onSalvar={(dados) => modalOficina === "nova" ? criarOficina(dados) : editarOficina(modalOficina.id, dados)}
+        />
+      )}
+
+      {modalAviso && (
+        <ModalNovoAviso onClose={() => setModalAviso(false)} onSalvar={criarAviso} />
+      )}
     </div>
+  );
+}
+
+/* Avisos fixados no topo do Dashboard (2026-09-18) — ver `avisos`/
+   `criarAviso`/`removerAviso` no componente raiz pro histórico completo
+   do pedido. **Três rodadas de redesenho no mesmo dia**:
+   1ª: de `Card` normal (cantos arredondados, vidro) pra faixa cheia sem
+   bordas ("esse aviso eu qria algo mais como um banner suspenso iguais
+   aqueles de site q fica fixo colado sem bordas") — `-mx-4 md:-mx-6`
+   (cancela o padding lateral do `<main>`, mesmo valor do `className`
+   dele no componente raiz) pra encostar nas bordas da tela.
+   2ª: a 1ª versão usava fundo sólido escuro + ícone de sino + botões — o
+   Diego mandou um print de referência (banner de site real: faixa FINA,
+   cor clara/terrosa, texto normal sublinhado, sem ícone) com "qro algo
+   proximo a isso". Fundo virou `rgbCor("sienna", 0.12)`, texto sublinhado
+   sem negrito.
+   3ª: "esta bom assim, porem so deixe a mensagem sem esse 'lembrete'...
+   para diferencias se e para mim ou para os alunos, mude a cor, deixe
+   preto para os alunos e vermelho pra mim" + "e as mensagem sempre em
+   maiusculo" — tira o texto de categoria por extenso (a cor sozinha já
+   diferencia: `--ink` pros alunos, `rose-600` pra admin), `uppercase`
+   via CSS (não mexe no dado digitado, só a exibição — mesmo padrão já
+   usado nos títulos de página com Bebas Neue). "Se for uma mensagem
+   maior, q ela fique passando" — `LinhaAviso` abaixo mede
+   `scrollWidth` vs largura do container e só liga a animação de ticker
+   (`.aviso-passando`, ver `<style>` do componente raiz) quando o texto
+   de fato não cabe; texto duplicado no DOM (uma cópia visível +
+   `aria-hidden`) pra o loop de -50% fechar sem pulo. */
+function LinhaAviso({ texto, cor }) {
+  const containerRef = useRef(null);
+  const textoRef = useRef(null);
+  const [passando, setPassando] = useState(false);
+  useEffect(() => {
+    function medir() {
+      if (containerRef.current && textoRef.current) {
+        setPassando(textoRef.current.scrollWidth > containerRef.current.clientWidth);
+      }
+    }
+    medir();
+    window.addEventListener("resize", medir);
+    return () => window.removeEventListener("resize", medir);
+  }, [texto]);
+  return (
+    <div ref={containerRef} className={"min-w-0 flex-1 overflow-hidden " + (passando ? "" : "flex justify-center")}>
+      <div className={"flex w-max whitespace-nowrap " + (passando ? "aviso-passando" : "")}>
+        <span ref={textoRef} className={"shrink-0 pr-10 text-xs font-medium uppercase tracking-wide underline underline-offset-2 " + cor}>{texto}</span>
+        {passando && <span aria-hidden="true" className={"shrink-0 pr-10 text-xs font-medium uppercase tracking-wide underline underline-offset-2 " + cor}>{texto}</span>}
+      </div>
+    </div>
+  );
+}
+function AvisosCard({ avisos, onNovoAviso, onRemover }) {
+  const estiloFaixa = { background: rgbCor("sienna", 0.12) };
+  /* `rounded-none` explícito nos `<button>` abaixo — sem isso, a regra
+     CSS global de baixa especificidade (`button { border-radius: 0.75rem
+     }`, ver CLAUDE.md §6.1) arredonda os cantos por cima do que a faixa
+     pede. `w-full` também explícito — `<button>` não estica pra ocupar a
+     largura toda sozinho como um `<div>` faria, precisa pedir. */
+  if (avisos.length === 0) {
+    return (
+      <button onClick={onNovoAviso} className="-mx-4 flex w-full items-center justify-center rounded-none px-4 py-2 text-center text-xs font-medium uppercase tracking-wide text-[var(--ink)] underline underline-offset-2 md:-mx-6 md:px-6" style={estiloFaixa}>
+        Fixar um aviso no topo
+      </button>
+    );
+  }
+  return (
+    <div className="-mx-4 md:-mx-6">
+      {avisos.map((a) => (
+        <div key={a.id} className="flex items-center justify-center gap-2 px-4 py-2 md:px-6" style={estiloFaixa}>
+          <LinhaAviso texto={a.texto} cor={a.destinatario === "alunos" ? "text-[var(--ink)]" : "text-rose-600"} />
+          <button onClick={() => onRemover(a.id)} aria-label="Remover aviso" className="shrink-0 rounded-none text-[var(--ink-soft)] hover:text-[var(--ink)]"><X size={13} /></button>
+        </div>
+      ))}
+      <button onClick={onNovoAviso} className="flex w-full items-center justify-center rounded-none px-4 py-1.5 text-center text-[11px] font-medium uppercase tracking-wide text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)] md:px-6" style={estiloFaixa}>
+        + Novo aviso
+      </button>
+    </div>
+  );
+}
+function ModalNovoAviso({ onClose, onSalvar }) {
+  const [texto, setTexto] = useState("");
+  const [destinatario, setDestinatario] = useState("admin");
+  return (
+    <Modal onClose={onClose}>
+      <h3 className="mb-3 text-base font-semibold">Novo aviso</h3>
+      <form onSubmit={(e) => { e.preventDefault(); if (!texto.trim()) return; onSalvar(texto.trim(), destinatario); }}>
+        <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Mensagem</label>
+        <textarea autoFocus value={texto} onChange={(e) => setTexto(e.target.value)} rows={3} className="mb-3 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="Ex: Comprar mais esmalte azul." />
+        <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Para quem</label>
+        <div className="mb-4 flex gap-2">
+          {[["admin", "Lembrete pra mim"], ["alunos", "Para os alunos"]].map(([id, label]) => (
+            <button type="button" key={id} onClick={() => setDestinatario(id)} className={"flex-1 border px-3 py-2.5 text-xs font-medium " + (destinatario === id ? "border-[var(--ink)] bg-[var(--cream-soft)] text-[var(--ink)]" : "border-[var(--line)] text-[var(--ink-soft)]")}>{label}</button>
+          ))}
+        </div>
+        {destinatario === "alunos" && (
+          <p className="mb-4 text-xs text-[var(--ink-soft)]">A Área do Aluno ainda não existe de verdade no app — por enquanto isso fica visível aqui, marcado como "Para os alunos".</p>
+        )}
+        <div className="flex gap-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
+          <button type="submit" className={"flex-1 py-2.5 text-sm font-medium " + ACCENT_SOLIDO}>Fixar aviso</button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -1226,34 +1565,41 @@ export default function AtelieDemo() {
 /*  Dashboard                                                          */
 /* ------------------------------------------------------------------ */
 
-function Dashboard({ ir, fornadas, onAbrirDia, onAbrirOficinas, onAbrirForno }) {
+function Dashboard({ ir, fornadas, vagasPorTurma, onAbrirDia, onAbrirOficinas, onAbrirForno, solicitacoes, onAprovarSolicitacao, onRecusarSolicitacao, avisos, onNovoAviso, onRemoverAviso }) {
   /* KPIs calculados a partir do dado real (2026-09-17, "atualize esses
      cards com os dados reais") — antes eram 4 números fixos, sem relação
      nenhuma com VAGAS_POR_TURMA. "Aulas hoje"/"Alunos confirmados" usam o
      dia real (new Date()), igual o resto do app (datasDaSemanaAtual());
      "confirmados" conta só quem não está "ausente" nas turmas de hoje —
      casa com o rótulo (turmas de hoje, não o total de alunos do ateliê).
-     "Pagamentos pendentes" é `pagamentosIniciais().length`, mesma conta
-     real que já alimenta a tela de Pagamentos — uma fonte só de verdade.
-     "Reposições pendentes" continua de `SOLICITACOES_INICIAIS`, que
-     **não** fazia parte da leva de dados reais que o Diego mandou — ainda
-     é fictício, só passou a ser calculado (não mais um "2" solto sem
-     relação com nada) pra não ficar tão desalinhado quanto antes. */
+     "Pagamentos pendentes" é `pagamentosIniciais(vagasPorTurma).length`,
+     mesma conta real que já alimenta a tela de Pagamentos — uma fonte só
+     de verdade. **Os dois cálculos passaram a usar o STATE `vagasPorTurma`
+     (prop), não mais a constante `VAGAS_POR_TURMA` fixa (2026-09-18)** —
+     achado ao tornar Pagamentos editável: o Dashboard nunca refletia
+     edições ao vivo (marcar presença, editar pagamento pela página de
+     detalhe), sempre mostrava o snapshot de quando o app carregou.
+     "Reposições pendentes" usa `solicitacoes` (prop, `useState` no
+     componente raiz desde 2026-09-18 — ver `aprovarSolicitacao`/
+     `recusarSolicitacao`) — o dado em si continua fictício (nunca fez
+     parte da leva real que o Diego mandou), mas agora aprovar/recusar
+     de verdade tira da lista, então o número aqui reage à ação real. */
   const diaIdHoje = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"][new Date().getDay()];
   const turmasHoje = TURMAS_DIAS.find((d) => d.id === diaIdHoje)?.turmas || [];
   const aulasHoje = turmasHoje.length;
-  const alunosConfirmadosHoje = turmasHoje.reduce((soma, t) => soma + (VAGAS_POR_TURMA[t.id] || []).filter((v) => v.nome && v.statusAula === "confirmado").length, 0);
+  const alunosConfirmadosHoje = turmasHoje.reduce((soma, t) => soma + (vagasPorTurma[t.id] || []).filter((v) => v.nome && v.statusAula === "confirmado").length, 0);
   const kpis = [
     { icon: CalendarDays, valor: aulasHoje, label: "Aulas hoje", tone: "text-[var(--ink)] bg-[var(--cream-soft)]", tela: "turmas" },
     { icon: Users, valor: alunosConfirmadosHoje, label: "Alunos confirmados", tone: "text-emerald-700 bg-emerald-50", tela: "alunos" },
-    { icon: RotateCcw, valor: SOLICITACOES_INICIAIS.length, label: "Reposições pendentes", tone: "text-amber-600 bg-amber-100", tela: "solicitacoes" },
-    { icon: CreditCard, valor: pagamentosIniciais().length, label: "Pagamentos pendentes", tone: "text-rose-600 bg-rose-100", tela: "pagamentos" },
+    { icon: RotateCcw, valor: solicitacoes.length, label: "Reposições pendentes", tone: "text-amber-600 bg-amber-100", tela: "solicitacoes" },
+    { icon: CreditCard, valor: pagamentosIniciais(vagasPorTurma).length, label: "Pagamentos pendentes", tone: "text-rose-600 bg-rose-100", tela: "pagamentos" },
   ];
   return (
     <div className="space-y-6">
       <div>
         <p className="text-sm text-[var(--ink-soft)]">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}</p>
       </div>
+      <AvisosCard avisos={avisos} onNovoAviso={onNovoAviso} onRemover={onRemoverAviso} />
       <div className="grid min-w-0 gap-3 lg:grid-cols-[300px_1fr]">
         <div className="[&>*]:min-w-0 grid min-w-0 grid-cols-2 gap-2">
           {kpis.map((k) => (
@@ -1313,9 +1659,19 @@ function Dashboard({ ir, fornadas, onAbrirDia, onAbrirOficinas, onAbrirForno }) 
         </div>
         <Card className="p-4">
           <h3 className="mb-3 text-sm font-semibold">Solicitações pendentes</h3>
-          <ul className="space-y-3 text-sm">{SOLICITACOES_INICIAIS.map((s) => (
-            <li key={s.nome} className="flex items-center justify-between"><span><span className="block font-medium">{s.nome}</span><span className="text-[var(--ink-soft)]">{s.tipo}</span></span></li>
-          ))}</ul>
+          {solicitacoes.length === 0 ? (
+            <p className="text-sm text-[var(--ink-soft)]">Nenhuma solicitação pendente.</p>
+          ) : (
+            <ul className="space-y-3 text-sm">{solicitacoes.map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-2">
+                <span className="min-w-0"><span className="block truncate font-medium">{s.nome}</span><span className="text-[var(--ink-soft)]">{s.tipo}</span></span>
+                <div className="flex shrink-0 gap-1.5">
+                  <button onClick={() => onAprovarSolicitacao(s)} className="bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700">Aprovar</button>
+                  <button onClick={() => onRecusarSolicitacao(s)} className="bg-rose-100 px-2.5 py-1.5 text-xs font-medium text-rose-600">Recusar</button>
+                </div>
+              </li>
+            ))}</ul>
+          )}
         </Card>
       </div>
     </div>
@@ -1512,11 +1868,13 @@ function FornoResumoCard({ forno, fornadaAtiva, onDetalhes }) {
 /*  Painel principal do Forno                                          */
 /* ------------------------------------------------------------------ */
 
-function PainelForno({ fornadas, notificar, fornoInicial, onNovaFornada, onDuplicar, onAtualizarTemp, onAdicionarObs, onFinalizar }) {
+function PainelForno({ fornadas, notificar, fornoInicial, onNovaFornada, onDuplicar, onAtualizarTemp, onAdicionarObs, onFinalizar, onCancelar, onEditarConteudo }) {
   const [fornoSel, setFornoSel] = useState(() => fornoInicial || fornadas.find((f) => f.status === "andamento")?.fornoId || FORNOS[0].id);
   const [modalTemp, setModalTemp] = useState(false);
   const [modalObs, setModalObs] = useState(false);
   const [modalFinalizar, setModalFinalizar] = useState(false);
+  const [modalCancelar, setModalCancelar] = useState(false);
+  const [modalEditarConteudo, setModalEditarConteudo] = useState(false);
   const [modalDetalheHist, setModalDetalheHist] = useState(null);
   const [inputTemp, setInputTemp] = useState("");
   const [inputObs, setInputObs] = useState("");
@@ -1569,6 +1927,8 @@ function PainelForno({ fornadas, notificar, fornoInicial, onNovaFornada, onDupli
           onAtualizarTemp={() => setModalTemp(true)}
           onAdicionarObs={() => setModalObs(true)}
           onFinalizar={() => setModalFinalizar(true)}
+          onCancelar={() => setModalCancelar(true)}
+          onEditarConteudo={() => setModalEditarConteudo(true)}
         />
       )}
 
@@ -1633,6 +1993,29 @@ function PainelForno({ fornadas, notificar, fornoInicial, onNovaFornada, onDupli
         </Modal>
       )}
 
+      {/* Cancelar (2026-09-18) — diferente de Finalizar: marca como
+         "Cancelada" em vez de "Finalizada", pra quem abriu a fornada por
+         engano ou desistiu dela, sem fingir que a queima aconteceu de
+         verdade. Confirmação obrigatória, mesmo padrão de Finalizar. */}
+      {modalCancelar && (
+        <Modal onClose={() => setModalCancelar(false)}>
+          <h3 className="mb-2 text-base font-semibold">Cancelar fornada?</h3>
+          <p className="mb-5 text-sm text-[var(--ink-soft)]">A fornada será marcada como Cancelada e sai do acompanhamento ativo. O histórico (temperaturas, observações registradas até agora) continua salvo.</p>
+          <div className="flex gap-2">
+            <button onClick={() => setModalCancelar(false)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Voltar</button>
+            <button onClick={() => { onCancelar(ativa.id); setModalCancelar(false); }} className="flex-1 bg-rose-600 py-2.5 text-sm font-medium text-white hover:bg-rose-700">Cancelar fornada</button>
+          </div>
+        </Modal>
+      )}
+
+      {modalEditarConteudo && (
+        <ModalEditarConteudoForno
+          fornada={ativa}
+          onClose={() => setModalEditarConteudo(false)}
+          onSalvar={(dados) => { onEditarConteudo(ativa.id, dados); setModalEditarConteudo(false); }}
+        />
+      )}
+
       {modalDetalheHist && (
         <Modal onClose={() => setModalDetalheHist(null)}>
           <div className="mb-1 flex items-center justify-between">
@@ -1672,7 +2055,7 @@ function ProgressRing({ pct, size = 176, stroke = 12, color = "var(--accent)", t
   );
 }
 
-function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, onFinalizar }) {
+function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, onFinalizar, onCancelar, onEditarConteudo }) {
   const ultima = fornada.leituras[fornada.leituras.length - 1] || null;
   const p = calcularPrevisao(fornada.config, fornada.iniciadoEm, agora, ultima);
 
@@ -1715,7 +2098,15 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
 
       <div className="[&>*]:min-w-0 mt-5 grid gap-5 lg:grid-cols-[1fr_1fr_280px]">
         <Card className="p-4">
-          <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">Conteúdo do forno</h3></div>
+          {/* "Editar" no header do card (2026-09-18, auditoria de
+             autonomia) — antes de corrigir o conteúdo de uma fornada já
+             em andamento (ex: esqueceu de marcar uma categoria) só dava
+             pra "Duplicar configuração", que cria uma fornada NOVA,
+             perdendo o progresso da atual. */}
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Conteúdo do forno</h3>
+            <button onClick={onEditarConteudo} className="flex items-center gap-1 text-xs font-medium text-[var(--ink-soft)] hover:text-[var(--ink)]"><Pencil size={13} />Editar</button>
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {fornada.categorias.map((c) => {
               const cat = CATEGORIAS.find((x) => x.id === c);
@@ -1738,9 +2129,50 @@ function FornadaAtivaPainel({ fornada, agora, onAtualizarTemp, onAdicionarObs, o
           <button onClick={onAtualizarTemp} className={"flex items-center justify-center gap-2 py-3.5 text-sm font-semibold " + ACCENT_SOLIDO}><Thermometer size={17} />Atualizar temperatura</button>
           <button onClick={onAdicionarObs} className="flex items-center justify-center gap-2 border border-[var(--line)] bg-white py-3.5 text-sm font-semibold text-[var(--ink)] hover:bg-[var(--cream)]"><MessageCircle size={17} />Adicionar observação</button>
           <button onClick={onFinalizar} className="flex items-center justify-center gap-2 bg-rose-50 py-3.5 text-sm font-semibold text-rose-600 hover:bg-rose-100">Finalizar fornada</button>
+          {/* Discreto de propósito (2026-09-18) — CLAUDE.md documenta "3
+             botões grandes" como regra do painel; cancelar é uma ação bem
+             menos comum que as três de cima (fornada começada por
+             engano), não merece competir visualmente com elas. */}
+          <button onClick={onCancelar} className="py-1.5 text-xs font-medium text-[var(--ink-soft)] hover:text-rose-600">Cancelar fornada</button>
         </div>
       </div>
     </>
+  );
+}
+
+/* Mesma receita visual do seletor de categorias em `NovaFornada` (cards
+   2×2 com borda de destaque), num modal compacto — reaproveitando o
+   padrão em vez de inventar um novo. */
+function ModalEditarConteudoForno({ fornada, onClose, onSalvar }) {
+  const [categorias, setCategorias] = useState(fornada.categorias);
+  const [detalhes, setDetalhes] = useState(fornada.detalhesConteudo || "");
+  function toggleCategoria(id) {
+    setCategorias((cs) => cs.includes(id) ? cs.filter((c) => c !== id) : [...cs, id]);
+  }
+  return (
+    <Modal onClose={onClose}>
+      <h3 className="mb-3 text-base font-semibold">Editar conteúdo do forno</h3>
+      <div className="[&>*]:min-w-0 mb-4 grid grid-cols-2 gap-2.5">
+        {CATEGORIAS.map((c) => {
+          const ativo = categorias.includes(c.id);
+          return (
+            <button
+              type="button" key={c.id} onClick={() => toggleCategoria(c.id)}
+              className={"relative flex flex-col items-center gap-1.5 border-2 px-3 py-4 text-center text-xs font-medium transition-all " + (ativo ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]" : "border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--ink-soft)]")}
+            >
+              {ativo && <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent)] text-white"><Check size={10} strokeWidth={3} /></span>}
+              <c.icon size={18} />{c.label}
+            </button>
+          );
+        })}
+      </div>
+      <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Detalhes do conteúdo (opcional)</label>
+      <textarea value={detalhes} onChange={(e) => setDetalhes(e.target.value)} rows={2} className="mb-4 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="Ex: Peças da turma de terça junto com uma encomenda da Marina." />
+      <div className="flex gap-2">
+        <button onClick={onClose} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
+        <button onClick={() => onSalvar({ categorias, detalhesConteudo: detalhes.trim() })} className={"flex-1 py-2.5 text-sm font-medium " + ACCENT_SOLIDO}>Salvar</button>
+      </div>
+    </Modal>
   );
 }
 
@@ -1881,7 +2313,7 @@ function Campo({ label, value, onChange }) {
 /*  Demais telas (inalteradas)                                         */
 /* ------------------------------------------------------------------ */
 
-function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma, onAbrirAluno, onMoverAluno, onRemoverAluno }) {
+function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma, onAbrirAluno, onMoverAluno, onRemoverAluno, solicitacoes, onAprovarSolicitacao, onRecusarSolicitacao }) {
   const diaValido = TURMAS_DIAS.find((d) => d.id === diaInicial && d.disponivel) || TURMAS_DIAS.find((d) => d.id === "ter");
   const [diaAtivo, setDiaAtivo] = useState(diaValido.id);
   const [turmaAtiva, setTurmaAtiva] = useState(diaValido.turmas[0].id);
@@ -2243,7 +2675,6 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
     setDiaAtivo(dia.id);
     setTurmaAtiva(dia.turmas[0].id);
   }
-  function resolver(nome, aprovado) { notificar(aprovado ? `Solicitação de ${nome} aprovada.` : `Solicitação de ${nome} recusada.`); }
   function toggleStatusAula(numero) {
     setVagas((vs) => vs.map((v) => v.numero === numero ? { ...v, statusAula: v.statusAula === "confirmado" ? "ausente" : "confirmado" } : v));
   }
@@ -2526,17 +2957,31 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
           </div>
           <div className={"relative p-4 " + VIDRO_CARD}>
             <h3 className="mb-3 text-sm font-semibold">Solicitações pendentes</h3>
-            <ul className="space-y-3">
-              {SOLICITACOES_INICIAIS.slice(0, 2).map((s) => (
-                <li key={s.nome} className="flex items-center justify-between text-sm">
-                  <span><span className="block font-medium">{s.nome}</span><span className="text-[var(--ink-soft)]">{s.tipo}</span></span>
-                  <div className="flex gap-1.5">
-                    <button onClick={() => resolver(s.nome, true)} className="bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">Aprovar</button>
-                    <button onClick={() => resolver(s.nome, false)} className="bg-rose-100 px-2 py-1 text-xs font-medium text-rose-600">Recusar</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            {/* Filtrado por `turmaId` (2026-09-18) — antes mostrava sempre
+               os 2 primeiros de `SOLICITACOES_INICIAIS` inteiro, sem
+               relação com a turma aberta (Beatriz/Felipe apareciam em
+               QUALQUER turma, não só na deles). Corrigido junto com
+               "Solicitações de verdade" (ver `aprovarSolicitacao` no
+               componente raiz) — agora que o dado tem `turmaId`, dá pra
+               filtrar de verdade. */}
+            {(() => {
+              const daTurma = solicitacoes.filter((s) => s.turmaId === turmaAtiva);
+              return daTurma.length === 0 ? (
+                <p className="text-sm text-[var(--ink-soft)]">Nenhuma solicitação pendente pra esta turma.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {daTurma.map((s) => (
+                    <li key={s.id} className="flex items-center justify-between text-sm">
+                      <span><span className="block font-medium">{s.nome}</span><span className="text-[var(--ink-soft)]">{s.tipo}</span></span>
+                      <div className="flex gap-1.5">
+                        <button onClick={() => onAprovarSolicitacao(s)} className="bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">Aprovar</button>
+                        <button onClick={() => onRecusarSolicitacao(s)} className="bg-rose-100 px-2 py-1 text-xs font-medium text-rose-600">Recusar</button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -2766,6 +3211,31 @@ function ModalCadastrarAluno({ numero, onClose, onSalvar }) {
   );
 }
 
+/* Aprovar solicitação (2026-09-18) — mesmo padrão visual/de campo de
+   `ModalCadastrarAluno` acima (nome já vem da solicitação, só falta
+   confirmar o pacote — o único dado que a solicitação não carrega). */
+function ModalAprovarSolicitacao({ solicitacao, onClose, onConfirmar }) {
+  const [total, setTotal] = useState(4);
+  const turmaInfo = turmaPorId(solicitacao.turmaId);
+  return (
+    <Modal onClose={onClose}>
+      <h3 className="mb-1 text-base font-semibold">Aprovar {solicitacao.nome}</h3>
+      <p className="mb-3 text-sm text-[var(--ink-soft)]">
+        Entra em {turmaInfo ? `${turmaInfo.dia.split("-")[0]} · ${turmaInfo.hora}` : "—"}. Qual o pacote?
+      </p>
+      <div className="mb-4 flex gap-2">
+        {[4, 8, 12].map((n) => (
+          <button type="button" key={n} onClick={() => setTotal(n)} className={"flex-1 border px-3 py-2 text-sm font-medium " + (total === n ? "border-[var(--ink)] bg-[var(--cream-soft)] text-[var(--ink)]" : "border-[var(--line)] text-[var(--ink-soft)]")}>{n} aulas</button>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <button onClick={onClose} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
+        <button onClick={() => onConfirmar(total)} className={"flex-1 py-2.5 text-sm font-medium " + ACCENT_SOLIDO}>Aprovar</button>
+      </div>
+    </Modal>
+  );
+}
+
 /* Linha de aluno — extraído em componente próprio (2026-09-17) porque
    agora renderiza em dois contextos: dentro do grupo da turma e na lista
    plana de resultado de busca. Virou `<button>` clicável na mesma leva
@@ -2898,13 +3368,38 @@ function AlunoDetalhe({ aluno, onVoltar, onSalvarEdicao, onExcluir }) {
         </div>
 
         {!editando ? (
-          <dl className="grid grid-cols-2 gap-y-3 text-sm">
-            <dt className="text-[var(--ink-soft)]">Aula atual</dt><dd className="text-right font-medium">{aluno.aula} de {aluno.total}</dd>
-            <dt className="text-[var(--ink-soft)]">Pagamento</dt>
-            <dd className="text-right">
-              {aluno.status === "pendente" ? <Badge tone="warning">Pendente</Badge> : aluno.status === "ultima" ? <Badge tone="danger">Renovar</Badge> : <Badge tone="success">Em dia</Badge>}
-            </dd>
-          </dl>
+          <>
+            <dl className="grid grid-cols-2 gap-y-3 text-sm">
+              <dt className="text-[var(--ink-soft)]">Aula atual</dt><dd className="text-right font-medium">{aluno.aula} de {aluno.total}</dd>
+              <dt className="text-[var(--ink-soft)]">Pagamento</dt>
+              <dd className="text-right">
+                {aluno.status === "pendente" ? <Badge tone="warning">Pendente</Badge> : aluno.status === "ultima" ? <Badge tone="danger">Renovar</Badge> : <Badge tone="success">Em dia</Badge>}
+              </dd>
+            </dl>
+            {/* Ações rápidas de cobrança (2026-09-18) — "no card dos
+               alunos, quando tiver pagamentos q eu consiga colocar como
+               pago tbm ou cobrar no whatts", pra não precisar sair da
+               página do aluno e ir até a tela de Pagamentos pra isso.
+               "Marcar como pago" reaproveita `onSalvarEdicao` já
+               existente (mesmo caminho do toggle "Pagamento em dia" no
+               formulário) em vez de duplicar a lógica de status. */}
+            {aluno.status === "pendente" && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  onClick={() => abrirWhatsAppCobranca(aluno.tel, aluno.nome, null)}
+                  className="flex-1 bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700"
+                >
+                  Cobrar no WhatsApp
+                </button>
+                <button
+                  onClick={() => onSalvarEdicao(aluno, { turmaId: turmaFormAtual, total: aluno.total, aula: aluno.aula, pago: true })}
+                  className="flex-1 border border-[var(--line)] px-3 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--cream)]"
+                >
+                  Marcar como pago
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="space-y-4">
             <div>
@@ -3109,7 +3604,7 @@ function FormAluno({ onCancelar, onSalvar }) {
   );
 }
 
-function Oficinas({ oficinas, onAbrir }) {
+function Oficinas({ oficinas, onAbrir, onNovaOficina }) {
   /* Mesmo tratamento de fundo de Turmas, foto fixa "carvão" (preto e
      branco) — pedido do Diego (2026-09-17): "qro q o fundo da pagina das
      oficinas siga o msm padrao das turmas, porem com ess fundo" (mandou a
@@ -3122,8 +3617,11 @@ function Oficinas({ oficinas, onAbrir }) {
         <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-2xl font-bold uppercase tracking-wide" style={FONT_DISPLAY}>Oficinas</h1>
         {/* Botão "+ Nova oficina" virou só um "+" discreto (2026-09-18,
            "troque esse 'nova oficina' por um '+' discreto") — mesma ação,
-           sem competir visualmente com o título centralizado do lado. */}
-        <button title="Nova oficina" aria-label="Nova oficina" className="rounded-full p-2 text-[var(--ink-soft)] hover:bg-[var(--cream)] hover:text-[var(--ink)]">
+           sem competir visualmente com o título centralizado do lado.
+           **Achado na auditoria de autonomia, mesmo dia**: esse "+" nunca
+           teve `onClick` nenhum — clicar não fazia nada, nem notificava.
+           Agora abre `ModalOficina` de verdade. */}
+        <button onClick={onNovaOficina} title="Nova oficina" aria-label="Nova oficina" className="rounded-full p-2 text-[var(--ink-soft)] hover:bg-[var(--cream)] hover:text-[var(--ink)]">
           <Plus size={20} />
         </button>
       </div>
@@ -3199,7 +3697,7 @@ function StatusPecasCard({ status, somenteLeitura, onAlterar }) {
   );
 }
 
-function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante, onAtualizarStatusPecas }) {
+function OficinaDetalhe({ oficina, notificar, onVoltar, onEditarOficina, onCadastrarParticipante, onRemoverParticipante, onAtualizarStatusPecas }) {
   const [modalNumero, setModalNumero] = useState(null);
   const [verComoAluno, setVerComoAluno] = useState(false);
   if (!oficina) return null;
@@ -3242,7 +3740,10 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
             </span>
             Ver como aluno
           </button>
-          <button className="flex items-center gap-1.5 border border-[var(--line)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]">Editar oficina</button>
+          {/* Achado na auditoria de autonomia (2026-09-18): sem `onClick`
+             nenhum, clicar não fazia nada. Abre `ModalOficina` já
+             preenchido com os dados atuais. */}
+          <button onClick={onEditarOficina} className="flex items-center gap-1.5 border border-[var(--line)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]">Editar oficina</button>
           <button onClick={() => notificar("Lembrete enviado via WhatsApp (demo).")} className={"flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium " + ACCENT_SOLIDO}>Enviar lembrete</button>
         </div>
       </div>
@@ -3277,15 +3778,20 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
 
       <h3 className="mb-3 text-sm font-semibold">Participantes ({oficina.vagas} vagas)</h3>
       <div className={"relative w-full min-w-0 divide-y divide-white/50 overflow-hidden " + VIDRO_CARD}>
+        {/* Linha preenchida virou clicável (2026-09-18, auditoria de
+           autonomia) — antes, uma vez cadastrado, o participante não
+           podia mais ser editado nem removido pela UI nenhuma. Abre o
+           MESMO `ModalCadastrarParticipante` de sempre, agora em modo
+           edição (`participante` preenchido). */}
         {oficina.participantes.map((p) => p.nome ? (
-          <div key={p.numero} className="flex w-full min-w-0 items-center gap-3 p-3">
+          <button key={p.numero} onClick={() => setModalNumero(p.numero)} className="flex w-full min-w-0 items-center gap-3 p-3 text-left hover:bg-[var(--cream)]">
             <Avatar nome={p.nome} size={40} />
             <div className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium">{p.nome}</span>
               <span className="text-xs text-[var(--ink-soft)]">{p.tipo === "dupla" ? (p.duplaCom ? `Dupla com ${p.duplaCom}` : "Dupla") : "Individual"}</span>
             </div>
             <Badge tone={p.pagamento === "pago" ? "success" : "warning"}>{p.pagamento === "pago" ? "Pago" : "Pendente"}</Badge>
-          </div>
+          </button>
         ) : (
           <button key={p.numero} onClick={() => setModalNumero(p.numero)} className="flex w-full items-center gap-3 p-3 text-left hover:bg-[var(--cream)]">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed border-[var(--ink-soft)] text-[var(--ink-soft)]"><Plus size={16} /></span>
@@ -3302,24 +3808,32 @@ function OficinaDetalhe({ oficina, notificar, onVoltar, onCadastrarParticipante,
       {modalNumero && (
         <ModalCadastrarParticipante
           numero={modalNumero}
+          participante={oficina.participantes.find((p) => p.numero === modalNumero)?.nome ? oficina.participantes.find((p) => p.numero === modalNumero) : null}
           opcoesDupla={individuaisPreenchidos.map((p) => p.nome)}
           onClose={() => setModalNumero(null)}
           onSalvar={(dados) => { onCadastrarParticipante(modalNumero, dados); setModalNumero(null); }}
+          onRemover={() => { onRemoverParticipante(modalNumero); setModalNumero(null); }}
         />
       )}
     </div>
   );
 }
 
-function ModalCadastrarParticipante({ numero, opcoesDupla, onClose, onSalvar }) {
-  const [nome, setNome] = useState("");
-  const [tipo, setTipo] = useState("individual");
-  const [duplaCom, setDuplaCom] = useState("");
-  const [pagamento, setPagamento] = useState("pendente");
+/* `participante`/`onRemover` opcionais (2026-09-18) — mesmo formulário
+   agora serve pra CADASTRAR (vaga vazia, campos em branco) e EDITAR (vaga
+   já ocupada, campos preenchidos + botão de remover) — auditoria de
+   autonomia: antes, uma vez cadastrado, o participante não podia mais
+   ser alterado nem removido pela UI. */
+function ModalCadastrarParticipante({ numero, participante, opcoesDupla, onClose, onSalvar, onRemover }) {
+  const editando = !!participante;
+  const [nome, setNome] = useState(participante?.nome || "");
+  const [tipo, setTipo] = useState(participante?.tipo || "individual");
+  const [duplaCom, setDuplaCom] = useState(participante?.duplaCom || "");
+  const [pagamento, setPagamento] = useState(participante?.pagamento || "pendente");
 
   return (
     <Modal onClose={onClose}>
-      <h3 className="mb-3 text-base font-semibold">Cadastrar participante — vaga {numero}</h3>
+      <h3 className="mb-3 text-base font-semibold">{editando ? `Editar participante — vaga ${numero}` : `Cadastrar participante — vaga ${numero}`}</h3>
       <form onSubmit={(e) => { e.preventDefault(); if (!nome.trim()) return; onSalvar({ nome: nome.trim(), tipo, duplaCom: tipo === "dupla" ? duplaCom || null : null, pagamento }); }}>
         <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Nome</label>
         <input autoFocus value={nome} onChange={(e) => setNome(e.target.value)} className="mb-3 w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="Nome do participante" />
@@ -3350,48 +3864,135 @@ function ModalCadastrarParticipante({ numero, opcoesDupla, onClose, onSalvar }) 
 
         <div className="flex gap-2">
           <button type="button" onClick={onClose} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
-          <button type="submit" className={"flex-1 py-2.5 text-sm font-medium " + ACCENT_SOLIDO}>Cadastrar</button>
+          <button type="submit" className={"flex-1 py-2.5 text-sm font-medium " + ACCENT_SOLIDO}>{editando ? "Salvar" : "Cadastrar"}</button>
+        </div>
+        {editando && (
+          <button type="button" onClick={onRemover} className="mt-2 w-full border border-rose-200 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50">Remover participante</button>
+        )}
+      </form>
+    </Modal>
+  );
+}
+
+/* Criar/editar oficina (2026-09-18) — mesmo padrão de campo do resto do
+   app. `data`/`hora` continuam texto livre (não `<input type="date">`) —
+   o app inteiro já representa isso como texto formatado por extenso
+   ("10 de Outubro de 2026"), um date picker devolveria outro formato e
+   quebraria a consistência com as oficinas existentes. `receita` (lista
+   peça→gramas) fica de fora do formulário — é só consulta, editável em
+   nenhum outro lugar do app hoje; se isso importar na prática é um
+   pedido separado, não construído de lambuja aqui. */
+function ModalOficina({ oficina, onClose, onSalvar }) {
+  const editando = !!oficina;
+  const [nome, setNome] = useState(oficina?.nome || "");
+  const [data, setData] = useState(oficina?.data || "");
+  const [hora, setHora] = useState(oficina?.hora || "");
+  const [vagas, setVagas] = useState(oficina?.vagas ?? 12);
+  const [valor, setValor] = useState(oficina?.valor ?? "");
+  const [descricao, setDescricao] = useState(oficina?.descricao || "");
+  const [observacoes, setObservacoes] = useState(oficina?.observacoes || "");
+
+  function submeter(e) {
+    e.preventDefault();
+    if (!nome.trim() || !data.trim() || !hora.trim()) return;
+    onSalvar({
+      nome: nome.trim(), data: data.trim(), hora: hora.trim(),
+      vagas: Math.max(1, Number(vagas) || 12),
+      valor: valor === "" ? null : Math.max(0, Number(valor) || 0),
+      descricao: descricao.trim(), observacoes: observacoes.trim(),
+    });
+  }
+
+  return (
+    <Modal onClose={onClose}>
+      <h3 className="mb-3 text-base font-semibold">{editando ? "Editar oficina" : "Nova oficina"}</h3>
+      <form onSubmit={submeter} className="space-y-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Nome</label>
+          <input autoFocus value={nome} onChange={(e) => setNome(e.target.value)} className="w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="Ex: Kit Café da Manhã" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Data</label>
+            <input value={data} onChange={(e) => setData(e.target.value)} className="w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="10 de Outubro de 2026" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Horário</label>
+            <input value={hora} onChange={(e) => setHora(e.target.value)} className="w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="16:00 às 19:00" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Vagas</label>
+            <input type="number" min={1} value={vagas} onChange={(e) => setVagas(e.target.value)} className="w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Valor por pessoa (R$)</label>
+            <input type="number" min={0} value={valor} onChange={(e) => setValor(e.target.value)} className="w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" placeholder="Opcional" />
+          </div>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Descrição</label>
+          <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} className="w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Observações</label>
+          <textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={2} className="w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]" />
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button type="button" onClick={onClose} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
+          <button type="submit" className={"flex-1 py-2.5 text-sm font-medium " + ACCENT_SOLIDO}>{editando ? "Salvar" : "Criar oficina"}</button>
         </div>
       </form>
     </Modal>
   );
 }
 
-function Solicitacoes({ notificar }) {
+function Solicitacoes({ solicitacoes, onAprovarSolicitacao, onRecusarSolicitacao }) {
   return (
     <div>
       <h1 className="mb-1 text-2xl font-bold uppercase tracking-wide" style={FONT_DISPLAY}>Solicitações</h1>
       <p className="mb-5 text-sm text-[var(--ink-soft)]">Vagas e reposições aguardando aprovação.</p>
-      <div className={"relative divide-y divide-white/50 overflow-hidden " + VIDRO_CARD}><ul className="divide-y divide-white/50">
-        {SOLICITACOES_INICIAIS.map((s) => (
-          <li key={s.nome} className="flex items-center justify-between gap-3 px-4 py-3">
-            <div className="flex items-center gap-3"><Avatar nome={s.nome} /><div><div className="text-sm font-medium">{s.nome}</div><div className="text-xs text-[var(--ink-soft)]">{s.tipo} · {s.quando}</div></div></div>
-            <div className="flex gap-1.5">
-              <button onClick={() => notificar(`Aprovado: ${s.nome}`)} className="bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700">Aprovar</button>
-              <button onClick={() => notificar(`Recusado: ${s.nome}`)} className="bg-rose-100 px-2.5 py-1.5 text-xs font-medium text-rose-600">Recusar</button>
-            </div>
-          </li>
-        ))}
-      </ul></div>
+      {solicitacoes.length === 0 ? (
+        <div className={"relative px-6 py-10 text-center text-sm text-[var(--ink-soft)] " + VIDRO_CARD}>Nenhuma solicitação pendente.</div>
+      ) : (
+        <div className={"relative divide-y divide-white/50 overflow-hidden " + VIDRO_CARD}><ul className="divide-y divide-white/50">
+          {solicitacoes.map((s) => (
+            <li key={s.id} className="flex items-center justify-between gap-3 px-4 py-3">
+              <div className="flex items-center gap-3"><Avatar nome={s.nome} /><div><div className="text-sm font-medium">{s.nome}</div><div className="text-xs text-[var(--ink-soft)]">{s.tipo} · {s.quando}</div></div></div>
+              <div className="flex gap-1.5">
+                <button onClick={() => onAprovarSolicitacao(s)} className="bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700">Aprovar</button>
+                <button onClick={() => onRecusarSolicitacao(s)} className="bg-rose-100 px-2.5 py-1.5 text-xs font-medium text-rose-600">Recusar</button>
+              </div>
+            </li>
+          ))}
+        </ul></div>
+      )}
     </div>
   );
 }
 
-function Pagamentos() {
-  const [pagamentos] = useState(pagamentosIniciais);
+function Pagamentos({ vagasPorTurma, onMarcarPago }) {
+  const pagamentos = pagamentosIniciais(vagasPorTurma);
   const [modal, setModal] = useState(null);
+  const [busca, setBusca] = useState("");
 
-  const pendentes = pagamentos.filter((p) => p.status === "pendente");
-  const pagos = pagamentos.filter((p) => p.status === "pago");
-  const totalPendente = pendentes.reduce((s, p) => s + p.valor, 0);
-  const totalRecebido = pagos.reduce((s, p) => s + p.valor, 0);
+  /* Busca por nome (2026-09-18) — "em pagamentos preciso q tenha uma
+     busca tbm para procurar nomes", mesmo padrão já usado em Alunos
+     (filtro case-insensitive por substring). Filtra as duas listas
+     (pendentes e histórico) — os KPIs do topo continuam somando TODOS os
+     pagamentos, não só o resultado filtrado (são o resumo geral da tela,
+     buscar um nome não devia fazer "Pendente"/"Recebido" mudarem). */
+  const buscando = busca.trim().length > 0;
+  const pagamentosFiltrados = buscando
+    ? pagamentos.filter((p) => p.nome.toLowerCase().includes(busca.trim().toLowerCase()))
+    : pagamentos;
 
-  function mensagem(p) {
-    return `Oi ${p.nome.split(" ")[0]}! Vi que seu pacote de cerâmica foi finalizado 😊 Quer renovar? Segue a chave Pix: ${PIX_CHAVE} — valor: R$ ${p.valor}. Qualquer dúvida me chama por aqui!`;
-  }
-  function enviarWhatsApp(p) {
-    window.open(`https://wa.me/${p.telefone}?text=${encodeURIComponent(mensagem(p))}`, "_blank");
-  }
+  const pendentes = pagamentosFiltrados.filter((p) => p.status === "pendente");
+  const pagosTotal = pagamentos.filter((p) => p.status === "pago");
+  const pendentesTotal = pagamentos.filter((p) => p.status === "pendente");
+  const totalPendente = pendentesTotal.reduce((s, p) => s + (p.valor || 0), 0);
+  const totalRecebido = pagosTotal.reduce((s, p) => s + (p.valor || 0), 0);
 
   return (
     <div>
@@ -3399,61 +4000,78 @@ function Pagamentos() {
       <p className="mb-5 text-sm text-[var(--ink-soft)]">Histórico de pacotes e aulas avulsas, cobranças pendentes.</p>
 
       <div className="[&>*]:min-w-0 mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon={CreditCard} label="Pendente" value={"R$ " + totalPendente} sub={pendentes.length + " cobranças"} />
-        <StatCard icon={Check} label="Recebido" value={"R$ " + totalRecebido} sub={pagos.length + " pagamentos"} />
+        <StatCard icon={CreditCard} label="Pendente" value={"R$ " + totalPendente} sub={pendentesTotal.length + " cobranças"} />
+        <StatCard icon={Check} label="Recebido" value={"R$ " + totalRecebido} sub={pagosTotal.length + " pagamentos"} />
         <StatCard icon={Users} label="Alunos" value={pagamentos.length} sub="no período" />
-        <StatCard icon={Clock} label="Ticket médio" value={"R$ " + Math.round((totalPendente + totalRecebido) / pagamentos.length)} />
+        <StatCard icon={Clock} label="Ticket médio" value={"R$ " + Math.round((totalPendente + totalRecebido) / (pagamentos.length || 1))} />
+      </div>
+
+      <div className={"relative mb-5 flex items-center gap-2 px-4 py-2.5 " + VIDRO_CARD}>
+        <Search size={16} className="shrink-0 text-[var(--ink-soft)]" />
+        <input
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar pelo nome…"
+          className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-[var(--ink-soft)]"
+        />
+        {buscando && <button onClick={() => setBusca("")} aria-label="Limpar busca" className="shrink-0 text-[var(--ink-soft)]"><X size={16} /></button>}
       </div>
 
       <div className={"relative mb-5 p-4 " + VIDRO_CARD}>
         <h3 className="mb-3 text-sm font-semibold">Pendentes — cobrar</h3>
-        <ul className="divide-y divide-white/50">
-          {pendentes.map((p) => (
-            <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
-              <div className="flex items-center gap-3">
-                <Avatar nome={p.nome} />
-                <div>
-                  <div className="text-sm font-medium">{p.nome}</div>
-                  <div className="text-xs text-[var(--ink-soft)]">{p.tipo} · R$ {p.valor} · {p.motivo}</div>
+        {pendentes.length === 0 ? (
+          <p className="text-sm text-[var(--ink-soft)]">{buscando ? `Nenhum pendente encontrado para "${busca}".` : "Nenhuma cobrança pendente."}</p>
+        ) : (
+          <ul className="divide-y divide-white/50">
+            {pendentes.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+                <div className="flex items-center gap-3">
+                  <Avatar nome={p.nome} />
+                  <div>
+                    <div className="text-sm font-medium">{p.nome}</div>
+                    <div className="text-xs text-[var(--ink-soft)]">{p.tipo} · {p.motivo}</div>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge tone="warning">Pendente</Badge>
-                <button onClick={() => setModal(p)} className="bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">Cobrar no WhatsApp</button>
-              </div>
-            </li>
-          ))}
-        </ul>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone="warning">Pendente</Badge>
+                  <button onClick={() => setModal(p)} className="bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">Cobrar no WhatsApp</button>
+                  <button onClick={() => onMarcarPago(p.id)} className="border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--ink)] hover:bg-[var(--cream)]">Marcar como pago</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className={"relative p-4 " + VIDRO_CARD}>
         <h3 className="mb-3 text-sm font-semibold">Histórico</h3>
-        <ul className="divide-y divide-white/50">
-          {pagamentos.map((p) => (
-            <li key={p.id} className="flex items-center justify-between gap-2 py-2.5 text-sm">
-              <div className="flex items-center gap-3">
-                <Avatar nome={p.nome} size={30} />
-                <div>
-                  <div className="font-medium">{p.nome}</div>
-                  <div className="text-xs text-[var(--ink-soft)]">{p.tipo} · {p.data}</div>
+        {pagamentosFiltrados.length === 0 ? (
+          <p className="text-sm text-[var(--ink-soft)]">Nenhum resultado para "{busca}".</p>
+        ) : (
+          <ul className="divide-y divide-white/50">
+            {pagamentosFiltrados.map((p) => (
+              <li key={p.id} className="flex items-center justify-between gap-2 py-2.5 text-sm">
+                <div className="flex items-center gap-3">
+                  <Avatar nome={p.nome} size={30} />
+                  <div>
+                    <div className="font-medium">{p.nome}</div>
+                    <div className="text-xs text-[var(--ink-soft)]">{p.tipo} · {p.data}</div>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[var(--ink-soft)]">R$ {p.valor}</span>
                 <Badge tone={p.status === "pago" ? "success" : "warning"}>{p.status === "pago" ? "Pago" : "Pendente"}</Badge>
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {modal && (
         <Modal onClose={() => setModal(null)}>
           <h3 className="mb-3 text-base font-semibold">Cobrar {modal.nome.split(" ")[0]}</h3>
-          <div className="mb-4 bg-[var(--cream)] p-3 text-sm text-[var(--ink)]">{mensagem(modal)}</div>
+          <div className="mb-4 bg-[var(--cream)] p-3 text-sm text-[var(--ink)]">{mensagemCobranca(modal.nome, modal.valor)}</div>
           <div className="flex gap-2">
             <button onClick={() => setModal(null)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
-            <button onClick={() => { enviarWhatsApp(modal); setModal(null); }} className="flex-1 bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700">Enviar no WhatsApp</button>
+            <button onClick={() => { abrirWhatsAppCobranca(modal.telefone, modal.nome, modal.valor); setModal(null); }} className="flex-1 bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700">Enviar no WhatsApp</button>
           </div>
         </Modal>
       )}

@@ -712,6 +712,26 @@ ciclo do React.
   "Revisão" ao vivo.
 - Histórico lateral com "Duplicar configuração" → abre Nova fornada
   preenchida.
+- **Cancelar fornada + editar conteúdo em andamento (2026-09-18)**,
+  auditoria de autonomia. Dois achados reais: o status "Cancelada" já
+  existia no enum/`STATUS_LABEL` desde sempre, mas nenhuma ação o
+  definia (só Finalizar ou substituir por Interrompida existiam); e não
+  havia jeito de corrigir o conteúdo (categorias/detalhes) de uma
+  fornada já iniciada sem "Duplicar configuração", que cria uma fornada
+  NOVA (perde o progresso da atual).
+  - **"Cancelar fornada"**: botão discreto (texto pequeno, não um 4º
+    botão grande — a regra "3 botões grandes" do painel continua
+    valendo, cancelar é bem menos comum que Atualizar/Observação/
+    Finalizar) abaixo dos 3 de sempre, com confirmação. Só muda
+    `status` pra "cancelada", nunca apaga (mesmo padrão de
+    `finalizarFornada`).
+  - **"Editar" no card "Conteúdo do forno"**: `ModalEditarConteudoForno`
+    reaproveita a mesma receita visual do seletor de categorias em
+    `NovaFornada` (cards 2×2 com borda de destaque), só que num modal
+    compacto. De propósito, só mexe em `categorias`/`detalhesConteudo` —
+    nunca em `config` (temperatura/tempo), que mudaria RETROATIVAMENTE
+    toda a curva de previsão já em andamento, categoria de edição bem
+    mais delicada que corrigir o que tem dentro do forno.
 
 **Motor de cálculo** — `calcularPrevisao(config, iniciadoEm, agora,
 ultimaLeitura)`, função pura. Quando o admin informa temperatura real, ela
@@ -730,15 +750,81 @@ função com outro parâmetro.
   como aluno" simulando a visão read-only (não há login no demo).
 - ~~Botão "+ Nova oficina" (pill laranja cheia, com texto)~~ **Virou só um
   "+" discreto (2026-09-18)** — "troque esse 'nova oficina' por um '+'
-  discreto". Mesma ação (`onClick` intacto), ícone `Plus` num botão
-  circular neutro (`text-[var(--ink-soft)]`, sem `ACCENT_SOLIDO`) — não
-  compete mais visualmente com o título "OFICINAS" centralizado do lado.
+  discreto". Ícone `Plus` num botão circular neutro
+  (`text-[var(--ink-soft)]`, sem `ACCENT_SOLIDO`) — não compete mais
+  visualmente com o título "OFICINAS" centralizado do lado. **Correção
+  (2026-09-18, auditoria de autonomia)**: a entrada anterior dizia "mesma
+  ação, `onClick` intacto" — não procede, o botão nunca teve `onClick`
+  nenhum nessa troca, clicar não fazia nada. Só percebido agora ao
+  auditar o app inteiro atrás do que ainda não é autoservido (ver
+  detalhe abaixo).
+- **Criar/editar oficina + editar/remover participante — implementado
+  (2026-09-18)**, depois da auditoria de autonomia pedida pelo Diego
+  ("qro ter mais autonomia no aplicativo... faça uma busca e me fale oq
+  precisa adicionar", resposta em três: Solicitações/Pagamentos/Oficinas/
+  Forno — ver §5 Dashboard pro resumo completo da auditoria). Achados
+  reais, não só o "+" do item acima: **"Editar oficina"** (dentro do
+  detalhe) também não tinha `onClick` nenhum; um participante já
+  cadastrado não podia ser editado/removido pela UI, só cadastrado uma
+  vez.
+  - `ModalOficina` (reaproveitado pros dois modos, `oficina={null}` =
+    criar / `oficina={...}` = editar): nome, data, horário (texto livre,
+    não date-picker — o app inteiro já representa isso como "10 de
+    Outubro de 2026" por extenso, um picker devolveria outro formato),
+    vagas, valor por pessoa (opcional), descrição, observações. `receita`
+    (peça→gramas) fica de fora do formulário — é só consulta em
+    qualquer lugar do app hoje, editar isso é pedido separado se
+    importar na prática.
+  - **Editar vagas nunca apaga um participante já inscrito**: encolher o
+    número de vagas só remove vagas VAZIAS do fim da lista; se a redução
+    pedida removeria alguém já cadastrado, a edição recusa e mantém o
+    número antigo, com aviso.
+  - **Participante**: `ModalCadastrarParticipante` ganhou modo edição
+    (`participante` preenchido → título/botão mudam pra "Editar"/
+    "Salvar", mais um botão "Remover participante" com fundo rose) — a
+    LINHA do participante (antes um `<div>` estático) virou `<button>`
+    clicável, mesmo padrão de "clicar num aluno abre o detalhe" já usado
+    em Turmas/Alunos.
 
 ### Pagamentos
 - Card "Pagamentos pendentes" no dashboard leva à página.
 - Histórico: tipo (pacote/avulsa), valor, data, status.
 - Pendentes têm "Cobrar no WhatsApp": modal com mensagem pronta + `wa.me`
   com texto codificado. Chave Pix fixa em `PIX_CHAVE`.
+- **Editável de verdade + busca (2026-09-18)**, mesma auditoria de
+  autonomia. Achado real: a tela não tinha NENHUM setter de estado
+  (`const [pagamentos] = useState(...)`, array-destructuring sem par) —
+  "marcar como pago" nem cabia ali antes disso.
+  - **`pagamentosIniciais` passou a receber `vagasPorTurma` como
+    parâmetro** em vez de fechar sobre a constante `VAGAS_POR_TURMA`
+    fixa — achado no caminho: a tela (e o KPI "Pagamentos pendentes" do
+    Dashboard) nunca refletiam uma edição ao vivo (ex: editar o
+    pagamento de alguém pela página de detalhe), sempre mostravam o
+    snapshot de quando o app carregou. Mesma correção aplicada ao KPI
+    "Alunos confirmados" do Dashboard, que tinha o mesmo problema.
+  - **"Marcar como pago"**: `id` de cada pendente é sempre
+    `${turmaId}-${numero}` (já existia, usado como `key`); separar pelo
+    ÚLTIMO hífen (não o primeiro, já que `turmaId` em si tem um hífen,
+    ex. "ter-1830") recupera os dois pedaços com segurança pra
+    atualizar a vaga certa em `vagasPorTurma`. Sem estado próprio de
+    "quem foi marcado" — o item some da lista sozinho assim que
+    `status` deixa de ser "pendente" no state real.
+  - **Busca por nome**, mesmo padrão de Alunos (filtro case-insensitive
+    por substring) — "em pagamentos preciso q tenha uma busca tbm para
+    procurar nomes". Filtra as duas listas (pendentes e histórico); os 4
+    KPIs do topo continuam somando TODOS os pagamentos, não só o
+    resultado filtrado.
+  - **Bug pré-existente corrigido no caminho**: a mensagem de cobrança
+    sempre incluía `"valor: R$ {p.valor}"` sem condicional — `valor` é
+    `null` pra todos os pendentes derivados do roster real (nunca
+    informado nesta leva de dados), então toda cobrança real saía
+    "R$ null" na mensagem. `mensagemCobranca`/`abrirWhatsAppCobranca`
+    extraídas pra funções top-level (reaproveitadas também em
+    `AlunoDetalhe`, ver §5 Alunos) com a correção.
+  - **Ações rápidas direto na página do aluno** (`AlunoDetalhe`, ver §5
+    Alunos) — "no card dos alunos, quando tiver pagamentos q eu consiga
+    colocar como pago tbm ou cobrar no whatts", pra não precisar sair da
+    página do aluno e ir até Pagamentos só pra isso.
 
 ### Alunos
 - ~~Lista começa vazia — cliente quer cadastrar alunos reais, sem mocks.~~
@@ -858,6 +944,53 @@ função com outro parâmetro.
     cadastro por completo. Sempre pede confirmação (`Modal` inline,
     mesmo padrão/copy do resto do app: "essa ação não pode ser
     desfeita"), nunca some só com um clique.
+  - **Ações rápidas de pagamento (2026-09-18, mesmo dia)** — "no card dos
+    alunos, quando tiver pagamentos q eu consiga colocar como pago tbm
+    ou cobrar no whatts". Quando `status === "pendente"`, o card "Pacote
+    e pagamento" (fora do modo de edição) ganha dois botões: "Cobrar no
+    WhatsApp" (`abrirWhatsAppCobranca`, extraída de dentro de
+    `Pagamentos` pra função top-level reaproveitável, ver §5 Pagamentos)
+    e "Marcar como pago" (reaproveita `onSalvarEdicao` já existente, com
+    `pago: true` e o resto dos campos intactos — não duplica a lógica de
+    cálculo de status). Some sozinho assim que o status deixa de ser
+    "pendente", sem precisar entrar no formulário de edição completo.
+
+### Solicitações
+- **De decorativo pra real (2026-09-18)**, auditoria de autonomia. Achado
+  real: "Aprovar"/"Recusar" só chamavam `notificar(...)` em 3 lugares
+  diferentes (Dashboard, card dentro de Turmas, tela Solicitações
+  completa) — a solicitação nunca saía da lista de verdade
+  (`SOLICITACOES_INICIAIS` era uma CONSTANTE, não `useState`), e
+  aprovar um pedido de vaga não colocava ninguém em turma nenhuma.
+  - `SOLICITACOES_INICIAIS` subiu pra `useState(solicitacoes)` no
+    componente raiz, mesmo padrão de lift já usado nesta sessão.
+  - **`turmaId` acrescentado a cada solicitação mockada** — o dado nunca
+    teve isso estruturado (só um texto livre em `tipo`, às vezes citando
+    a turma tipo "Solicitou reposição · Quinta 18:30", às vezes não:
+    "Quer participar da turma" não dizia qual). Sem isso, "Aprovar" não
+    tinha como saber onde colocar a pessoa. Esse mock nunca fez parte da
+    leva de dados reais do Diego (só as 4 turmas fixas/roster são
+    reais) — atribuir uma turma a cada solicitação fictícia é ajuste do
+    mock, não invenção de dado de negócio real.
+  - **"Aprovar"** abre `ModalAprovarSolicitacao` (mesmo padrão visual de
+    `ModalCadastrarAluno`) só pra confirmar o pacote (4/8/12) — o único
+    dado que a solicitação não carrega. Ao confirmar, insere a pessoa
+    como vaga ocupada nova em `vagasPorTurma[turmaId]` (próximo número
+    livre) e remove da lista de solicitações.
+  - **Simplificação deliberada**: pedido de vaga nova e "reposição" são
+    tratados IGUAL (inserem como vaga ocupada nova). Uma "reposição" de
+    verdade seria uma transferência PROVISÓRIA de alguém que já é aluno
+    de outra turma (mesmo mecanismo do `moverAluno`), mas o dado de
+    solicitação só tem um nome solto, sem referência a uma vaga já
+    existente pra mover — não dá pra inferir isso com segurança sem
+    inventar uma ligação que não existe. Se isso importar na prática,
+    a UI de aprovar precisaria de um passo extra ("essa pessoa já é
+    aluna? de qual turma?"), pedido separado.
+  - **Achado de brinde, mesma correção**: o preview "Solicitações
+    pendentes" dentro de Turmas mostrava sempre os 2 primeiros de TODA
+    a lista, sem relação com a turma aberta (Beatriz/Felipe apareciam
+    em Terça E em Quarta, por exemplo). Agora que o dado tem `turmaId`,
+    filtra de verdade pela turma ativa.
 
 ### Dashboard
 - KPIs compactos (coluna estreita, 2×2) — cliente reclamou 2× de ocuparem
@@ -1085,6 +1218,68 @@ proximas oficinas no lugar q estava msm, porem matenha essa modificação
 do fundo" — voltou pro lugar original (último bloco da página, `grid
 md:grid-cols-2` ao lado de "Solicitações pendentes"), o fundo/foto é a
 única mudança que ficou.
+
+**Avisos fixados no topo (2026-09-18)** — pedido novo, não fazia parte da
+auditoria de autonomia (que era sobre completar ações que já deveriam
+existir): "qro implementar, uma seção de avisos, q eu coloque uma
+mensagem ou programa e vai ficar como um aviso fixo na tela inicial no
+topo, posso escolher pra mim como um lembrete, ou para os alunos".
+`avisos` (`useState([])`, lista vazia — não é dado real pré-existente) +
+`criarAviso`/`removerAviso` no componente raiz. `destinatario: "admin" |
+"alunos"` só marca a categoria por enquanto — a Área do Aluno ainda não
+existe de verdade (pausada nesta sessão, ver PROGRESS.md), então um
+aviso "para os alunos" não tem pra onde ir além do Dashboard do admin
+ainda; não finge que está sendo entregue a alguém.
+
+**Três rodadas de redesenho visual, mesma sessão, cada uma reagindo ao
+resultado ao vivo:**
+1. Primeira versão: `Card` normal (cantos arredondados, vidro, dentro do
+   padding da página) — igual todo o resto do app.
+2. **Rejeitada com referência visual**: "esse aviso eu qria algo mais
+   como um banner suspenso iguais aqueles de site q fica fixo colado sem
+   bordas" + print de um banner de site real (faixa fina, cor clara/
+   terrosa, texto normal sublinhado, sem ícone). Reescrito pra bater:
+   `-mx-4 md:-mx-6` (cancela exatamente o padding lateral do `<main>`,
+   mesmo valor do `className` dele) pra encostar nas duas bordas da
+   tela; fundo `rgbCor("sienna", 0.12)` (a paleta de argila do app, só
+   bem mais clara que o sólido usado em outros lugares); sem cantos
+   arredondados nem vidro. **Achado no caminho**: `<button>` sem
+   `rounded-none` explícito pega a regra CSS global de baixa
+   especificidade (`button { border-radius: 0.75rem }`, CLAUDE.md §6.1)
+   por cima da intenção da faixa; `<button>` também não estica pra
+   ocupar a largura toda sozinho como um `<div>` faria, precisa de
+   `w-full` explícito — os dois motivos pelos quais a primeira tentativa
+   dessa versão saiu com cantos arredondados e alinhada à esquerda em
+   vez de faixa cheia.
+3. **Refinamento final, mesma sessão**: "esta bom assim, porem so deixe
+   a mensagem sem esse 'lembrete' e se for uma mensagem maior, q ela
+   fique passando.. para diferencias se e para mim ou para os alunos,
+   mude a cor, deixe preto para os alunos e vermelho pra mim" + "e as
+   mensagem sempre em maiusculo". Quatro mudanças:
+   - Texto de categoria por extenso ("(para os alunos)"/"lembrete pra
+     mim") removido — a cor sozinha diferencia agora.
+   - Cor do TEXTO (não mais do fundo) marca o destinatário: `--ink`
+     (preto) pros alunos, `rose-600` (vermelho) pra admin/"pra mim".
+   - `uppercase` via CSS (`text-transform`, não mexe no dado digitado,
+     só a exibição — mesmo padrão já usado nos títulos de página com
+     Bebas Neue).
+   - **Ticker de verdade quando o texto não cabe**: `LinhaAviso` mede
+     `scrollWidth` do texto vs. largura do container (`useEffect`,
+     re-mede em `resize`) e só liga a animação
+     (`.aviso-passando`, `@keyframes` no `<style>` do componente raiz)
+     quando de fato precisa — texto curto fica parado e centralizado,
+     não tem sentido animar o que já cabe. O texto é duplicado no DOM
+     (uma cópia visível + uma `aria-hidden`) e a animação desloca
+     exatamente -50% (a largura de UMA cópia): dá um loop contínuo sem
+     pulo perceptível no fim, técnica clássica de ticker por CSS puro.
+   - **Achado de sintaxe no caminho**: um comentário dentro do `<style>`
+     usou crase (`` ` ``) ao redor de um nome de componente — como esse
+     `<style>` é uma template literal JS (`<style>{\`...\`}</style>`),
+     a crase fechou a string prematuramente e quebrou a sintaxe do
+     arquivo inteiro. Lição: nunca usar crase dentro de comentários
+     CSS que vivem dentro de uma template literal JS — aspas simples ou
+     nenhuma marcação, não o padrão de code-span usado no resto dos
+     comentários em português deste arquivo.
 
 ---
 
