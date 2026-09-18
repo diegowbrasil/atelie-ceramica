@@ -793,6 +793,71 @@ função com outro parâmetro.
   - **Remover da turma**: arrastar até uma lateral da tela (zona
     vermelha) pede confirmação (`ModalRemover`) antes de esvaziar a vaga
     — nunca remove só pelo gesto.
+- **`AlunoDetalhe` virou editável de verdade (2026-09-18)** — pedido do
+  Diego voltando pro app principal depois de começar a Área do Aluno:
+  "preciso ter as coisas editaveis tbm, no sentido de excluir ou nao
+  aludo, editar o pacote, colocar se esta em dia ou nao, mudar a turma".
+  Motivo dado na sequência, mensagens separadas: "qro ter mais autonomia
+  no aplicativo, sem q eu tenho q ficar toda hora pedindo para o claude
+  fazer uma alteração de alunos ou turmas... do app inteiro" — a
+  motivação de fundo (autonomia de gestão sem depender de pedir uma
+  edição de código a cada ajuste) é maior que só esta tela; ver auditoria
+  completa do resto do app logo abaixo.
+  - Um formulário só, atrás de um botão "Editar" no card "Pacote e
+    pagamento": turma (select das 4 turmas), pacote (4/8/12, mesmos
+    botões de `ModalCadastrarAluno`), aula atual (number input, sempre
+    clampado a `[0, total]` — inclusive quando o total diminui e a aula
+    atual ficaria acima dele), pagamento em dia (`Toggle` reaproveitado).
+    Salva tudo junto (`salvarEdicaoAluno`, componente raiz) — evita
+    estados parciais estranhos tipo "mudei a turma mas esqueci de
+    corrigir o pacote na mesma ida".
+  - **"Está em dia ou não" não é um 4º valor de `status`** — continua só
+    `confirmado`/`pendente`/`ultima`, exatamente a regra já documentada
+    (não pago tem prioridade sobre "última aula"). O toggle edita um
+    booleano (`pago`) que só na hora de salvar é traduzido pra `status`
+    pela mesma fórmula: `!pago → "pendente"`; `pago && aula===total →
+    "ultima"`; senão `"confirmado"`. Não inventa uma regra nova, só expõe
+    a existente como campo editável.
+  - **"Mudar a turma" reaproveita `moverAluno`** (a mesma função que já
+    fazia a transferência "fixa" do arrastar-e-soltar) em vez de duplicar
+    a lógica de esvaziar/achar-vaga-livre — o formulário só monta o
+    objeto já com o pacote/pagamento novos embutidos
+    (`{...aluno, ...patchDados}`) e deixa `moverAluno` fazer o resto.
+    Isso exigiu ensinar `moverAluno` a também atualizar
+    `alunoSelecionado` quando a pessoa movida é quem está aberta na tela
+    de detalhe (senão a PRÓXIMA edição, ex: pacote logo em seguida,
+    tentaria escrever na vaga antiga já esvaziada) — capturado numa
+    variável fora do updater de `setVagasPorTurma` e aplicado depois, não
+    aninhado dentro dele (chamar `setState` de dentro do updater
+    funcional de outro `setState` funciona, mas não é hábito seguro).
+  - **`alunosLista` (a lista da tela Alunos) subiu pro componente raiz**
+    — antes era `useState(ALUNOS_REAIS)` local dentro de `Alunos()`,
+    inacessível a partir de `AlunoDetalhe` (que vive na raiz). Mesmo
+    padrão de lift já usado pra `vagasPorTurma`/`fornadas`/`oficinas`.
+  - **As duas fontes de dado (`vagasPorTurma` e `alunosLista`) continuam
+    SEPARADAS, de propósito, não unificadas** — decisão já registrada
+    quando `AlunoDetalhe` foi criado (a mesma pessoa pode ter uma linha
+    em cada fonte, sem sincronia entre elas), reaberta aqui só pra
+    confirmar que segue valendo: unificar de verdade esbarraria num
+    problema real não resolvido (algumas pessoas, ex. Marina/Elisabeth,
+    aparecem em MAIS DE UMA vaga dentro do próprio `vagasPorTurma` — uma
+    na turma fixa, outra numa reposição — enquanto `ALUNOS_REAIS` foi
+    deliberadamente deduplicado pra mostrar cada pessoa uma vez só, na
+    turma fixa; flatten ingênuo quebraria esse dedup). `salvarEdicaoAluno`/
+    `excluirAlunoDetalhe` (raiz) só escrevem na fonte de onde o aluno foi
+    aberto (`aluno.turmaAtualId` presente = veio de Turmas = vagasPorTurma;
+    ausente = veio de Alunos = alunosLista) — editar a mesma pessoa a
+    partir dos dois pontos de entrada não propaga de um lado pro outro.
+    Verificado ao vivo: editar/mover/excluir funcionam nos dois casos,
+    mas é um limite real a lembrar se isso virar confuso pro Diego no
+    celular (nesse caso, a unificação de verdade — resolvendo o caso
+    Marina/Elisabeth primeiro — vira um pedido separado, não algo pra
+    fazer de lambuja aqui).
+  - **Excluir** (`excluirAlunoDetalhe`) é diferente de "remover da
+    turma" (que já existia, só esvazia a vaga) — excluir tira a pessoa do
+    cadastro por completo. Sempre pede confirmação (`Modal` inline,
+    mesmo padrão/copy do resto do app: "essa ação não pode ser
+    desfeita"), nunca some só com um clique.
 
 ### Dashboard
 - KPIs compactos (coluna estreita, 2×2) — cliente reclamou 2× de ocuparem

@@ -296,6 +296,25 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
     teste nova (PointerEvents sintéticos precisam de um frame de espera
     entre eles, senão o React faz batching e mascara bugs de estado
     intermediário).
+23. **Pivô de volta pro app principal (2026-09-18)** — o Diego pausou a
+    retomada da Área do Aluno (pedida na sessão anterior) e pediu edição
+    de verdade no app do admin: "preciso ter as coisas editaveis tbm...
+    excluir... editar o pacote, colocar se esta em dia ou nao, mudar a
+    turma", com o motivo explícito de fundo "qro ter mais autonomia no
+    aplicativo, sem q eu tenho q ficar toda hora pedindo para o claude
+    fazer uma alteração... do app inteiro". `AlunoDetalhe` ganhou um modo
+    de edição completo (turma/pacote/pagamento num formulário só, atrás
+    de "Editar") mais exclusão com confirmação, reaproveitando
+    `moverAluno` já existente pra "mudar a turma" em vez de duplicar
+    lógica. Exigiu subir `alunosLista` (a lista da tela Alunos) pro
+    componente raiz, mesmo padrão de `vagasPorTurma`/`fornadas`/
+    `oficinas` — as duas fontes de dado continuam separadas de propósito
+    (motivo real, não preguiça: unificar esbarra num dedup existente que
+    quebraria, ver CLAUDE.md). Verificado ao vivo nos dois pontos de
+    entrada (Turmas e Alunos). Detalhe técnico completo em CLAUDE.md §5,
+    Alunos. Depois disso, o Diego pediu uma auditoria do app inteiro
+    (Turmas/Forno/Oficinas/Pagamentos/Solicitações) listando o que ainda
+    não é autoservido — ver achados abaixo, em "Auditoria de autonomia".
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills

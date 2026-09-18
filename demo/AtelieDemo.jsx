@@ -5,6 +5,7 @@ import {
   ChevronDown, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, Check, Clock,
   Snowflake, ShieldCheck, Flag, MessageCircle, GraduationCap as GradIcon,
   Truck, Package, School, Coffee, ArrowLeftRight, Phone, GripVertical,
+  Pencil, Trash2,
 } from "lucide-react";
 /* ------------------------------------------------------------------ */
 /*  Dados fictícios base                                               */
@@ -44,6 +45,16 @@ const TURMA_COR = { "ter-1830": "sienna", "qua-1630": "ardosia", "qui-1430": "mu
 /* Mesmas 4 turmas, chave por rótulo em vez de id — usado onde o dado só
    tem o texto (ex: cadastro de aluno), não o id de TURMAS_DIAS. */
 const TURMA_LABEL_COR = { "Terça 18:30": "sienna", "Quarta 16:30": "ardosia", "Quinta 14:30": "musgo", "Quinta 18:30": "cafe" };
+/* Ponte entre os dois formatos de turma que convivem no app (id, usado
+   por `vagasPorTurma`/`TURMAS_DIAS`, vs. rótulo em texto, usado só por
+   `alunosLista`/`TURMA_LABEL_COR`) — necessária a partir da edição de
+   aluno (2026-09-18: "mudar a turma" precisa funcionar pros dois formatos
+   de onde `AlunoDetalhe` pode ter sido aberto, ver `salvarEdicaoAluno`).
+   Chaves escritas à mão, não derivadas de `dia`/`hora` por concatenação —
+   mais seguro que bater exatamente com `TURMA_LABEL_COR` por acidente de
+   formatação de string. */
+const TURMA_ID_PARA_LABEL = { "ter-1830": "Terça 18:30", "qua-1630": "Quarta 16:30", "qui-1430": "Quinta 14:30", "qui-1830": "Quinta 18:30" };
+const TURMA_LABEL_PARA_ID = Object.fromEntries(Object.entries(TURMA_ID_PARA_LABEL).map(([id, label]) => [label, id]));
 
 function rgbCor(corKey, alpha) {
   const rgb = CORES_IDENTIDADE[corKey] || CORES_IDENTIDADE.sienna;
@@ -865,6 +876,24 @@ export default function AtelieDemo() {
      para a outra, porem depois de soltar vai aparecer uma mensagem,
      vaga provisória... ou vai ser trasferido fixo". */
   const [vagasPorTurma, setVagasPorTurma] = useState(VAGAS_POR_TURMA_INICIAL);
+  /* Lista de Alunos (tela "Alunos", busca/acordeão por turma) subiu de
+     dentro do componente `Alunos` pro componente raiz (2026-09-18) — igual
+     `vagasPorTurma` já tinha subido pra feature de mover aluno. Necessário
+     porque `AlunoDetalhe`, que agora edita/exclui de verdade (pedido do
+     Diego: "preciso ter as coisas editaveis tbm... excluir... editar o
+     pacote, colocar se esta em dia ou nao, mudar a turma"), é renderizado
+     aqui na raiz e precisa conseguir escrever nessa lista quando o aluno
+     foi aberto a partir de Alunos (não de Turmas) — sem o lift, a edição
+     só alcançaria o `useState` local de `Alunos`, que o componente raiz
+     não tem como tocar. **`alunosLista` e `vagasPorTurma` continuam sendo
+     DUAS fontes de dado separadas** (mesma pessoa pode ter uma linha em
+     cada, não unificadas — decisão já registrada quando `AlunoDetalhe` foi
+     criado, fora do escopo reabrir isso agora) — `salvarEdicaoAluno`/
+     `excluirAlunoDetalhe` abaixo escrevem na fonte certa conforme de onde
+     o aluno foi aberto (`aluno.turmaAtualId` presente = veio de Turmas =
+     vagasPorTurma; ausente = veio de Alunos = alunosLista), sem tentar
+     sincronizar as duas. */
+  const [alunosLista, setAlunosLista] = useState(ALUNOS_REAIS);
   const [alunoSelecionado, setAlunoSelecionado] = useState(null);
   function abrirAlunoDetalhe(aluno, origemTela) {
     setAlunoSelecionado({ ...aluno, origemTela });
@@ -878,6 +907,7 @@ export default function AtelieDemo() {
      provisório/fixo) que chega no mesmo resultado funcional do pedido.
      Registrado em CLAUDE.md pra não parecer decisão silenciosa. */
   function moverAluno(aluno, origemTurmaId, destinoTurmaId, tipo) {
+    let movidoCalculado = null;
     setVagasPorTurma((vpt) => {
       const origem = (vpt[origemTurmaId] || []).map((v) =>
         v.numero === aluno.numero ? { numero: v.numero, nome: null } : v
@@ -886,8 +916,27 @@ export default function AtelieDemo() {
       const novoNumero = Math.max(0, ...destino.map((v) => v.numero)) + 1;
       const turmaOrigemFinal = tipo === "provisorio" ? (aluno.turmaOrigemId || origemTurmaId) : destinoTurmaId;
       const movido = { ...aluno, numero: novoNumero, turmaOrigemId: turmaOrigemFinal, provisorio: tipo === "provisorio" };
+      movidoCalculado = movido;
       return { ...vpt, [origemTurmaId]: origem, [destinoTurmaId]: [...destino, movido] };
     });
+    /* Se a pessoa movida é quem está aberta em AlunoDetalhe agora (tela de
+       edição, ver `salvarEdicaoAluno`), atualiza `alunoSelecionado` junto
+       — sem isso, a tela continuaria mostrando o `numero`/`turmaAtualId`
+       antigos depois de "mudar a turma", e a PRÓXIMA edição (ex: pacote,
+       logo em seguida) tentaria escrever na vaga errada (a antiga, já
+       esvaziada). Fora do updater de `setVagasPorTurma` de propósito —
+       chamar outro `setState` de dentro do updater funcional de um
+       primeiro funciona, mas não é hábito seguro (o React pode invocar o
+       updater mais de uma vez); capturar o valor calculado numa variável e
+       aplicar depois, em sequência, evita essa categoria de problema.
+       Não afeta o arraste normal em Turmas — lá `alunoSelecionado` é
+       sempre `null` (não se arrasta e edita ao mesmo tempo), então essa
+       checagem é um no-op nesse caso. */
+    setAlunoSelecionado((sel) =>
+      (sel && sel.turmaAtualId === origemTurmaId && sel.numero === aluno.numero)
+        ? { ...sel, ...movidoCalculado, turmaAtualId: destinoTurmaId }
+        : sel
+    );
     const destinoInfo = turmaPorId(destinoTurmaId);
     notificar(
       tipo === "provisorio"
@@ -908,6 +957,64 @@ export default function AtelieDemo() {
       [turmaId]: (vpt[turmaId] || []).map((v) => (v.numero === aluno.numero ? { numero: v.numero, nome: null } : v)),
     }));
     notificar(`${aluno.nome} removido(a) da turma.`);
+  }
+  /* Edição de verdade em `AlunoDetalhe` (2026-09-18) — pedido do Diego,
+     voltando pro app principal depois de começar a Área do Aluno: "preciso
+     ter as coisas editaveis tbm... excluir... editar o pacote, colocar se
+     esta em dia ou nao, mudar a turma". Um `form` só (turma + pacote +
+     pagamento), salvos juntos — evita estados parciais estranhos (ex:
+     trocar a turma sem também poder corrigir o pacote na mesma ida).
+     `form = { turmaId, total, aula, pago }`; `pago` (booleano) é a entrada
+     editável, `status` continua sendo DERIVADO dele com a mesma regra já
+     documentada (CLAUDE.md §5: não pago tem prioridade sobre "ultima" —
+     não inventa uma 4ª regra, só expõe a mesma como campo editável). */
+  function salvarEdicaoAluno(aluno, form) {
+    const status = !form.pago ? "pendente" : (form.aula === form.total ? "ultima" : "confirmado");
+    const patchDados = { aula: form.aula, total: form.total, status };
+    if (aluno.turmaAtualId) {
+      if (form.turmaId !== aluno.turmaAtualId) {
+        /* Mudar a turma pelo formulário é a MESMA operação que o
+           arrastar-e-soltar já faz ("transferir fixo") — reaproveita
+           `moverAluno` (que já cuida de esvaziar a vaga de origem, achar
+           o próximo número livre no destino, e sincronizar
+           `alunoSelecionado`) em vez de duplicar essa lógica aqui. O
+           pacote/pagamento editados juntos já vão dentro do objeto —
+           `moverAluno` espalha `{...aluno}` na vaga nova, então o patch
+           viaja junto pro destino numa operação só. */
+        moverAluno({ ...aluno, ...patchDados }, aluno.turmaAtualId, form.turmaId, "fixo");
+      } else {
+        setVagasPorTurma((vpt) => ({
+          ...vpt,
+          [aluno.turmaAtualId]: (vpt[aluno.turmaAtualId] || []).map((v) =>
+            v.numero === aluno.numero ? { ...v, ...patchDados } : v
+          ),
+        }));
+        setAlunoSelecionado((sel) => (sel ? { ...sel, ...patchDados } : sel));
+      }
+    } else {
+      /* Veio da tela Alunos (`alunosLista`) — não tem vaga numerada, só um
+         rótulo de turma em texto; "mudar a turma" aqui é só trocar esse
+         rótulo, sem mexer em `vagasPorTurma` (as duas fontes continuam
+         separadas, ver comentário em `alunosLista` acima). */
+      const novoLabel = TURMA_ID_PARA_LABEL[form.turmaId] || aluno.turma;
+      setAlunosLista((as) => as.map((a) => (a.nome === aluno.nome ? { ...a, ...patchDados, turma: novoLabel } : a)));
+      setAlunoSelecionado((sel) => (sel ? { ...sel, ...patchDados, turma: novoLabel } : sel));
+    }
+    notificar(`${aluno.nome}: dados atualizados.`);
+  }
+  /* Excluir de verdade (não só "remover da turma", que deixa a vaga vazia
+     mas a pessoa continua existindo em `alunosLista` se também estiver lá)
+     — mesma ramificação por fonte de dado que `salvarEdicaoAluno`. Sempre
+     navega de volta pra tela de origem depois, a página de detalhe não
+     tem mais o que mostrar. */
+  function excluirAlunoDetalhe(aluno) {
+    if (aluno.turmaAtualId) removerAluno(aluno, aluno.turmaAtualId);
+    else {
+      setAlunosLista((as) => as.filter((a) => a.nome !== aluno.nome));
+      notificar(`${aluno.nome} excluído(a).`);
+    }
+    setAlunoSelecionado(null);
+    ir(aluno.origemTela === "alunos" ? "alunos" : "turmas");
   }
 
   return (
@@ -1038,11 +1145,13 @@ export default function AtelieDemo() {
               onRemoverAluno={removerAluno}
             />
           )}
-          {tela === "alunos" && <Alunos onAbrirAluno={abrirAlunoDetalhe} />}
+          {tela === "alunos" && <Alunos alunos={alunosLista} setAlunos={setAlunosLista} onAbrirAluno={abrirAlunoDetalhe} />}
           {tela === "alunoDetalhe" && alunoSelecionado && (
             <AlunoDetalhe
               aluno={alunoSelecionado}
               onVoltar={() => ir(alunoSelecionado.origemTela === "alunos" ? "alunos" : "turmas")}
+              onSalvarEdicao={salvarEdicaoAluno}
+              onExcluir={excluirAlunoDetalhe}
             />
           )}
           {tela === "oficinas" && <Oficinas oficinas={oficinas} onAbrir={(id) => { setOficinaAbertaId(id); ir("oficinaDetalhe"); }} />}
@@ -2704,13 +2813,47 @@ function LinhaAluno({ a, onClick }) {
    (isso ainda não existe de verdade em nenhuma das duas fontes, só o
    estado da semana atual) — mostra isso com uma legenda explícita em vez
    de fingir que é um histórico completo. */
-function AlunoDetalhe({ aluno, onVoltar }) {
+/* Editável de verdade (2026-09-18) — pedido do Diego, voltando pro app
+   principal: "preciso ter as coisas editaveis tbm, no sentido de excluir
+   ou nao aludo, editar o pacote, colocar se esta em dia ou nao, mudar a
+   turma". Um único formulário (turma + pacote + pagamento) por trás de um
+   botão "Editar" no card de pacote — `onSalvarEdicao`/`onExcluir` (raiz,
+   ver `salvarEdicaoAluno`/`excluirAlunoDetalhe`) sabem em qual das duas
+   fontes de dado escrever (vem de `aluno.turmaAtualId` estar presente ou
+   não), então este componente não precisa saber a diferença. */
+function AlunoDetalhe({ aluno, onVoltar, onSalvarEdicao, onExcluir }) {
   const turmaAtualInfo = aluno.turmaAtualId ? turmaPorId(aluno.turmaAtualId) : null;
   const turmaLabel = turmaAtualInfo ? `${turmaAtualInfo.dia.split("-")[0]} · ${turmaAtualInfo.hora}` : (aluno.turma || "—");
   const cor = aluno.turmaAtualId ? corTurma(aluno.turmaAtualId) : (TURMA_LABEL_COR[aluno.turma] || "sienna");
   const origemInfo = aluno.turmaOrigemId ? turmaPorId(aluno.turmaOrigemId) : null;
   const ehProvisorio = !!(aluno.provisorio && aluno.turmaOrigemId && aluno.turmaOrigemId !== aluno.turmaAtualId);
   const pct = aluno.total ? (aluno.aula / aluno.total) * 100 : 0;
+  const turmasFlat = TURMAS_DIAS.flatMap((d) => d.turmas);
+  const turmaFormAtual = aluno.turmaAtualId || TURMA_LABEL_PARA_ID[aluno.turma] || turmasFlat[0].id;
+
+  const [editando, setEditando] = useState(false);
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [turmaForm, setTurmaForm] = useState(turmaFormAtual);
+  const [totalForm, setTotalForm] = useState(aluno.total);
+  const [aulaForm, setAulaForm] = useState(aluno.aula);
+  const [pagoForm, setPagoForm] = useState(aluno.status !== "pendente");
+
+  function iniciarEdicao() {
+    setTurmaForm(turmaFormAtual);
+    setTotalForm(aluno.total);
+    setAulaForm(aluno.aula);
+    setPagoForm(aluno.status !== "pendente");
+    setEditando(true);
+  }
+  function confirmarEdicao() {
+    onSalvarEdicao(aluno, { turmaId: turmaForm, total: totalForm, aula: aulaForm, pago: pagoForm });
+    setEditando(false);
+  }
+  function mudarTotalForm(n) {
+    setTotalForm(n);
+    setAulaForm((a) => Math.min(a, n));
+  }
+
   return (
     <div>
       <button onClick={onVoltar} className="mb-4 flex items-center gap-1 text-sm font-medium text-[var(--ink-soft)] hover:text-[var(--ink)]"><ChevronLeft size={16} />Voltar</button>
@@ -2745,18 +2888,65 @@ function AlunoDetalhe({ aluno, onVoltar }) {
       </div>
 
       <div className={"relative mb-4 p-4 " + VIDRO_CARD}>
-        <h3 className="mb-3 text-sm font-semibold">Pacote e pagamento</h3>
-        <dl className="grid grid-cols-2 gap-y-3 text-sm">
-          <dt className="text-[var(--ink-soft)]">Aula atual</dt><dd className="text-right font-medium">{aluno.aula} de {aluno.total}</dd>
-          <dt className="text-[var(--ink-soft)]">Pagamento</dt>
-          <dd className="text-right">
-            {aluno.status === "pendente" ? <Badge tone="warning">Pendente</Badge> : aluno.status === "ultima" ? <Badge tone="danger">Renovar</Badge> : <Badge tone="success">Em dia</Badge>}
-          </dd>
-        </dl>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Pacote e pagamento</h3>
+          {!editando && (
+            <button onClick={iniciarEdicao} className="flex items-center gap-1 text-xs font-medium text-[var(--ink-soft)] hover:text-[var(--ink)]">
+              <Pencil size={13} /> Editar
+            </button>
+          )}
+        </div>
+
+        {!editando ? (
+          <dl className="grid grid-cols-2 gap-y-3 text-sm">
+            <dt className="text-[var(--ink-soft)]">Aula atual</dt><dd className="text-right font-medium">{aluno.aula} de {aluno.total}</dd>
+            <dt className="text-[var(--ink-soft)]">Pagamento</dt>
+            <dd className="text-right">
+              {aluno.status === "pendente" ? <Badge tone="warning">Pendente</Badge> : aluno.status === "ultima" ? <Badge tone="danger">Renovar</Badge> : <Badge tone="success">Em dia</Badge>}
+            </dd>
+          </dl>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Turma</label>
+              <select value={turmaForm} onChange={(e) => setTurmaForm(e.target.value)} className="w-full border border-[var(--line)] bg-transparent px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]">
+                {turmasFlat.map((t) => (
+                  <option key={t.id} value={t.id}>{t.dia.split("-")[0]} · {t.hora}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Pacote</label>
+              <div className="flex gap-2">
+                {[4, 8, 12].map((n) => (
+                  <button type="button" key={n} onClick={() => mudarTotalForm(n)} className={"flex-1 border px-3 py-2 text-sm font-medium " + (totalForm === n ? "border-[var(--ink)] bg-[var(--cream-soft)] text-[var(--ink)]" : "border-[var(--line)] text-[var(--ink-soft)]")}>{n} aulas</button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-end gap-4">
+              <div className="flex-1">
+                <label className="mb-1 block text-xs font-medium text-[var(--ink-soft)]">Aula atual</label>
+                <input
+                  type="number" min={0} max={totalForm} value={aulaForm}
+                  onChange={(e) => setAulaForm(Math.max(0, Math.min(totalForm, Number(e.target.value) || 0)))}
+                  className="w-full border border-[var(--line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--ink)]"
+                />
+              </div>
+              <div className="flex items-center gap-2 pb-2.5">
+                <Toggle checked={pagoForm} onChange={() => setPagoForm((p) => !p)} title="Pagamento em dia" />
+                <span className="text-sm">{pagoForm ? "Em dia" : "Pendente"}</span>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setEditando(false)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
+              <button onClick={confirmarEdicao} className={"flex-1 py-2.5 text-sm font-medium " + ACCENT_SOLIDO}>Salvar</button>
+            </div>
+          </div>
+        )}
       </div>
 
       {aluno.statusAula !== undefined && (
-        <div className={"relative p-4 " + VIDRO_CARD}>
+        <div className={"relative mb-4 p-4 " + VIDRO_CARD}>
           <h3 className="mb-1 text-sm font-semibold">Presença</h3>
           <p className="mb-3 text-xs text-[var(--ink-soft)]">Histórico de presença por data ainda não existe — mostrando só o estado da semana atual.</p>
           <div className="flex items-center gap-2 text-sm">
@@ -2765,6 +2955,21 @@ function AlunoDetalhe({ aluno, onVoltar }) {
             {aluno.presente && <span className="text-[var(--ink-soft)]"> · já marcado(a) como presente</span>}
           </div>
         </div>
+      )}
+
+      <button onClick={() => setConfirmandoExclusao(true)} className="flex w-full items-center justify-center gap-1.5 border border-rose-200 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50">
+        <Trash2 size={15} /> Excluir aluno
+      </button>
+
+      {confirmandoExclusao && (
+        <Modal onClose={() => setConfirmandoExclusao(false)}>
+          <h3 className="mb-1 text-base font-semibold">Excluir {aluno.nome}?</h3>
+          <p className="mb-4 text-sm text-[var(--ink-soft)]">Remove {aluno.nome} do cadastro por completo — a vaga volta a ficar disponível. Essa ação não pode ser desfeita.</p>
+          <div className="flex gap-2">
+            <button onClick={() => setConfirmandoExclusao(false)} className="flex-1 border border-[var(--line)] py-2.5 text-sm font-medium text-[var(--ink)]">Cancelar</button>
+            <button onClick={() => onExcluir(aluno)} className="flex-1 bg-rose-600 py-2.5 text-sm font-medium text-white hover:bg-rose-700">Excluir</button>
+          </div>
+        </Modal>
       )}
     </div>
   );
@@ -2780,8 +2985,7 @@ function AlunoDetalhe({ aluno, onVoltar }) {
    plana só dos resultados (faz mais sentido procurar um nome sem
    precisar saber de cabeça em qual turma a pessoa está). */
 const TURMAS_ORDEM_LABELS = Object.keys(TURMA_LABEL_COR);
-function Alunos({ onAbrirAluno }) {
-  const [alunos, setAlunos] = useState(ALUNOS_REAIS);
+function Alunos({ alunos, setAlunos, onAbrirAluno }) {
   const [modal, setModal] = useState(false);
   const [busca, setBusca] = useState("");
   const [turmaAberta, setTurmaAberta] = useState(null);
