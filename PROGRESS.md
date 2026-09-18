@@ -273,6 +273,29 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
     da caixa) como ponto de referência único pros dois estados (card
     normal e bola). Detalhe técnico completo em CLAUDE.md §5, item 12 da
     mesma saga.
+21. **Quinto round, mesmo dia** — a constante fixa do item 20 batia certo
+    no navegador embutido mas não no celular real do Diego (print: "olha
+    como o card fica muito para a esquerda" / "ele nao segue meu mouse,
+    fica fora"). Trocado por MEDIÇÃO real (`getBoundingClientRect` do
+    avatar dentro do fantasma, um novo `ghostAvatarRef`) em vez de uma
+    constante calculada à mão — não depende mais de nenhuma suposição
+    sobre tamanho/padding/borda que possa divergir do ambiente real.
+    Detalhe técnico completo em CLAUDE.md §5, item 13 da mesma saga.
+22. **Sexto round, mesmo dia** — arrastar até os SUB-PILLS de horário de
+    Quinta especificamente estava quebrado ("quando coloco a mira na
+    quinta, ai vou arrastar para baixo nos horarios, ele some"), por 3
+    bugs empilhados: z-index elevado no container inteiro dos pills (não
+    só no pill em destaque) cobrindo o fantasma; a pré-visualização do
+    dia sendo desligada no exato frame em que um sub-pill virava alvo,
+    desmontando os sub-pills; e um gap/margem entre os dois blocos de
+    pills sem zona de tolerância. Também: a faixa vermelha lateral (zona
+    de remover) passou a cobrir a tela inteira visualmente (antes parava
+    no meio), mantendo a área real de detecção só a partir de onde já
+    estava (não competir com as pills lá em cima). Detalhe técnico
+    completo em CLAUDE.md §5, item 14 da mesma saga — inclui uma lição de
+    teste nova (PointerEvents sintéticos precisam de um frame de espera
+    entre eles, senão o React faz batching e mascara bugs de estado
+    intermediário).
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills

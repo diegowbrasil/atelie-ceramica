@@ -1826,20 +1826,12 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
      de 2 passos de sempre (escolher turma → provisório/fixo); arrastar
      de verdade e soltar sobre um pill pula direto pro passo 2, com a
      turma já escolhida pelo pill onde soltou. */
-  const arrastoRef = useRef({ ativo: false, moveu: false, aluno: null, startX: 0, startY: 0, metadeAltura: 0 });
+  const arrastoRef = useRef({ ativo: false, moveu: false, aluno: null, startX: 0, startY: 0, centroX: 0, centroY: 0 });
   const ghostRef = useRef(null);
   const ghostInnerRef = useRef(null);
+  const ghostAvatarRef = useRef(null);
   const ghostNomeRef = useRef(null);
   const BOLA_TAMANHO = 44;
-  /* Posição horizontal fixa do CENTRO do avatar dentro do fantasma
-     (borda 1px + padding 0.75rem/12px + metade do avatar 36px/2=18px) —
-     usada tanto pra centralizar o recorte circular (`clip-path`) quanto
-     pra posicionar o fantasma no ponteiro (ver `moverArraste`). Fixa de
-     propósito (não medida) porque avatar/padding/borda nunca mudam de
-     tamanho — só a largura do fantasma INTEIRO varia (nome mais
-     longo/curto), e é exatamente essa variação que causava o "fica mais
-     de ladinho" (ver comentário em `moverArraste`). */
-  const CENTRO_AVATAR_X = 1 + 12 + 18;
   /* `pillsRef` guarda o nó de cada pill-alvo (chave = id da turma), usado
      só na animação de "afunilar" ao soltar (`animarAfunilarEFechar`) pra
      saber o retângulo final. A detecção de alvo em si, durante o arraste,
@@ -1854,7 +1846,7 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
     arrastoRef.current = {
       ativo: true, moveu: false, aluno: v,
       startX: e.clientX, startY: e.clientY,
-      metadeLargura: 0, metadeAltura: 0,
+      centroX: 0, centroY: 0,
     };
     /* Escreve o nome direto no DOM (não só em `arrastoRef`) antes de
        qualquer medição — achado do Diego com print marcando o mouse vs.
@@ -1877,30 +1869,34 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
     if (!a.moveu && Math.hypot(dx, dy) > LIMIAR_ARRASTE) {
       a.moveu = true;
       if (ghostRef.current) ghostRef.current.style.display = "block";
-      /* O fantasma NÃO herda mais a largura da linha inteira (que inclui
-         espaço pro handle/anel/toggle que ele nem desenha) — fica do
-         tamanho natural do próprio conteúdo (avatar + nome). Só mede a
-         ALTURA (metade, pra centralizar verticalmente) — a horizontal
-         usa `CENTRO_AVATAR_X`, uma constante fixa, não uma medida do
-         fantasma inteiro. Isso É o segundo achado do Diego, com print
-         marcando mouse vs. card: "olha a bolinha... ela fica mais de
-         ladinho" — eu tinha corrigido pra centralizar o CENTRO DA CAIXA
-         no ponteiro, mas a "bola" visível (o recorte circular, ver
-         `clipPath` abaixo) fica em cima do AVATAR, que mora perto da
-         borda ESQUERDA da caixa, não no centro dela — quanto mais longo
-         o nome (caixa mais larga), mais a bola visualmente se afastava
-         do ponteiro. Ancorar no avatar (fixo, sempre no mesmo lugar
-         relativo à caixa) resolve pros dois estados — card inteiro E
-         bola — com o MESMO ponto de referência, sem pulo entre eles. */
-      if (ghostInnerRef.current) {
-        const r = ghostInnerRef.current.getBoundingClientRect();
-        a.metadeAltura = r.height / 2;
+      /* Centro do avatar MEDIDO de verdade (getBoundingClientRect), não
+         mais uma constante calculada à mão (border+padding+raio). Achado
+         no celular real do Diego, com print marcando a bolinha azul (o
+         dedo) bem longe do card: a constante fixa (`CENTRO_AVATAR_X =
+         1+12+18`) supunha valores exatos de borda/padding/tamanho que
+         claramente não batiam com o que renderiza de verdade no
+         dispositivo dele — qualquer diferença de fonte/zoom/rounding e a
+         "matemática" descola do avatar real. Medir os dois retângulos
+         (avatar dentro do fantasma) elimina a suposição inteira: não
+         importa o que está realmente desenhado, o centro medido é
+         sempre onde o avatar de fato está. Medido uma vez só, no
+         instante em que o limiar de arraste é cruzado (já depois do
+         `textContent` síncrono em `iniciarArraste`, então o nome — que
+         não afeta a posição do avatar, mas garante que o layout já
+         assentou — está correto) — `clip-path` não muda dimensões reais
+         depois disso, então o valor medido continua válido pro resto do
+         gesto, nos dois estados (card inteiro e bola). */
+      if (ghostInnerRef.current && ghostAvatarRef.current) {
+        const rInner = ghostInnerRef.current.getBoundingClientRect();
+        const rAvatar = ghostAvatarRef.current.getBoundingClientRect();
+        a.centroX = (rAvatar.left - rInner.left) + rAvatar.width / 2;
+        a.centroY = (rAvatar.top - rInner.top) + rAvatar.height / 2;
       }
       setArrastandoAtivo(true);
     }
     if (!a.moveu) return;
     if (ghostRef.current) {
-      ghostRef.current.style.transform = `translate(${e.clientX - CENTRO_AVATAR_X}px, ${e.clientY - a.metadeAltura}px)`;
+      ghostRef.current.style.transform = `translate(${e.clientX - a.centroX}px, ${e.clientY - a.centroY}px)`;
     }
     /* Alvo sob o ponteiro via `document.elementFromPoint` em vez de
        comparar retângulos manuais contra `pillsRef` — acha o que está
@@ -1929,11 +1925,41 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
     /* Pairar sobre o pill de um DIA com mais de uma turma (só Quinta hoje)
        não resolve um alvo direto — só troca a pré-visualização pra revelar
        os sub-pills de horário, que aí sim viram alvos de verdade assim que
-       aparecem. Só entra em preview se o ponteiro não achou um alvo direto
-       (evita ficar trocando a pré-visualização enquanto já está em cima de
-       um sub-pill de outro dia, por exemplo). */
-    const diaPill = !alvo ? elementoSobPonteiro?.closest("[data-alvo-dia]") : null;
-    const diaPreview = diaPill ? diaPill.getAttribute("data-alvo-dia") : null;
+       aparecem. **Bug real, achado do Diego**: "quando coloco a mira na
+       quinta, ai vou arrastar para baixo nos horarios, ele some" — a
+       versão anterior só mantinha o preview enquanto `!alvo` (sem alvo
+       direto), então no exato frame em que o ponteiro desce o suficiente
+       pra ACHAR um sub-pill de horário como alvo, essa mesma condição
+       zerava `diaPreviewArraste` — o que desmonta os sub-pills do DOM
+       (`diaExibido` volta a ser a turma ativa, que não é multi),
+       incluindo o sub-pill que tinha acabado de virar alvo. No próximo
+       `elementFromPoint` ele já não existe mais ali, o alvo se perde, e
+       visualmente os horários "somem". Fix: se o alvo atual já pertence a
+       um dia multi-turma, o preview desse dia continua ativo — os
+       sub-pills nunca desmontam enquanto um deles for o alvo. */
+    /* Segundo bug, achado no mesmo teste: mesmo com o fix acima, o dedo
+       real passa por um instante em que não está nem sobre o pill "Qui"
+       nem sobre nenhum sub-pill (o gap entre os dois blocos, ou a borda
+       entre dois sub-pills) — nesse frame `alvo` E `diaPill` ficam null
+       os dois, resetando o preview de qualquer forma, ANTES do dedo
+       "aterrissar" no sub-pill de destino. `data-zona-dias` (wrapper
+       `display:contents` ao redor dos dois blocos, ver JSX acima) dá uma
+       terceira opção: dentro dessa zona mas fora de qualquer pill
+       específico, mantém o preview ATUAL em vez de zerar — só reseta de
+       verdade quando o ponteiro sai da zona inteira (foi pra outro lugar
+       da tela de propósito, não só migrando entre pills vizinhos). */
+    let diaPreview = null;
+    if (alvo) {
+      const diaDoAlvo = TURMAS_DIAS.find((d) => d.turmas.some((t) => t.id === alvo));
+      if (diaDoAlvo && diaDoAlvo.turmas.length > 1) diaPreview = diaDoAlvo.id;
+    } else {
+      const diaPill = elementoSobPonteiro?.closest("[data-alvo-dia]");
+      if (diaPill) {
+        diaPreview = diaPill.getAttribute("data-alvo-dia");
+      } else if (elementoSobPonteiro?.closest("[data-zona-dias]")) {
+        diaPreview = diaPreviewArraste;
+      }
+    }
     setDiaPreviewArraste((atual) => (atual === diaPreview ? atual : diaPreview));
     /* Faixas laterais (remover) — mesma técnica; elas têm prioridade
        visual sobre qualquer pill por ficarem na borda da tela, mas como
@@ -1954,8 +1980,9 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
        frame da transição). **Solução final**: `clip-path: circle(...)`
        — recorta visualmente o fantasma até uma janela circular DE
        VERDADE (`circle(raio at X Y)`, não `inset()`+`round` fingindo)
-       centrada no avatar (`CENTRO_AVATAR_X`, a mesma constante usada pra
-       posicionar o fantasma — ver `moverArraste`), sem NUNCA mudar a
+       centrada no avatar (`a.centroX/centroY`, medido de verdade — ver
+       comentário sobre isso mais acima em `moverArraste` — o mesmo
+       ponto usado pra posicionar o fantasma), sem NUNCA mudar a
        largura/padding real da caixa (só pintura/composição, não layout).
        **Corrigido depois de testar**: a primeira versão usava
        `inset(0 calc(100% - 44px) 0 0 round 9999px)` — isso só limita a
@@ -1975,8 +2002,8 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
     const emAlvo = !!(alvo || lateral);
     if (ghostInnerRef.current) {
       ghostInnerRef.current.style.clipPath = emAlvo
-        ? `circle(${BOLA_TAMANHO / 2}px at ${CENTRO_AVATAR_X}px 50%)`
-        : `circle(300px at ${CENTRO_AVATAR_X}px 50%)`;
+        ? `circle(${BOLA_TAMANHO / 2}px at ${a.centroX}px ${a.centroY}px)`
+        : `circle(300px at ${a.centroX}px ${a.centroY}px)`;
     }
     if (ghostNomeRef.current) {
       ghostNomeRef.current.style.opacity = emAlvo ? "0" : "1";
@@ -2066,7 +2093,7 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
       if (ghostRef.current) ghostRef.current.style.display = "none";
       setModalMover(a.aluno);
     }
-    arrastoRef.current = { ativo: false, moveu: false, aluno: null, startX: 0, startY: 0, metadeLargura: 0, metadeAltura: 0 };
+    arrastoRef.current = { ativo: false, moveu: false, aluno: null, startX: 0, startY: 0, centroX: 0, centroY: 0 };
     setArrastandoAtivo(false);
     setDestinoArraste(null);
     setDiaPreviewArraste(null);
@@ -2160,8 +2187,33 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
          `ghostRef` abaixo) — pedido do Diego: "quando eu arrastar o card
          da pessoa para uma turma, a turma precisa estar por cima pra eu
          conseguir visualizar" (o fantasma translúcido tapava o pill e o
-         destaque dele quando o dedo passava bem em cima). */}
-      <div className={"relative mb-3 flex w-full gap-1 min-[380px]:gap-1.5" + (arrastandoAtivo ? " z-[60]" : "")}>
+         destaque dele quando o dedo passava bem em cima). **Correção
+         (2026-09-18)**: o `z-[60]` tinha ficado no CONTAINER inteiro (todos
+         os pills do dia), não só no pill em destaque — achado do Diego:
+         "para arrastar ainda os cards para o horario de quinta feira ele
+         nao esta funcionando... quando coloco a mira na quinta, ai vou
+         arrastar para baixo nos horarios, ele some". Os sub-pills de
+         horário (mais largos/altos que os de dia) têm o mesmo container
+         elevado logo abaixo — o fantasma ficava coberto assim que o dedo
+         descia até ESSA FAIXA INTEIRA, não só quando estava de fato em
+         cima de um pill específico. Movido pro pill individual (ver
+         `emArraste` abaixo, dentro do `.map`) nos dois blocos — só quem
+         está realmente em destaque vence o fantasma no empilhamento. */}
+      {/* `data-zona-dias` envolve os pills de DIA e os sub-pills de horário
+         juntos — usado em `moverArraste` como zona de "tolerância" (ver
+         comentário lá sobre o bug de sumiço dos horários). **Não pode ser
+         `display:contents`** (primeira tentativa, corrigida no mesmo
+         teste): um elemento `contents` não tem caixa própria, então o GAP
+         de margem entre os pills de dia e os sub-pills (`mb-3`/`mb-5`) não
+         pertence a ele — `elementFromPoint` naquele pixel vazio "atravessa"
+         pro AVÔ (o container raiz da página inteira, não um filho da
+         zona), e `closest("[data-zona-dias]")` nunca encontrava a zona
+         justo na transição entre os dois blocos, o ponto exato onde a
+         tolerância mais importa. `<div>` normal (bloco, sem estilo) tem
+         uma caixa de verdade cobrindo a extensão inteira dos filhos —
+         qualquer ponto no gap agora resolve pro PRÓPRIO wrapper. */}
+      <div data-zona-dias>
+      <div className="relative mb-3 flex w-full gap-1 min-[380px]:gap-1.5">
         {TURMAS_DIAS.map((d) => {
           const ativo = diaAtivo === d.id;
           const multiTurma = d.turmas.length > 1;
@@ -2189,7 +2241,7 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
               data-alvo-dia={multiTurma ? d.id : undefined}
               onClick={() => selecionarDia(d)}
               disabled={!d.disponivel}
-              className={"min-w-0 flex-1 rounded-full px-1.5 py-1.5 text-center text-xs font-medium transition-transform " + (ativo ? ACCENT_SOLIDO : d.disponivel ? VIDRO_PILL : VIDRO_PILL_NEUTRO) + (emArraste ? " relative z-10 origin-center scale-125 ring-2 ring-white" : "")}
+              className={"min-w-0 flex-1 rounded-full px-1.5 py-1.5 text-center text-xs font-medium transition-transform " + (ativo ? ACCENT_SOLIDO : d.disponivel ? VIDRO_PILL : VIDRO_PILL_NEUTRO) + (emArraste ? " relative z-[60] origin-center scale-125 ring-2 ring-white" : "")}
               style={
                 ativo
                   ? undefined
@@ -2215,7 +2267,7 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
         const diaExibido = (arrastandoAtivo && diaPreviewArraste) ? (TURMAS_DIAS.find((d) => d.id === diaPreviewArraste) || diaInfo) : diaInfo;
         if (diaExibido.turmas.length <= 1) return <div className="mb-5" />;
         return (
-          <div className={"relative mb-5 flex gap-2" + (arrastandoAtivo ? " z-[60]" : "")}>
+          <div className="relative mb-5 flex gap-2">
             {diaExibido.turmas.map((t) => {
               const corPill = corTurma(t.id);
               const ativa = turmaAtiva === t.id && diaExibido === diaInfo;
@@ -2226,7 +2278,7 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
                   ref={(no) => { pillsRef.current[t.id] = no; }}
                   data-alvo-turma={t.id}
                   onClick={() => setTurmaAtiva(t.id)}
-                  className={"rounded-full px-3 py-1.5 text-xs font-medium transition-transform " + (ativa ? ACCENT_SOLIDO : VIDRO_PILL) + (emArraste ? " relative z-10 origin-center scale-125 ring-2 ring-white" : "")}
+                  className={"rounded-full px-3 py-1.5 text-xs font-medium transition-transform " + (ativa ? ACCENT_SOLIDO : VIDRO_PILL) + (emArraste ? " relative z-[60] origin-center scale-125 ring-2 ring-white" : "")}
                   style={ativa ? undefined : estiloVidroTingido(corPill, emArraste ? 1 : 0.45, emArraste ? 0.85 : 0.22)}
                 >
                   {t.hora}
@@ -2236,6 +2288,7 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
           </div>
         );
       })()}
+      </div>
       <div className="[&>*]:min-w-0 grid gap-5 lg:grid-cols-[1fr_300px]">
         <div className="w-full min-w-0">
           <div className={"relative mb-4 flex flex-wrap items-center justify-between gap-2 px-4 py-3 " + VIDRO_CARD}>
@@ -2415,7 +2468,7 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
             transformOrigin: "center",
             borderRadius: "1rem",
             padding: "0.75rem",
-            clipPath: `circle(300px at ${CENTRO_AVATAR_X}px 50%)`,
+            clipPath: "circle(300px at 50% 50%)",
           }}
         >
           {/* Avatar/nome ficam SEMPRE montados (não condicionados a
@@ -2429,7 +2482,12 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
              (nome do aluno) que só aparece de verdade quando o `<div>` de
              fora vira visível (`display:block`), que já acontece depois
              de `iniciarArraste` ter preenchido `arrastoRef.current`. */}
-          <Avatar nome={arrastoRef.current.aluno?.nome || ""} size={36} />
+          {/* `ghostAvatarRef` num wrapper (não no `Avatar` em si, que não
+             encaminha ref) — é o que `moverArraste` mede de verdade pra
+             achar `a.centroX/centroY`, ver comentário lá. */}
+          <span ref={ghostAvatarRef} className="inline-flex shrink-0">
+            <Avatar nome={arrastoRef.current.aluno?.nome || ""} size={36} />
+          </span>
           <span ref={ghostNomeRef} className="truncate text-sm font-medium" style={{ transition: "opacity 100ms ease-out" }}>{arrastoRef.current.aluno?.nome || ""}</span>
         </div>
       </div>
@@ -2448,19 +2506,29 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
          de jeito nenhum, não tentar vencer no z-index. */}
       {arrastandoAtivo && (
         <>
-          {/* Zona de hit-test (`data-alvo-lateral`, largura fixa =
-             `FAIXA_LATERAL_PX`) separada do visual (gradiente dentro dela,
-             que pode ficar mais fino/apagado sem encolher a área real que
-             `elementFromPoint` enxerga) — antes a largura VISÍVEL (12px em
-             repouso) também era a área de detecção, exigindo mira quase
-             perfeita na borda. `pointer-events-auto` (não mais `-none`) pra
-             `elementFromPoint` conseguir achar esse elemento. */}
-          <div data-alvo-lateral="esquerda" className="fixed left-0 top-64 z-40 bottom-0" style={{ width: FAIXA_LATERAL_PX }}>
-            <div className={"pointer-events-none h-full transition-all " + (lateralArraste === "esquerda" ? "w-16 bg-gradient-to-r from-rose-500/70 to-transparent" : "w-3 bg-gradient-to-r from-rose-500/25 to-transparent")} />
-          </div>
-          <div data-alvo-lateral="direita" className="fixed right-0 top-64 z-40 bottom-0" style={{ width: FAIXA_LATERAL_PX }}>
-            <div className={"pointer-events-none ml-auto h-full transition-all " + (lateralArraste === "direita" ? "w-16 bg-gradient-to-l from-rose-500/70 to-transparent" : "w-3 bg-gradient-to-l from-rose-500/25 to-transparent")} />
-          </div>
+          {/* Visual (gradiente) cobre a tela INTEIRA, top-0 a bottom-0 —
+             pedido do Diego, com print marcando com seta até onde ele
+             queria que subisse: "qro q esse efeito suba ate encima" (a
+             faixa vermelha parava no meio da tela, só a partir de onde a
+             zona de detecção começava, e ele queria o efeito visível
+             cobrindo também atrás do cabeçalho/abas de dia). Elemento
+             PRÓPRIO agora, não mais filho da zona de detecção — as duas
+             coisas têm alturas diferentes de propósito (ver comentário
+             logo abaixo), então não dá mais pra uma só `<div>` cobrir as
+             duas. `pointer-events-none`: é só decoração, nunca deve
+             interceptar o `elementFromPoint` do arraste. */}
+          <div className={"pointer-events-none fixed left-0 top-0 z-40 bottom-0 transition-all " + (lateralArraste === "esquerda" ? "w-16 bg-gradient-to-r from-rose-500/70 to-transparent" : "w-3 bg-gradient-to-r from-rose-500/25 to-transparent")} />
+          <div className={"pointer-events-none fixed right-0 top-0 z-40 bottom-0 transition-all " + (lateralArraste === "direita" ? "w-16 bg-gradient-to-l from-rose-500/70 to-transparent" : "w-3 bg-gradient-to-l from-rose-500/25 to-transparent")} />
+          {/* Zona de hit-test real (`data-alvo-lateral`, largura fixa =
+             `FAIXA_LATERAL_PX`), sem nenhum visual próprio agora — segue
+             começando em `top-64`, não `top-0`, de propósito: nunca
+             ocupar o mesmo espaço que as pills de dia/horário lá em cima,
+             pra não precisar arbitrar `elementFromPoint` contra elas por
+             z-index (ver comentário histórico abaixo). Subir isso também
+             pra `top-0` reabriria exatamente esse problema — só o visual
+             precisava subir, a área de detecção não. */}
+          <div data-alvo-lateral="esquerda" className="fixed left-0 top-64 z-40 bottom-0" style={{ width: FAIXA_LATERAL_PX }} />
+          <div data-alvo-lateral="direita" className="fixed right-0 top-64 z-40 bottom-0" style={{ width: FAIXA_LATERAL_PX }} />
           {lateralArraste && (
             <div className={"pointer-events-none fixed top-1/2 z-40 -translate-y-1/2 rounded-full bg-rose-600 p-2.5 text-white shadow-lg " + (lateralArraste === "esquerda" ? "left-2" : "right-2")}>
               <X size={18} />

@@ -547,6 +547,92 @@ reagindo ao resultado ao vivo:
        pulo entre "card normal" e "modo bola", e sem depender do
        tamanho do nome de cada aluno.
 
+13. **Quinto round, ainda 2026-09-18 — o mesmo bug do item 12 reapareceu no
+    CELULAR REAL do Diego**, mesmo com `CENTRO_AVATAR_X` verificado por
+    geometria computada no navegador embutido. Print com uma bolinha azul
+    (indicador de toque) claramente fora do card: "porem qro q o card q eu
+    seguro esteja centralizado com o mouose, estou segurando na boliza
+    azul, olha como o card fica muito para a esquerda" — e de novo, já no
+    modo bola: "pq na hora q ele encolhe, olhe onde ta o ponto azul q seria
+    o mouse e onde o card esta, ele nao segue meu mouse, fica fora". A
+    constante fixa (`CENTRO_AVATAR_X = borda 1px + padding 12px + metade do
+    avatar 18px = 31px`) supunha valores exatos de borda/padding/tamanho
+    que bateram certinho no navegador embutido mas, por alguma diferença
+    de ambiente real (fonte carregada, rounding, o iframe do artifact),
+    não batiam no celular dele — qualquer suposição "calculada à mão" é
+    só isso, uma suposição. **Fix**: parar de supor e MEDIR de verdade.
+    Novo `ghostAvatarRef` (wrapper `<span>` em volta do `<Avatar>` dentro
+    do fantasma, já que `Avatar` não encaminha ref) — no instante em que o
+    limiar de arraste é cruzado, `moverArraste` mede
+    `ghostAvatarRef.getBoundingClientRect()` relativo a
+    `ghostInnerRef.getBoundingClientRect()` e guarda o centro real
+    (`a.centroX`/`a.centroY`) em vez de usar a constante. Não importa mais
+    o que está de fato renderizado (fonte, zoom, o que for) — o valor
+    medido reflete a realidade, não uma suposição. `CENTRO_AVATAR_X` foi
+    removida do código.
+14. **Sexto round, mesmo dia — dois bugs nos SUB-PILLS de horário de
+    Quinta especificamente** (os pills de DIA já funcionavam bem): "porem
+    para arrastar ainda os cards para o horario de quinta feira ele nao
+    esta funcionando, para os dias ele acerta agora nos horarios nao,
+    quando coloco a mira na quinta, ai vou arrastar para baixo nos
+    horarios, ele some".
+    1. **Z-index no container inteiro, não só no pill em destaque**: tanto
+       o bloco de pills de DIA quanto o bloco de sub-pills de HORÁRIO
+       ganhavam `z-[60]` (maior que o `z-50` do fantasma) no `<div>` PAI
+       inteiro durante um arraste — não só no pill individual em destaque.
+       Pros pills de dia (fileira estreita no topo) isso quase não se
+       notava; os sub-pills de horário são mais largos/altos e ficam bem
+       no caminho de quem desce o dedo até eles — o fantasma ficava
+       coberto (some) assim que a MÃO entrava nessa faixa inteira, não só
+       quando estava de fato em cima de um pill específico. **Fix**:
+       `z-[60]` saiu dos dois containers e foi pro `emArraste` de cada
+       pill individual (dia e horário) — só quem está realmente em
+       destaque vence o fantasma no empilhamento, o resto da faixa deixa
+       o fantasma visível por cima.
+    2. **Bug mais fundo, achado ao investigar o primeiro**: mesmo depois
+       do fix acima, o alvo ainda se perdia. Causa raiz: `diaPreviewArraste`
+       (o dia cujos sub-pills aparecem) só ficava ativo enquanto `!alvo`
+       — no EXATO frame em que o ponteiro desce o suficiente pra achar um
+       SUB-PILL como alvo, essa mesma condição zerava o preview, o que
+       desmonta os sub-pills do DOM (`diaExibido` volta a ser a turma
+       ativa, sem sub-pills) — incluindo o sub-pill que tinha acabado de
+       virar alvo. No próximo `elementFromPoint` ele já não existe mais
+       ali, o alvo se perde, os horários "somem" de verdade (não é só
+       cobertos, é desmontados). **Fix**: se o alvo atual já pertence a um
+       dia multi-turma, o preview desse dia passa a continuar ativo — os
+       sub-pills nunca desmontam enquanto um deles for o alvo.
+    3. **Terceiro bug, achado testando o fix acima**: o dedo real passa
+       por um instante em que não está nem sobre o pill "Qui" nem sobre
+       nenhum sub-pill — o GAP/margem entre os dois blocos. Nesse frame,
+       nem `alvo` nem `diaPill` batem, resetando o preview de qualquer
+       jeito antes do dedo "aterrissar". Precisou de uma zona de
+       tolerância: `data-zona-dias`, um `<div>` (⚠️ **não pode ser
+       `display:contents`** — tentativa inicial, corrigida no mesmo teste:
+       um elemento `contents` não tem caixa própria, então o `elementFromPoint`
+       num pixel de margem "atravessa" pro AVÔ, não pro wrapper, e
+       `closest("[data-zona-dias]")` nunca batia justo na transição entre
+       os dois blocos, o ponto onde a tolerância mais importa — um `<div>`
+       normal tem uma caixa de verdade cobrindo a extensão dos filhos,
+       incluindo os gaps) ao redor dos dois blocos de pills. Dentro dela
+       mas fora de qualquer pill específico, `moverArraste` mantém o
+       preview ATUAL em vez de zerar — só reseta de verdade quando o
+       ponteiro sai da zona inteira. Verificado com PointerEvents
+       sintéticos com waits reais entre cada passo (rajada síncrona sem
+       wait mascarava esses dois bugs — o React só reflete o novo DOM
+       depois de um frame real) + um `left_click_drag` de ponta a ponta:
+       modal abriu certo em "Mover Isadora / Mover para Quinta · 14:30 às
+       16:30".
+    4. **Pedido separado, mesma leva**: "qro q esse efeito suba ate
+       encima", com seta no print mostrando a faixa vermelha lateral
+       (zona de remover) parando no meio da tela em vez de cobrir até
+       atrás do cabeçalho. Só o VISUAL (gradiente) precisava subir — a
+       ZONA DE DETECÇÃO real continua começando em `top-64` de propósito
+       (não disputar `elementFromPoint` contra as pills lá em cima, ver
+       item 9). Virou dois elementos separados: o gradiente (`top-0` a
+       `bottom-0`, `pointer-events-none`, decoração pura) e o
+       `data-alvo-lateral` (continua `top-64`, sem estilo visual próprio
+       agora — antes o gradiente era filho dele).
+
 **Não é arrastar-e-soltar nativo do navegador** (`draggable`/`ondragstart`)
 em lugar nenhum — é Pointer Events com toda a mecânica de detecção de
 colisão, fantasma e animação escrita à mão. Se pedirem pra estender esse
@@ -555,7 +641,7 @@ código de `Turmas` (`iniciarArraste`/`moverArraste`/`soltarArraste`/
 `animarAfunilarEFechar`/`animarSaidaLateral`) é a referência a copiar, não
 reinventar do zero. **Lição pra próxima vez**: testes com mouse simulado
 neste navegador embutido não pegam tudo — os bugs reais desta saga (itens
-9-12) só apareceram no toque real do celular, num timing que o mouse
+9-14) só apareceram no toque real do celular, num timing que o mouse
 simulado não reproduz sozinho, ou num detalhe geométrico (oval vs.
 círculo, centro-da-caixa vs. centro-do-avatar) que só fica óbvio olhando
 o resultado de perto/no zoom de um print. Vale pedir confirmação no
@@ -563,8 +649,22 @@ celular antes de dar uma feature de gesto como concluída, e **quando
 "centralizar em cima do ponteiro" for pedido de novo**: definir com
 clareza qual é o PONTO DE REFERÊNCIA real (centro da caixa? centro de um
 elemento específico dentro dela?) antes de escrever a fórmula, não só
-"metade da largura/altura" no automático. **Padrão que se repetiu 2x
-nesta saga** (itens 10 e 11): cuidado geral com refs (`useRef`) que só
+"metade da largura/altura" no automático. **Item 13 vai além disso**:
+mesmo uma fórmula com o ponto de referência certo (`CENTRO_AVATAR_X`,
+item 12) pode divergir do ambiente real por causa de suposições de
+tamanho/padding/borda "calculadas à mão" — quando der pra medir o
+elemento de verdade (`getBoundingClientRect`) em vez de supor um número,
+medir é sempre mais robusto, principalmente pra algo que só quebra num
+ambiente que não dá pra testar diretamente (o celular do Diego, o iframe
+do artifact). **Item 14.3 é outra lição de teste**: PointerEvents
+sintéticos disparados em rajada síncrona (sem esperar um frame entre
+eles) fazem o React fazer batching de vários `setState` juntos — o DOM só
+reflete o ÚLTIMO estado, mascarando bugs que só existem NUM ESTADO
+INTERMEDIÁRIO (como os sub-pills desmontando e remontando). Testar esse
+tipo de sequência precisa de um `requestAnimationFrame` (ou wait real)
+entre cada evento simulado, não só despachar tudo de uma vez. **Padrão
+que se repetiu 2x nesta saga** (itens 10 e 11): cuidado geral com refs
+(`useRef`) que só
 existem no DOM condicionadas a OUTRA ref, ou cujo CONTEÚDO/tamanho é lido
 antes do React ter re-renderizado com o valor atual — a condição/leitura
 não reage a mudanças da ref, só a `state`, então a janela entre "a ref
