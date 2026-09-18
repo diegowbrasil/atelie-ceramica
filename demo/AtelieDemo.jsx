@@ -1826,7 +1826,7 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
      de 2 passos de sempre (escolher turma → provisório/fixo); arrastar
      de verdade e soltar sobre um pill pula direto pro passo 2, com a
      turma já escolhida pelo pill onde soltou. */
-  const arrastoRef = useRef({ ativo: false, moveu: false, aluno: null, startX: 0, startY: 0, offsetX: 0, offsetY: 0, largura: 0 });
+  const arrastoRef = useRef({ ativo: false, moveu: false, aluno: null, startX: 0, startY: 0, metadeLargura: 0, metadeAltura: 0 });
   const ghostRef = useRef(null);
   const ghostInnerRef = useRef(null);
   const ghostNomeRef = useRef(null);
@@ -1842,14 +1842,23 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
   const LIMIAR_ARRASTE = 8;
 
   function iniciarArraste(e, v) {
-    const linha = e.currentTarget.closest("[data-linha-aluno]");
-    const rect = linha.getBoundingClientRect();
     arrastoRef.current = {
       ativo: true, moveu: false, aluno: v,
       startX: e.clientX, startY: e.clientY,
-      offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top,
-      largura: rect.width,
+      metadeLargura: 0, metadeAltura: 0,
     };
+    /* Escreve o nome direto no DOM (não só em `arrastoRef`) antes de
+       qualquer medição — achado do Diego com print marcando o mouse vs.
+       o retângulo fora do centro: a MEDIÇÃO da largura do fantasma (ver
+       `moverArraste`) rodava antes do React re-renderizar o `<span>` com
+       o nome do aluno ATUAL (refs não disparam re-render sozinhas — o
+       texto só atualizava depois, no mesmo timing do bug já corrigido
+       do `ghostNomeRef`), então a largura medida vinha de um nome
+       ANTIGO (de um arraste anterior, ou vazio) — diferença real de
+       tamanho, não só um detalhe. Escrever aqui, via `textContent`
+       direto, garante que o DOM já está certo antes de `moverArraste`
+       medir, sem depender do ciclo de render do React. */
+    if (ghostNomeRef.current) ghostNomeRef.current.textContent = v.nome;
     e.currentTarget.setPointerCapture(e.pointerId);
   }
   function moverArraste(e) {
@@ -1859,12 +1868,30 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
     if (!a.moveu && Math.hypot(dx, dy) > LIMIAR_ARRASTE) {
       a.moveu = true;
       if (ghostRef.current) ghostRef.current.style.display = "block";
-      if (ghostInnerRef.current) ghostInnerRef.current.style.width = a.largura + "px";
+      /* O fantasma NÃO herda mais a largura da linha inteira (que inclui
+         espaço pro handle/anel/toggle que ele nem desenha) — fica do
+         tamanho natural do próprio conteúdo (avatar + nome). Por isso o
+         deslocamento do ponteiro também precisa ser medido no fantasma
+         de verdade (metade da LARGURA/ALTURA DELE), não mais na linha de
+         origem — achado do Diego com print marcando onde o mouse estava
+         vs. onde o retângulo aparecia: "o retangulo nao fica centralizado
+         onde eu pego". Medido uma vez só aqui (não a cada pointermove —
+         com `clip-path` no lugar de `width` pro efeito de bola, ver
+         abaixo, o tamanho real do fantasma não muda mais durante o
+         arraste, então uma medida só continua válida o arraste inteiro).
+         Centraliza o fantasma no ponteiro (não tenta replicar "onde
+         dentro da linha original você segurou" — não faz sentido, o
+         fantasma é um resumo simplificado, não a linha inteira). */
+      if (ghostInnerRef.current) {
+        const r = ghostInnerRef.current.getBoundingClientRect();
+        a.metadeLargura = r.width / 2;
+        a.metadeAltura = r.height / 2;
+      }
       setArrastandoAtivo(true);
     }
     if (!a.moveu) return;
     if (ghostRef.current) {
-      ghostRef.current.style.transform = `translate(${e.clientX - a.offsetX}px, ${e.clientY - a.offsetY}px)`;
+      ghostRef.current.style.transform = `translate(${e.clientX - a.metadeLargura}px, ${e.clientY - a.metadeAltura}px)`;
     }
     /* Alvo sob o ponteiro via `document.elementFromPoint` em vez de
        comparar retângulos manuais contra `pillsRef` — acha o que está
@@ -1909,26 +1936,27 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
     setLateralArraste((atual) => (atual === lateral ? atual : lateral));
     /* Card vira "uma bola" assim que paira sobre um alvo válido (turma ou
        lateral de remover), não só no momento de soltar — pedido do Diego,
-       corrigido depois de uma primeira tentativa com `scale()` uniforme
-       (encolhia mantendo a forma retangular, ele queria de verdade
-       virar uma bolinha): "nao esta reduzindo os cards do jeito que qro,
-       ele diminui na proporção inteira, preciso q vire qs uma bola porem
-       so nas interações se eu sair de cima volte ao normal". Em vez de
-       fingir com `scale`, anima largura/padding/border-radius de
-       verdade até virar um círculo do tamanho do avatar (`BOLA_TAMANHO`)
-       e esconde o nome — só sobra o avatar (já redondo), lê como bola.
-       Volta pro tamanho normal (`a.largura`) assim que sai de cima do
-       alvo, sempre — nunca fica "preso" na forma de bola. `ghostInnerRef`
-       é um elemento separado do que recebe a posição (`ghostRef`) só pra
-       poder ter transition suave sem atrasar o acompanhamento do dedo
-       (que precisa ser instantâneo). Os pills já crescem (`scale-125`/
-       `ring-2`) quando são o alvo — junto com a bola, dá a leitura de
-       "sendo puxado pra dentro". */
+       corrigido 2x: primeiro um `scale()` uniforme (encolhia mantendo a
+       forma retangular, ele queria de verdade virar bolinha: "nao esta
+       reduzindo os cards do jeito que qro, ele diminui na proporção
+       inteira, preciso q vire qs uma bola"); depois animar
+       largura/padding de verdade (`width`/`padding` são propriedades de
+       LAYOUT — o detector de design apontou certo: força reflow a cada
+       frame da transição). **Solução final**: `clip-path` — recorta
+       visualmente o fantasma até uma janela circular do tamanho do
+       avatar (`BOLA_TAMANHO`) sem NUNCA mudar a largura/padding real da
+       caixa (só pintura/composição, não layout); o nome, que continua
+       ocupando espaço real por baixo do recorte, some via opacidade (não
+       precisaria, o clip já esconde, mas evita qualquer sobra visível
+       durante a transição). Volta pro card inteiro assim que sai de cima
+       do alvo, sempre — nunca fica "preso" na forma de bola. Os pills já
+       crescem (`scale-125`/`ring-2`) quando são o alvo — junto com a
+       bola, dá a leitura de "sendo puxado pra dentro". */
     const emAlvo = !!(alvo || lateral);
     if (ghostInnerRef.current) {
-      ghostInnerRef.current.style.width = (emAlvo ? BOLA_TAMANHO : a.largura) + "px";
-      ghostInnerRef.current.style.borderRadius = emAlvo ? "9999px" : "1rem";
-      ghostInnerRef.current.style.padding = emAlvo ? "4px" : "0.75rem";
+      ghostInnerRef.current.style.clipPath = emAlvo
+        ? `inset(0 calc(100% - ${BOLA_TAMANHO}px) 0 0 round 9999px)`
+        : "inset(0 round 1rem)";
     }
     if (ghostNomeRef.current) {
       ghostNomeRef.current.style.opacity = emAlvo ? "0" : "1";
@@ -2018,7 +2046,7 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
       if (ghostRef.current) ghostRef.current.style.display = "none";
       setModalMover(a.aluno);
     }
-    arrastoRef.current = { ativo: false, moveu: false, aluno: null, startX: 0, startY: 0, offsetX: 0, offsetY: 0, largura: 0 };
+    arrastoRef.current = { ativo: false, moveu: false, aluno: null, startX: 0, startY: 0, metadeLargura: 0, metadeAltura: 0 };
     setArrastandoAtivo(false);
     setDestinoArraste(null);
     setDiaPreviewArraste(null);
@@ -2351,27 +2379,23 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
          coisas numa `transform` só não dava pra ter transition no scale
          sem também atrasar a posição. */}
       <div ref={ghostRef} className="pointer-events-none fixed left-0 top-0 z-50 hidden" style={{ display: "none" }}>
-        {/* Vira "uma bola" ao pairar sobre um alvo válido (2026-09-18,
-           correção do encolhimento anterior) — "nao esta reduzindo os
-           cards do jeito que qro, ele diminui na proporção inteira,
-           preciso q vire qs uma bola porem so nas interações se eu sair
-           de cima volte ao normal". Antes era só um `scale()` uniforme
-           (encolhia mantendo a forma retangular, só menor). Agora
-           `moverArraste` anima largura/padding/border-radius de verdade
-           (não um `scale` fingindo) até virar um círculo do tamanho do
-           avatar, com o nome desaparecendo (`ghostNomeRef`) — só o
-           avatar (já redondo) sobra visível, lê como bolinha de verdade.
-           Reverte pro card retangular normal assim que sai de cima do
-           alvo (não é um estado permanente do arraste, só enquanto
-           pairando). */}
+        {/* Vira "uma bola" ao pairar sobre um alvo válido (2026-09-18) via
+           `clip-path` (ver `moverArraste`) — não muda a largura/padding
+           reais da caixa (fica sempre do tamanho natural do conteúdo,
+           avatar+nome), só recorta visualmente até uma janela circular.
+           `width`/`padding` são propriedades de LAYOUT; animar isso força
+           reflow a cada frame (achado do detector de design). Reverte pro
+           card inteiro assim que sai de cima do alvo — não é um estado
+           permanente, só enquanto pairando. */}
         <div
           ref={ghostInnerRef}
-          className="flex items-center gap-3 overflow-hidden border border-white/70 bg-white/55 shadow-[0_20px_40px_-10px_rgba(59,56,51,0.4)] backdrop-blur-md backdrop-saturate-150"
+          className="flex w-max items-center gap-3 border border-white/70 bg-white/55 shadow-[0_20px_40px_-10px_rgba(59,56,51,0.4)] backdrop-blur-md backdrop-saturate-150"
           style={{
-            transition: "width 160ms ease-out, padding 160ms ease-out, border-radius 160ms ease-out, transform 240ms cubic-bezier(.4,0,1,1), opacity 180ms ease-in",
+            transition: "clip-path 160ms ease-out, transform 240ms cubic-bezier(.4,0,1,1), opacity 180ms ease-in",
             transformOrigin: "center",
             borderRadius: "1rem",
             padding: "0.75rem",
+            clipPath: "inset(0 round 1rem)",
           }}
         >
           {/* Avatar/nome ficam SEMPRE montados (não condicionados a

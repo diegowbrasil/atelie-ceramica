@@ -481,6 +481,42 @@ reagindo ao resultado ao vivo:
       pra ficar de fora do resultado, ele literalmente não está
       renderizado nesse instante exato.
 
+11. **Terceiro round, ainda 2026-09-18 — dois achados, um do detector de
+    design e um do Diego com print**:
+    - **`layout-transition` (achado automático)**: animar `width`/
+      `padding` (item 10) força reflow de LAYOUT a cada frame — problema
+      de performance real, não estético. **Fix de verdade, não
+      supressão**: trocado por `clip-path` — o fantasma nunca mais muda
+      largura/padding reais (fica sempre do tamanho natural do
+      conteúdo), só tem uma JANELA CIRCULAR recortada visualmente
+      (`inset(0 calc(100% - 44px) 0 0 round 9999px)` quando em cima de
+      um alvo, `inset(0 round 1rem)` em repouso) — `clip-path` é
+      composição/pintura, não layout, não entra na mesma categoria do
+      achado.
+    - **"O retangulo nao fica centralizado onde eu pego"** (print
+      marcando com um ponto vermelho onde estava o mouse vs. onde
+      aparecia o card) — dois bugs reais, achados juntos:
+      1. O fantasma era forçado a ter a LARGURA DA LINHA INTEIRA
+         (`a.largura`, incluindo o espaço do handle/anel/toggle que ele
+         nem desenha) — muito mais largo que o conteúdo real
+         (avatar+nome). O deslocamento do ponteiro (`offsetX`/`offsetY`)
+         também era calculado contra essa linha inteira, não contra o
+         fantasma de verdade. **Fix**: fantasma sem largura forçada
+         (`w-max`, tamanho natural do conteúdo) e reescrito pra
+         centralizar no ponteiro (mede a METADE da largura/altura do
+         PRÓPRIO fantasma, uma vez só, não da linha de origem).
+      2. Mesmo depois desse fix, sobrava um offset sistemático — causa:
+         a MEDIÇÃO da largura do fantasma (pra centralizar) rodava antes
+         do React re-renderizar o `<span>` do nome com o aluno ATUAL
+         (mesma classe do bug do item 10 — refs não disparam re-render),
+         então a largura medida vinha do NOME ANTERIOR (de um arraste
+         anterior, ou vazio), não do nome de quem estava sendo arrastado
+         agora — se o nome novo tiver tamanho bem diferente, a medição
+         fica errada. **Fix**: `iniciarArraste` escreve o nome direto no
+         `<span>` via `textContent` (mutação imperativa do DOM, não passa
+         pelo ciclo do React) antes de qualquer coisa — quando
+         `moverArraste` mede a largura, o DOM já está certo.
+
 **Não é arrastar-e-soltar nativo do navegador** (`draggable`/`ondragstart`)
 em lugar nenhum — é Pointer Events com toda a mecânica de detecção de
 colisão, fantasma e animação escrita à mão. Se pedirem pra estender esse
@@ -488,15 +524,19 @@ padrão pra outra tela (ex.: mover peça de oficina, reordenar algo), o
 código de `Turmas` (`iniciarArraste`/`moverArraste`/`soltarArraste`/
 `animarAfunilarEFechar`/`animarSaidaLateral`) é a referência a copiar, não
 reinventar do zero. **Lição pra próxima vez**: testes com mouse simulado
-neste navegador embutido não pegam tudo — os dois bugs reais desta saga
-(item 9 e item 10) só apareceram no toque real do celular/num timing que
-o mouse simulado não reproduz sozinho. Vale pedir confirmação no celular
-antes de dar uma feature de gesto como concluída, e — achado do item
-10 — cuidado geral com refs (`useRef`) que só existem no DOM
-condicionadas a OUTRA ref: a condição não reage a mudanças da ref, só a
-`state`, então a janela entre "a ref mudou" e "o próximo `state` re-
-renderizou" é uma fresta real onde a ref-dependente pode não existir
-ainda.
+neste navegador embutido não pegam tudo — os bugs reais desta saga (itens
+9-11) só apareceram no toque real do celular ou num timing que o mouse
+simulado não reproduz sozinho sem cuidado extra (esperar entre eventos).
+Vale pedir confirmação no celular antes de dar uma feature de gesto como
+concluída. **Padrão que se repetiu 2x nesta saga** (itens 10 e 11):
+cuidado geral com refs (`useRef`) que só existem no DOM condicionadas a
+OUTRA ref, ou cujo CONTEÚDO/tamanho é lido antes do React ter
+re-renderizado com o valor atual — a condição/leitura não reage a
+mudanças da ref, só a `state`, então a janela entre "a ref mudou" e "o
+próximo `state` re-renderizou" é uma fresta real onde o DOM ainda reflete
+o estado anterior. Quando isso importa pra uma medição síncrona (não só
+pra exibição), escrever direto no DOM via `textContent`/`style` antes de
+medir é mais confiável do que esperar o ciclo do React.
 
 ### Forno (ferramenta central)
 - Menu "Forno" abre o **painel de acompanhamento**, NUNCA a criação direta.

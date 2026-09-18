@@ -245,6 +245,21 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
     border-radius de verdade (não `scale`) até virar um círculo,
     revertendo assim que sai do alvo. Detalhe técnico completo em
     CLAUDE.md §5, item 10 da mesma saga.
+19. **Terceiro round, mesmo dia** — o detector de design apontou
+    `layout-transition` no `width`/`padding` animados do item 18 (reflow
+    de verdade, não estético) — trocado por `clip-path` (recorte visual,
+    nunca muda o tamanho real da caixa). No mesmo round, o Diego mandou
+    print com um ponto marcando onde o mouse estava vs. onde o card
+    aparecia — bem longe um do outro. Dois bugs reais: o fantasma era
+    forçado a ter a largura da LINHA INTEIRA (não só do conteúdo que ele
+    mostra) e o deslocamento do ponteiro era calculado em cima disso; e,
+    mesmo corrigindo isso, sobrava um offset porque a largura do
+    fantasma era medida ANTES do nome do aluno atual aparecer no DOM
+    (mesma classe do bug de timing do item 18 — ref não dispara
+    re-render). Centralização confirmada matematicamente depois (diff
+    de 0px entre ponteiro e centro do fantasma, em repouso e em modo
+    "bola"). Detalhe técnico completo em CLAUDE.md §5, item 11 da mesma
+    saga — vale ler antes de mexer nessa área nunca mais sem reler.
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills
