@@ -222,6 +222,18 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
     de mexer nessa área de novo — em CLAUDE.md §5 (Turmas: "arrastar e
     soltar de verdade — saga completa"; Alunos: resumo da arquitetura da
     página de detalhe).
+17. **Bug real do arraste, achado testando no celular de verdade
+    (2026-09-18)** — tudo do item 16 tinha sido validado só com mouse
+    simulado no navegador embutido; no celular real o card não encolhia
+    ao pairar sobre uma turma e não interagia com os horários de Quinta.
+    Causa raiz e correção (trocar a detecção de colisão por
+    `document.elementFromPoint` em vez de comparar retângulos manuais —
+    mais robusto, ignora o fantasma de graça, não depende de vencer
+    z-index entre `position:fixed`/`relative`) em CLAUDE.md §5, item 9 da
+    mesma saga de Turmas. **Lição**: testes com mouse simulado não pegam
+    tudo em features de gesto — vale confirmação no celular antes de dar
+    como concluído. De brinde, "+ Nova oficina" virou um "+" discreto
+    (pedido rápido, mesma sessão).
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills

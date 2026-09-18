@@ -405,6 +405,38 @@ reagindo ao resultado ao vivo:
    esses eventos; um `useEffect` que só existe enquanto `arrastandoAtivo`
    registra `pointerup`/`pointercancel`/`blur` no `window` como fallback
    que sempre limpa o estado.
+9. **Bug real, achado testando no celular de verdade (2026-09-18)** — tudo
+   acima tinha sido validado só com mouse simulado (`left_click_drag`/
+   Pointer Events sintéticos no navegador embutido do Claude Code); no
+   celular real o Diego reportou, com screenshot: "o card da pessoa ele
+   ainda nao diminui quando tem a interação com a nuva turma e ele nao
+   interage com os horarios de quinta, ele fica acima dos horarios".
+   Causa raiz: a detecção de alvo comparava manualmente o retângulo de
+   cada pill (`pillsRef`) contra a posição do ponteiro, e só contava como
+   "colisão" se o pill estivesse visualmente por CIMA do fantasma no
+   empilhamento — dependia de vencer o fantasma (`z-50`) no z-index. As
+   pills ganharam `z-[60]` (§ acima), só que isso é `position:relative`
+   (empilha só dentro do contexto local) competindo com um `position:fixed`
+   (escapa pro contexto raiz) — as duas coisas não são diretamente
+   comparáveis por z-index, então em algumas situações reais o fantasma
+   vencia mesmo assim, e a colisão nunca era contada (sem alvo → sem
+   encolher, sem highlight, sem soltar). **Fix**: trocada a detecção
+   inteira pra `document.elementFromPoint(x, y)` — pergunta ao navegador
+   o que está DE VERDADE desenhado naquele pixel exato (empilhamento real,
+   não uma conta minha) e já ignora o fantasma de graça, já que ele é
+   `pointer-events-none` (`elementFromPoint` pula elementos assim). Pills
+   e faixas ganharam atributos `data-alvo-turma`/`data-alvo-dia`/
+   `data-alvo-lateral` só pra esse lookup (`.closest(...)` a partir do
+   elemento retornado). `pillsRef` sobrevive só pra achar o retângulo final
+   da animação de afunilar (`animarAfunilarEFechar`), não mais pra detectar
+   colisão. **Mesma leva**: a zona de hit-test das faixas laterais também
+   foi separada do visual (zona real = `FAIXA_LATERAL_PX` = 56px sempre,
+   visual pode ficar mais fino/apagado sem encolher a área clicável — antes
+   os dois eram a mesma largura de 12px em repouso, exigindo mira quase
+   perfeita na borda) e começa em `top-64` (256px), não `top-0` — não pra
+   "vencer" as pills num z-index ambíguo, e sim pra nunca ocupar o mesmo
+   espaço que elas, eliminando a ambiguidade de vez em vez de tentar
+   arbitrar ela.
 
 **Não é arrastar-e-soltar nativo do navegador** (`draggable`/`ondragstart`)
 em lugar nenhum — é Pointer Events com toda a mecânica de detecção de
@@ -412,7 +444,10 @@ colisão, fantasma e animação escrita à mão. Se pedirem pra estender esse
 padrão pra outra tela (ex.: mover peça de oficina, reordenar algo), o
 código de `Turmas` (`iniciarArraste`/`moverArraste`/`soltarArraste`/
 `animarAfunilarEFechar`/`animarSaidaLateral`) é a referência a copiar, não
-reinventar do zero.
+reinventar do zero. **Lição pra próxima vez**: testes com mouse simulado
+neste navegador embutido não pegam tudo — esse bug de verdade só apareceu
+no toque real do celular. Vale pedir confirmação no celular antes de dar
+uma feature de gesto como concluída.
 
 ### Forno (ferramenta central)
 - Menu "Forno" abre o **painel de acompanhamento**, NUNCA a criação direta.
@@ -468,6 +503,11 @@ função com outro parâmetro.
 - **Status das peças**: Em secagem → Biscoitadas → Esmaltadas → Prontas p/
   retirada. **Só admin altera; aluno só visualiza.** Demo tem toggle "Ver
   como aluno" simulando a visão read-only (não há login no demo).
+- ~~Botão "+ Nova oficina" (pill laranja cheia, com texto)~~ **Virou só um
+  "+" discreto (2026-09-18)** — "troque esse 'nova oficina' por um '+'
+  discreto". Mesma ação (`onClick` intacto), ícone `Plus` num botão
+  circular neutro (`text-[var(--ink-soft)]`, sem `ACCENT_SOLIDO`) — não
+  compete mais visualmente com o título "OFICINAS" centralizado do lado.
 
 ### Pagamentos
 - Card "Pagamentos pendentes" no dashboard leva à página.

@@ -1829,16 +1829,12 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
   const arrastoRef = useRef({ ativo: false, moveu: false, aluno: null, startX: 0, startY: 0, offsetX: 0, offsetY: 0, largura: 0 });
   const ghostRef = useRef(null);
   const ghostInnerRef = useRef(null);
+  /* `pillsRef` guarda o nó de cada pill-alvo (chave = id da turma), usado
+     só na animação de "afunilar" ao soltar (`animarAfunilarEFechar`) pra
+     saber o retângulo final. A detecção de alvo em si, durante o arraste,
+     usa `document.elementFromPoint` (ver `moverArraste`), não mais esse
+     mapa de retângulos. */
   const pillsRef = useRef({});
-  /* Pills de DIA com mais de uma turma (só Quinta hoje) não são alvo
-     direto de soltar — pairar sobre eles só troca a pré-visualização pra
-     revelar os sub-pills de horário embaixo, pra soltar num horário
-     específico. Ref separada porque a colisão com esses pills tem uma
-     consequência diferente da colisão com um alvo de verdade (ver
-     `moverArraste`). Pedido do Diego: "quando colocar encima de quinta
-     ja precisa mudar para quinta com as opções dos horarios embaixo pra
-     eu escolher onde deixar". */
-  const diaMultiRef = useRef({});
   const [arrastandoAtivo, setArrastandoAtivo] = useState(false);
   const [diaPreviewArraste, setDiaPreviewArraste] = useState(null);
   const LIMIAR_ARRASTE = 8;
@@ -1868,33 +1864,39 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
     if (ghostRef.current) {
       ghostRef.current.style.transform = `translate(${e.clientX - a.offsetX}px, ${e.clientY - a.offsetY}px)`;
     }
-    let alvo = null;
-    for (const [turmaId, no] of Object.entries(pillsRef.current)) {
-      if (!no || turmaId === turmaAtiva) continue;
-      const r = no.getBoundingClientRect();
-      if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) { alvo = turmaId; break; }
-    }
+    /* Alvo sob o ponteiro via `document.elementFromPoint` em vez de
+       comparar retângulos manuais contra `pillsRef` — acha o que está
+       REALMENTE desenhado naquele ponto exato (empilhamento de verdade
+       do navegador, não uma cópia minha via z-index) e já ignora o
+       próprio fantasma de graça (`pointer-events-none`, elementFromPoint
+       pula ele automaticamente). A versão em retângulos manuais exigia o
+       pill "vencer" o fantasma no z-index pra ser contado como alvo —
+       funcionava nos meus testes com mouse simulado, mas achado real
+       testando no celular: "o card da pessoa ele ainda nao diminui...
+       nao interage com os horarios de quinta, ele fica acima dos
+       horarios" — nesse ponto exato o fantasma estava mesmo cobrindo o
+       alvo. Pills/faixas ganharam `data-alvo-*` só pra esse lookup. */
+    const elementoSobPonteiro = document.elementFromPoint(e.clientX, e.clientY);
+    const pillAlvo = elementoSobPonteiro?.closest("[data-alvo-turma]");
+    const turmaSobPonteiro = pillAlvo?.getAttribute("data-alvo-turma") || null;
+    const alvo = turmaSobPonteiro && turmaSobPonteiro !== turmaAtiva ? turmaSobPonteiro : null;
     setDestinoArraste((atual) => (atual === alvo ? atual : alvo));
     /* Pairar sobre o pill de um DIA com mais de uma turma (só Quinta hoje)
        não resolve um alvo direto — só troca a pré-visualização pra revelar
-       os sub-pills de horário, que aí sim viram alvos de verdade no loop
-       de cima assim que aparecerem (mesma `pillsRef`). Só entra em preview
-       se o ponteiro não achou um alvo direto (evita ficar trocando a
-       pré-visualização enquanto já está em cima de um sub-pill de outro
-       dia, por exemplo). */
-    let diaPreview = null;
-    if (!alvo) {
-      for (const [diaId, no] of Object.entries(diaMultiRef.current)) {
-        if (!no) continue;
-        const r = no.getBoundingClientRect();
-        if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) { diaPreview = diaId; break; }
-      }
-    }
+       os sub-pills de horário, que aí sim viram alvos de verdade assim que
+       aparecem. Só entra em preview se o ponteiro não achou um alvo direto
+       (evita ficar trocando a pré-visualização enquanto já está em cima de
+       um sub-pill de outro dia, por exemplo). */
+    const diaPill = !alvo ? elementoSobPonteiro?.closest("[data-alvo-dia]") : null;
+    const diaPreview = diaPill ? diaPill.getAttribute("data-alvo-dia") : null;
     setDiaPreviewArraste((atual) => (atual === diaPreview ? atual : diaPreview));
-    /* Faixas laterais (remover) têm prioridade sobre qualquer pill —
-       fazem parte da borda da TELA, não competem por área com os pills
-       lá em cima. */
-    const lateral = e.clientX <= FAIXA_LATERAL_PX ? "esquerda" : e.clientX >= window.innerWidth - FAIXA_LATERAL_PX ? "direita" : null;
+    /* Faixas laterais (remover) — mesma técnica; elas têm prioridade
+       visual sobre qualquer pill por ficarem na borda da tela, mas como
+       são elementos próprios agora (não mais um cálculo de distância até
+       a borda), o próprio empilhamento/DOM já resolve isso sem precisar
+       de lógica extra de prioridade. */
+    const lateralElemento = elementoSobPonteiro?.closest("[data-alvo-lateral]");
+    const lateral = lateralElemento ? lateralElemento.getAttribute("data-alvo-lateral") : null;
     setLateralArraste((atual) => (atual === lateral ? atual : lateral));
     /* Card encolhe assim que paira sobre um alvo válido (turma ou
        lateral de remover), não só no momento de soltar — pedido do Diego:
@@ -2113,10 +2115,9 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
           return (
             <button
               key={d.id}
-              ref={(no) => {
-                if (turmaAlvoDia) pillsRef.current[turmaAlvoDia] = no;
-                if (multiTurma) diaMultiRef.current[d.id] = no;
-              }}
+              ref={(no) => { if (turmaAlvoDia) pillsRef.current[turmaAlvoDia] = no; }}
+              data-alvo-turma={turmaAlvoDia || undefined}
+              data-alvo-dia={multiTurma ? d.id : undefined}
               onClick={() => selecionarDia(d)}
               disabled={!d.disponivel}
               className={"min-w-0 flex-1 rounded-full px-1.5 py-1.5 text-center text-xs font-medium transition-transform " + (ativo ? ACCENT_SOLIDO : d.disponivel ? VIDRO_PILL : VIDRO_PILL_NEUTRO) + (emArraste ? " relative z-10 origin-center scale-125 ring-2 ring-white" : "")}
@@ -2154,6 +2155,7 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
                 <button
                   key={t.id}
                   ref={(no) => { pillsRef.current[t.id] = no; }}
+                  data-alvo-turma={t.id}
                   onClick={() => setTurmaAtiva(t.id)}
                   className={"rounded-full px-3 py-1.5 text-xs font-medium transition-transform " + (ativa ? ACCENT_SOLIDO : VIDRO_PILL) + (emArraste ? " relative z-10 origin-center scale-125 ring-2 ring-white" : "")}
                   style={ativa ? undefined : estiloVidroTingido(corPill, emArraste ? 1 : 0.45, emArraste ? 0.85 : 0.22)}
@@ -2345,15 +2347,30 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
       {/* Faixas laterais = zona de remover, só aparecem/reagem durante um
          arraste ativo. Vermelho porque é ação destrutiva (padrão de cor
          já usado no resto do app pra "recusar"/perigo — Badge tone
-         "danger", botão "Recusar" das solicitações). */}
+         "danger", botão "Recusar" das solicitações). Começam abaixo de
+         `top-64` (256px) de propósito — não abaixo de `top-0` — pra nunca
+         disputar `elementFromPoint` contra as pills de dia/horário lá em
+         cima: essas pills são `position:relative` com `z-index` local
+         (comparado só dentro do próprio contexto de empilhamento), as
+         faixas são `position:fixed` (escapam pro contexto raiz) —
+         `z-index` entre as duas coisas não é diretamente comparável de
+         forma confiável, então a solução robusta é não sobrepor as áreas
+         de jeito nenhum, não tentar vencer no z-index. */}
       {arrastandoAtivo && (
         <>
-          <div
-            className={"pointer-events-none fixed left-0 top-0 z-40 h-full transition-all " + (lateralArraste === "esquerda" ? "w-16 bg-gradient-to-r from-rose-500/70 to-transparent" : "w-3 bg-gradient-to-r from-rose-500/25 to-transparent")}
-          />
-          <div
-            className={"pointer-events-none fixed right-0 top-0 z-40 h-full transition-all " + (lateralArraste === "direita" ? "w-16 bg-gradient-to-l from-rose-500/70 to-transparent" : "w-3 bg-gradient-to-l from-rose-500/25 to-transparent")}
-          />
+          {/* Zona de hit-test (`data-alvo-lateral`, largura fixa =
+             `FAIXA_LATERAL_PX`) separada do visual (gradiente dentro dela,
+             que pode ficar mais fino/apagado sem encolher a área real que
+             `elementFromPoint` enxerga) — antes a largura VISÍVEL (12px em
+             repouso) também era a área de detecção, exigindo mira quase
+             perfeita na borda. `pointer-events-auto` (não mais `-none`) pra
+             `elementFromPoint` conseguir achar esse elemento. */}
+          <div data-alvo-lateral="esquerda" className="fixed left-0 top-64 z-40 bottom-0" style={{ width: FAIXA_LATERAL_PX }}>
+            <div className={"pointer-events-none h-full transition-all " + (lateralArraste === "esquerda" ? "w-16 bg-gradient-to-r from-rose-500/70 to-transparent" : "w-3 bg-gradient-to-r from-rose-500/25 to-transparent")} />
+          </div>
+          <div data-alvo-lateral="direita" className="fixed right-0 top-64 z-40 bottom-0" style={{ width: FAIXA_LATERAL_PX }}>
+            <div className={"pointer-events-none ml-auto h-full transition-all " + (lateralArraste === "direita" ? "w-16 bg-gradient-to-l from-rose-500/70 to-transparent" : "w-3 bg-gradient-to-l from-rose-500/25 to-transparent")} />
+          </div>
           {lateralArraste && (
             <div className={"pointer-events-none fixed top-1/2 z-40 -translate-y-1/2 rounded-full bg-rose-600 p-2.5 text-white shadow-lg " + (lateralArraste === "esquerda" ? "left-2" : "right-2")}>
               <X size={18} />
@@ -2741,7 +2758,12 @@ function Oficinas({ oficinas, onAbrir }) {
       <FundoArgilaParallax cor="carvao" />
       <div className="relative mb-5 flex min-h-[2.75rem] items-center justify-end">
         <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-2xl font-bold uppercase tracking-wide" style={FONT_DISPLAY}>Oficinas</h1>
-        <button className={"px-4 py-2 text-sm font-medium " + ACCENT_SOLIDO}>+ Nova oficina</button>
+        {/* Botão "+ Nova oficina" virou só um "+" discreto (2026-09-18,
+           "troque esse 'nova oficina' por um '+' discreto") — mesma ação,
+           sem competir visualmente com o título centralizado do lado. */}
+        <button title="Nova oficina" aria-label="Nova oficina" className="rounded-full p-2 text-[var(--ink-soft)] hover:bg-[var(--cream)] hover:text-[var(--ink)]">
+          <Plus size={20} />
+        </button>
       </div>
       <div className="relative grid gap-4 sm:grid-cols-2">
         {oficinas.map((o) => {
