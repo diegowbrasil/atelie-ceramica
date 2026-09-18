@@ -438,6 +438,49 @@ reagindo ao resultado ao vivo:
    espaço que elas, eliminando a ambiguidade de vez em vez de tentar
    arbitrar ela.
 
+10. **Segundo round no mesmo dia, ainda 2026-09-18** — o item 9 resolveu
+    só parte do problema. O Diego testou nas próprias palavras: "o
+    arrastar os cards para os horarios de quinta ainda nao funciona e nao
+    esta reduzindo os cards do jeito que qro, ele diminui na proporção
+    inteira, preciso q vire qs uma bola porem so nas interações se eu sair
+    de cima volte ao normal". Dois problemas distintos:
+    - **Achado um segundo bug real, de timing**: o encolhimento ao pairar
+      setava `ghostNomeRef.current.style.opacity`, mas `<span ref=
+      {ghostNomeRef}>` só existia no DOM dentro de `{arrastoRef.current.
+      aluno && (...)}`. Como `arrastoRef` é uma REF (não `state`), setar
+      `arrastoRef.current.aluno` em `iniciarArraste` NÃO dispara
+      re-render — o span só passava a existir de verdade depois que
+      `setArrastandoAtivo(true)` terminasse de re-renderizar. No exato
+      evento de ponteiro em que o limiar de arraste é cruzado, o
+      fantasma já vira visível (`display:block`) na mesma chamada de
+      função onde `setArrastandoAtivo` só agenda (não aplica na hora) o
+      re-render — se o próximo evento de movimento chegasse antes desse
+      re-render completar (plausível em toque real, onde os eventos
+      podem vir mais espaçados/agrupados que num mouse), `ghostNomeRef.
+      current` ainda era `null` e o `if (ghostNomeRef.current) {...}`
+      não fazia nada, silenciosamente. **Fix**: avatar/nome do fantasma
+      viraram SEMPRE montados (não condicionados à ref), só o texto que
+      fica vazio até `arrastoRef.current.aluno` ser preenchido — a ref
+      nunca mais fica indisponível.
+    - **"Vire qs uma bola" não era o que "encolher" fazia**: a versão
+      anterior só aplicava `scale()` uniforme no fantasma — encolhia
+      mantendo a MESMA forma retangular, só menor (proporção inteira
+      preservada, exatamente o que o Diego não queria). Trocado por
+      largura/padding/`border-radius` de verdade animando até um círculo
+      do tamanho do avatar (`BOLA_TAMANHO = 44`), com o nome
+      desaparecendo (`opacity: 0`) — só sobra o avatar, que já é
+      redondo, lendo como bolinha de verdade. Sempre reversível: sai do
+      alvo → largura/padding/`border-radius` voltam pro estado normal do
+      card, nunca fica "preso" na forma de bola (era parte explícita do
+      pedido: "so nas interações se eu sair de cima volte ao normal").
+    - **Reforço extra na detecção**, por precaução (não confirmado como
+      causa raiz, mas remove uma categoria inteira de dúvida): o
+      fantasma agora é escondido (`display:none`) por um instante
+      síncrono bem na hora de chamar `document.elementFromPoint`, e
+      reaparece logo em seguida — não depende só do `pointer-events-none`
+      pra ficar de fora do resultado, ele literalmente não está
+      renderizado nesse instante exato.
+
 **Não é arrastar-e-soltar nativo do navegador** (`draggable`/`ondragstart`)
 em lugar nenhum — é Pointer Events com toda a mecânica de detecção de
 colisão, fantasma e animação escrita à mão. Se pedirem pra estender esse
@@ -445,9 +488,15 @@ padrão pra outra tela (ex.: mover peça de oficina, reordenar algo), o
 código de `Turmas` (`iniciarArraste`/`moverArraste`/`soltarArraste`/
 `animarAfunilarEFechar`/`animarSaidaLateral`) é a referência a copiar, não
 reinventar do zero. **Lição pra próxima vez**: testes com mouse simulado
-neste navegador embutido não pegam tudo — esse bug de verdade só apareceu
-no toque real do celular. Vale pedir confirmação no celular antes de dar
-uma feature de gesto como concluída.
+neste navegador embutido não pegam tudo — os dois bugs reais desta saga
+(item 9 e item 10) só apareceram no toque real do celular/num timing que
+o mouse simulado não reproduz sozinho. Vale pedir confirmação no celular
+antes de dar uma feature de gesto como concluída, e — achado do item
+10 — cuidado geral com refs (`useRef`) que só existem no DOM
+condicionadas a OUTRA ref: a condição não reage a mudanças da ref, só a
+`state`, então a janela entre "a ref mudou" e "o próximo `state` re-
+renderizou" é uma fresta real onde a ref-dependente pode não existir
+ainda.
 
 ### Forno (ferramenta central)
 - Menu "Forno" abre o **painel de acompanhamento**, NUNCA a criação direta.

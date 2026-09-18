@@ -1829,6 +1829,8 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
   const arrastoRef = useRef({ ativo: false, moveu: false, aluno: null, startX: 0, startY: 0, offsetX: 0, offsetY: 0, largura: 0 });
   const ghostRef = useRef(null);
   const ghostInnerRef = useRef(null);
+  const ghostNomeRef = useRef(null);
+  const BOLA_TAMANHO = 44;
   /* `pillsRef` guarda o nó de cada pill-alvo (chave = id da turma), usado
      só na animação de "afunilar" ao soltar (`animarAfunilarEFechar`) pra
      saber o retângulo final. A detecção de alvo em si, durante o arraste,
@@ -1875,8 +1877,15 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
        testando no celular: "o card da pessoa ele ainda nao diminui...
        nao interage com os horarios de quinta, ele fica acima dos
        horarios" — nesse ponto exato o fantasma estava mesmo cobrindo o
-       alvo. Pills/faixas ganharam `data-alvo-*` só pra esse lookup. */
+       alvo. Pills/faixas ganharam `data-alvo-*` só pra esse lookup.
+       Reforço extra: esconde o fantasma por um instante síncrono (sem
+       repintar a tela de verdade, é tudo antes do próximo frame) durante
+       a própria leitura — não depende só do `pointer-events-none` pra
+       ficar de fora, `elementFromPoint` literalmente não vê o fantasma
+       nesse instante porque ele não está nem renderizado. */
+    if (ghostRef.current) ghostRef.current.style.display = "none";
     const elementoSobPonteiro = document.elementFromPoint(e.clientX, e.clientY);
+    if (ghostRef.current) ghostRef.current.style.display = "block";
     const pillAlvo = elementoSobPonteiro?.closest("[data-alvo-turma]");
     const turmaSobPonteiro = pillAlvo?.getAttribute("data-alvo-turma") || null;
     const alvo = turmaSobPonteiro && turmaSobPonteiro !== turmaAtiva ? turmaSobPonteiro : null;
@@ -1898,19 +1907,31 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
     const lateralElemento = elementoSobPonteiro?.closest("[data-alvo-lateral]");
     const lateral = lateralElemento ? lateralElemento.getAttribute("data-alvo-lateral") : null;
     setLateralArraste((atual) => (atual === lateral ? atual : lateral));
-    /* Card encolhe assim que paira sobre um alvo válido (turma ou
-       lateral de remover), não só no momento de soltar — pedido do Diego:
-       "quando eu mover o aluno para a turma qro q o card do aluno
-       diminua quando deixar encima de alguma turma... e fizesse a
-       animação como se tivesse entrando na turma". `ghostInnerRef` é um
-       elemento separado do que recebe a posição (`ghostRef`) só pra
-       poder ter uma `transition` suave no scale sem atrasar o
-       acompanhamento do dedo (que precisa ser instantâneo). Os pills já
-       crescem (`scale-125`/`ring-2`) quando são o alvo — junto com o
-       encolhimento do card, dá a leitura de "sendo puxado pra dentro". */
+    /* Card vira "uma bola" assim que paira sobre um alvo válido (turma ou
+       lateral de remover), não só no momento de soltar — pedido do Diego,
+       corrigido depois de uma primeira tentativa com `scale()` uniforme
+       (encolhia mantendo a forma retangular, ele queria de verdade
+       virar uma bolinha): "nao esta reduzindo os cards do jeito que qro,
+       ele diminui na proporção inteira, preciso q vire qs uma bola porem
+       so nas interações se eu sair de cima volte ao normal". Em vez de
+       fingir com `scale`, anima largura/padding/border-radius de
+       verdade até virar um círculo do tamanho do avatar (`BOLA_TAMANHO`)
+       e esconde o nome — só sobra o avatar (já redondo), lê como bola.
+       Volta pro tamanho normal (`a.largura`) assim que sai de cima do
+       alvo, sempre — nunca fica "preso" na forma de bola. `ghostInnerRef`
+       é um elemento separado do que recebe a posição (`ghostRef`) só pra
+       poder ter transition suave sem atrasar o acompanhamento do dedo
+       (que precisa ser instantâneo). Os pills já crescem (`scale-125`/
+       `ring-2`) quando são o alvo — junto com a bola, dá a leitura de
+       "sendo puxado pra dentro". */
+    const emAlvo = !!(alvo || lateral);
     if (ghostInnerRef.current) {
-      ghostInnerRef.current.style.transform = (alvo || lateral) ? "scale(0.55)" : "scale(1)";
-      ghostInnerRef.current.style.opacity = (alvo || lateral) ? "0.75" : "1";
+      ghostInnerRef.current.style.width = (emAlvo ? BOLA_TAMANHO : a.largura) + "px";
+      ghostInnerRef.current.style.borderRadius = emAlvo ? "9999px" : "1rem";
+      ghostInnerRef.current.style.padding = emAlvo ? "4px" : "0.75rem";
+    }
+    if (ghostNomeRef.current) {
+      ghostNomeRef.current.style.opacity = emAlvo ? "0" : "1";
     }
   }
   /* Soltar sobre um alvo válido não fecha o fantasma na hora — encolhe e
@@ -2330,17 +2351,42 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
          coisas numa `transform` só não dava pra ter transition no scale
          sem também atrasar a posição. */}
       <div ref={ghostRef} className="pointer-events-none fixed left-0 top-0 z-50 hidden" style={{ display: "none" }}>
+        {/* Vira "uma bola" ao pairar sobre um alvo válido (2026-09-18,
+           correção do encolhimento anterior) — "nao esta reduzindo os
+           cards do jeito que qro, ele diminui na proporção inteira,
+           preciso q vire qs uma bola porem so nas interações se eu sair
+           de cima volte ao normal". Antes era só um `scale()` uniforme
+           (encolhia mantendo a forma retangular, só menor). Agora
+           `moverArraste` anima largura/padding/border-radius de verdade
+           (não um `scale` fingindo) até virar um círculo do tamanho do
+           avatar, com o nome desaparecendo (`ghostNomeRef`) — só o
+           avatar (já redondo) sobra visível, lê como bolinha de verdade.
+           Reverte pro card retangular normal assim que sai de cima do
+           alvo (não é um estado permanente do arraste, só enquanto
+           pairando). */}
         <div
           ref={ghostInnerRef}
-          className="flex items-center gap-3 rounded-2xl border border-white/70 bg-white/55 p-3 shadow-[0_20px_40px_-10px_rgba(59,56,51,0.4)] backdrop-blur-md backdrop-saturate-150"
-          style={{ transition: "transform 150ms ease-out, opacity 150ms ease-out", transformOrigin: "center" }}
+          className="flex items-center gap-3 overflow-hidden border border-white/70 bg-white/55 shadow-[0_20px_40px_-10px_rgba(59,56,51,0.4)] backdrop-blur-md backdrop-saturate-150"
+          style={{
+            transition: "width 160ms ease-out, padding 160ms ease-out, border-radius 160ms ease-out, transform 240ms cubic-bezier(.4,0,1,1), opacity 180ms ease-in",
+            transformOrigin: "center",
+            borderRadius: "1rem",
+            padding: "0.75rem",
+          }}
         >
-          {arrastoRef.current.aluno && (
-            <>
-              <Avatar nome={arrastoRef.current.aluno.nome} size={36} />
-              <span className="truncate text-sm font-medium">{arrastoRef.current.aluno.nome}</span>
-            </>
-          )}
+          {/* Avatar/nome ficam SEMPRE montados (não condicionados a
+             `arrastoRef.current.aluno`, que é ref e não dispara
+             re-render) — achado real testando: `ghostNomeRef.current`
+             podia ainda ser `null` bem no instante em que o arraste
+             cruzava o limiar, porque o span só existiria depois que
+             `setArrastandoAtivo(true)` terminasse de re-renderizar, e
+             `moverArraste` já tinha seguido em frente antes disso.
+             Sempre montado = a ref nunca fica indisponível, só o texto
+             (nome do aluno) que só aparece de verdade quando o `<div>` de
+             fora vira visível (`display:block`), que já acontece depois
+             de `iniciarArraste` ter preenchido `arrastoRef.current`. */}
+          <Avatar nome={arrastoRef.current.aluno?.nome || ""} size={36} />
+          <span ref={ghostNomeRef} className="truncate text-sm font-medium" style={{ transition: "opacity 100ms ease-out" }}>{arrastoRef.current.aluno?.nome || ""}</span>
         </div>
       </div>
 

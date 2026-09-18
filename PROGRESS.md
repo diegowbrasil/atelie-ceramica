@@ -234,6 +234,17 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
     tudo em features de gesto — vale confirmação no celular antes de dar
     como concluído. De brinde, "+ Nova oficina" virou um "+" discreto
     (pedido rápido, mesma sessão).
+18. **Segundo round do mesmo bug, mesmo dia** — o item 17 não resolveu
+    tudo: Quinta ainda falhava, e o encolhimento não virava "bola" (só
+    escalava o card inteiro, mantendo a forma retangular). Achado um
+    SEGUNDO bug real, de timing (`ghostNomeRef` podia não existir ainda
+    no instante exato em que o arraste cruzava o limiar, por causa de um
+    `<span>` condicionado à ref `arrastoRef` em vez de a `state` — refs
+    não disparam re-render, então a condição podia ainda não ter sido
+    aplicada), mais a troca do encolhimento por largura/padding/
+    border-radius de verdade (não `scale`) até virar um círculo,
+    revertendo assim que sai do alvo. Detalhe técnico completo em
+    CLAUDE.md §5, item 10 da mesma saga.
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills
