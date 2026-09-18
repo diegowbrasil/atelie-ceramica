@@ -517,6 +517,36 @@ reagindo ao resultado ao vivo:
          pelo ciclo do React) antes de qualquer coisa — quando
          `moverArraste` mede a largura, o DOM já está certo.
 
+12. **Quarto round, ainda 2026-09-18** — o item 11 trocou `width`/
+    `padding` por `clip-path`, mas com `inset(0 calc(100% - 44px) 0 0
+    round 9999px)`. O Diego mandou print de novo: "olha a bolinha q
+    diminuiu nao esta centralizada e nao homogenica ela esta cortando a
+    letra, e eu estou mirando na ter e ela fica mais de ladinho". Dois
+    bugs reais, os dois de geometria (não de detecção/timing dessa vez):
+    1. **Bola não era um círculo de verdade**: `inset(0 calc(100% -
+       44px) 0 0 round 9999px)` só limita a LARGURA da janela (44px) — a
+       ALTURA ficava a altura inteira da caixa (~60px, sem limite). Uma
+       janela 44×60 com cantos bem arredondados é uma PÍLULA/OVAL, não
+       um círculo — cortava o avatar de um jeito torto ("cortando a
+       letra"). **Fix**: `clip-path: circle(raio at x y)` em vez de
+       `inset()`+`round` — um raio só, circular por definição, não dá
+       pra virar oval sem querer.
+    2. **"Fica mais de ladinho" quando mirava perto do card**: o
+       fantasma era centralizado no ponteiro pelo CENTRO GEOMÉTRICO DA
+       CAIXA INTEIRA (`metadeLargura`, medida da largura total incluindo
+       o nome) — mas o avatar (o que fica visível na "bola") mora perto
+       da borda ESQUERDA da caixa, não no centro dela. Card centralizado
+       no ponteiro ≠ avatar centralizado no ponteiro; quanto mais longo
+       o nome (caixa mais larga), maior a diferença entre os dois
+       pontos. **Fix**: parou de medir a largura da caixa pra
+       centralizar — usa uma constante FIXA (`CENTRO_AVATAR_X = borda +
+       padding + metade do avatar = 31px`, nunca muda, avatar/padding/
+       borda têm tamanho fixo) tanto pra posicionar o fantasma
+       (`translate`) quanto pra centrar o círculo do `clip-path` — os
+       dois pontos de referência viram o MESMO ponto (o avatar), sem
+       pulo entre "card normal" e "modo bola", e sem depender do
+       tamanho do nome de cada aluno.
+
 **Não é arrastar-e-soltar nativo do navegador** (`draggable`/`ondragstart`)
 em lugar nenhum — é Pointer Events com toda a mecânica de detecção de
 colisão, fantasma e animação escrita à mão. Se pedirem pra estender esse
@@ -525,18 +555,24 @@ código de `Turmas` (`iniciarArraste`/`moverArraste`/`soltarArraste`/
 `animarAfunilarEFechar`/`animarSaidaLateral`) é a referência a copiar, não
 reinventar do zero. **Lição pra próxima vez**: testes com mouse simulado
 neste navegador embutido não pegam tudo — os bugs reais desta saga (itens
-9-11) só apareceram no toque real do celular ou num timing que o mouse
-simulado não reproduz sozinho sem cuidado extra (esperar entre eventos).
-Vale pedir confirmação no celular antes de dar uma feature de gesto como
-concluída. **Padrão que se repetiu 2x nesta saga** (itens 10 e 11):
-cuidado geral com refs (`useRef`) que só existem no DOM condicionadas a
-OUTRA ref, ou cujo CONTEÚDO/tamanho é lido antes do React ter
-re-renderizado com o valor atual — a condição/leitura não reage a
-mudanças da ref, só a `state`, então a janela entre "a ref mudou" e "o
-próximo `state` re-renderizou" é uma fresta real onde o DOM ainda reflete
-o estado anterior. Quando isso importa pra uma medição síncrona (não só
-pra exibição), escrever direto no DOM via `textContent`/`style` antes de
-medir é mais confiável do que esperar o ciclo do React.
+9-12) só apareceram no toque real do celular, num timing que o mouse
+simulado não reproduz sozinho, ou num detalhe geométrico (oval vs.
+círculo, centro-da-caixa vs. centro-do-avatar) que só fica óbvio olhando
+o resultado de perto/no zoom de um print. Vale pedir confirmação no
+celular antes de dar uma feature de gesto como concluída, e **quando
+"centralizar em cima do ponteiro" for pedido de novo**: definir com
+clareza qual é o PONTO DE REFERÊNCIA real (centro da caixa? centro de um
+elemento específico dentro dela?) antes de escrever a fórmula, não só
+"metade da largura/altura" no automático. **Padrão que se repetiu 2x
+nesta saga** (itens 10 e 11): cuidado geral com refs (`useRef`) que só
+existem no DOM condicionadas a OUTRA ref, ou cujo CONTEÚDO/tamanho é lido
+antes do React ter re-renderizado com o valor atual — a condição/leitura
+não reage a mudanças da ref, só a `state`, então a janela entre "a ref
+mudou" e "o próximo `state` re-renderizou" é uma fresta real onde o DOM
+ainda reflete o estado anterior. Quando isso importa pra uma medição
+síncrona (não só pra exibição), escrever direto no DOM via
+`textContent`/`style` antes de medir é mais confiável do que esperar o
+ciclo do React.
 
 ### Forno (ferramenta central)
 - Menu "Forno" abre o **painel de acompanhamento**, NUNCA a criação direta.

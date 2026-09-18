@@ -1826,11 +1826,20 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
      de 2 passos de sempre (escolher turma → provisório/fixo); arrastar
      de verdade e soltar sobre um pill pula direto pro passo 2, com a
      turma já escolhida pelo pill onde soltou. */
-  const arrastoRef = useRef({ ativo: false, moveu: false, aluno: null, startX: 0, startY: 0, metadeLargura: 0, metadeAltura: 0 });
+  const arrastoRef = useRef({ ativo: false, moveu: false, aluno: null, startX: 0, startY: 0, metadeAltura: 0 });
   const ghostRef = useRef(null);
   const ghostInnerRef = useRef(null);
   const ghostNomeRef = useRef(null);
   const BOLA_TAMANHO = 44;
+  /* Posição horizontal fixa do CENTRO do avatar dentro do fantasma
+     (borda 1px + padding 0.75rem/12px + metade do avatar 36px/2=18px) —
+     usada tanto pra centralizar o recorte circular (`clip-path`) quanto
+     pra posicionar o fantasma no ponteiro (ver `moverArraste`). Fixa de
+     propósito (não medida) porque avatar/padding/borda nunca mudam de
+     tamanho — só a largura do fantasma INTEIRO varia (nome mais
+     longo/curto), e é exatamente essa variação que causava o "fica mais
+     de ladinho" (ver comentário em `moverArraste`). */
+  const CENTRO_AVATAR_X = 1 + 12 + 18;
   /* `pillsRef` guarda o nó de cada pill-alvo (chave = id da turma), usado
      só na animação de "afunilar" ao soltar (`animarAfunilarEFechar`) pra
      saber o retângulo final. A detecção de alvo em si, durante o arraste,
@@ -1870,28 +1879,28 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
       if (ghostRef.current) ghostRef.current.style.display = "block";
       /* O fantasma NÃO herda mais a largura da linha inteira (que inclui
          espaço pro handle/anel/toggle que ele nem desenha) — fica do
-         tamanho natural do próprio conteúdo (avatar + nome). Por isso o
-         deslocamento do ponteiro também precisa ser medido no fantasma
-         de verdade (metade da LARGURA/ALTURA DELE), não mais na linha de
-         origem — achado do Diego com print marcando onde o mouse estava
-         vs. onde o retângulo aparecia: "o retangulo nao fica centralizado
-         onde eu pego". Medido uma vez só aqui (não a cada pointermove —
-         com `clip-path` no lugar de `width` pro efeito de bola, ver
-         abaixo, o tamanho real do fantasma não muda mais durante o
-         arraste, então uma medida só continua válida o arraste inteiro).
-         Centraliza o fantasma no ponteiro (não tenta replicar "onde
-         dentro da linha original você segurou" — não faz sentido, o
-         fantasma é um resumo simplificado, não a linha inteira). */
+         tamanho natural do próprio conteúdo (avatar + nome). Só mede a
+         ALTURA (metade, pra centralizar verticalmente) — a horizontal
+         usa `CENTRO_AVATAR_X`, uma constante fixa, não uma medida do
+         fantasma inteiro. Isso É o segundo achado do Diego, com print
+         marcando mouse vs. card: "olha a bolinha... ela fica mais de
+         ladinho" — eu tinha corrigido pra centralizar o CENTRO DA CAIXA
+         no ponteiro, mas a "bola" visível (o recorte circular, ver
+         `clipPath` abaixo) fica em cima do AVATAR, que mora perto da
+         borda ESQUERDA da caixa, não no centro dela — quanto mais longo
+         o nome (caixa mais larga), mais a bola visualmente se afastava
+         do ponteiro. Ancorar no avatar (fixo, sempre no mesmo lugar
+         relativo à caixa) resolve pros dois estados — card inteiro E
+         bola — com o MESMO ponto de referência, sem pulo entre eles. */
       if (ghostInnerRef.current) {
         const r = ghostInnerRef.current.getBoundingClientRect();
-        a.metadeLargura = r.width / 2;
         a.metadeAltura = r.height / 2;
       }
       setArrastandoAtivo(true);
     }
     if (!a.moveu) return;
     if (ghostRef.current) {
-      ghostRef.current.style.transform = `translate(${e.clientX - a.metadeLargura}px, ${e.clientY - a.metadeAltura}px)`;
+      ghostRef.current.style.transform = `translate(${e.clientX - CENTRO_AVATAR_X}px, ${e.clientY - a.metadeAltura}px)`;
     }
     /* Alvo sob o ponteiro via `document.elementFromPoint` em vez de
        comparar retângulos manuais contra `pillsRef` — acha o que está
@@ -1942,21 +1951,32 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
        inteira, preciso q vire qs uma bola"); depois animar
        largura/padding de verdade (`width`/`padding` são propriedades de
        LAYOUT — o detector de design apontou certo: força reflow a cada
-       frame da transição). **Solução final**: `clip-path` — recorta
-       visualmente o fantasma até uma janela circular do tamanho do
-       avatar (`BOLA_TAMANHO`) sem NUNCA mudar a largura/padding real da
-       caixa (só pintura/composição, não layout); o nome, que continua
-       ocupando espaço real por baixo do recorte, some via opacidade (não
-       precisaria, o clip já esconde, mas evita qualquer sobra visível
-       durante a transição). Volta pro card inteiro assim que sai de cima
-       do alvo, sempre — nunca fica "preso" na forma de bola. Os pills já
-       crescem (`scale-125`/`ring-2`) quando são o alvo — junto com a
-       bola, dá a leitura de "sendo puxado pra dentro". */
+       frame da transição). **Solução final**: `clip-path: circle(...)`
+       — recorta visualmente o fantasma até uma janela circular DE
+       VERDADE (`circle(raio at X Y)`, não `inset()`+`round` fingindo)
+       centrada no avatar (`CENTRO_AVATAR_X`, a mesma constante usada pra
+       posicionar o fantasma — ver `moverArraste`), sem NUNCA mudar a
+       largura/padding real da caixa (só pintura/composição, não layout).
+       **Corrigido depois de testar**: a primeira versão usava
+       `inset(0 calc(100% - 44px) 0 0 round 9999px)` — isso só limita a
+       LARGURA da janela, a ALTURA ficava inteira (altura da caixa, não
+       44px) — resultado era uma janela OVAL (larga 44px, alta ~60px),
+       não um círculo, cortando o avatar de um jeito estranho: "a
+       bolinha... nao esta centralizada e nao homogenica ela esta
+       cortando a letra". `circle(raio at x y)` é circular por definição
+       (um raio só, não largura×altura independentes), resolve os dois
+       problemas juntos. O nome, que continua ocupando espaço real por
+       baixo do recorte, some via opacidade (não precisaria, o clip já
+       esconde, mas evita qualquer sobra visível durante a transição).
+       Volta pro card inteiro assim que sai de cima do alvo, sempre —
+       nunca fica "preso" na forma de bola. Os pills já crescem
+       (`scale-125`/`ring-2`) quando são o alvo — junto com a bola, dá a
+       leitura de "sendo puxado pra dentro". */
     const emAlvo = !!(alvo || lateral);
     if (ghostInnerRef.current) {
       ghostInnerRef.current.style.clipPath = emAlvo
-        ? `inset(0 calc(100% - ${BOLA_TAMANHO}px) 0 0 round 9999px)`
-        : "inset(0 round 1rem)";
+        ? `circle(${BOLA_TAMANHO / 2}px at ${CENTRO_AVATAR_X}px 50%)`
+        : `circle(300px at ${CENTRO_AVATAR_X}px 50%)`;
     }
     if (ghostNomeRef.current) {
       ghostNomeRef.current.style.opacity = emAlvo ? "0" : "1";
@@ -2395,7 +2415,7 @@ function Turmas({ notificar, diaInicial = "ter", vagasPorTurma, setVagasPorTurma
             transformOrigin: "center",
             borderRadius: "1rem",
             padding: "0.75rem",
-            clipPath: "inset(0 round 1rem)",
+            clipPath: `circle(300px at ${CENTRO_AVATAR_X}px 50%)`,
           }}
         >
           {/* Avatar/nome ficam SEMPRE montados (não condicionados a

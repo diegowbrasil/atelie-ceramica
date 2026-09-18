@@ -260,6 +260,19 @@ fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
     de 0px entre ponteiro e centro do fantasma, em repouso e em modo
     "bola"). Detalhe técnico completo em CLAUDE.md §5, item 11 da mesma
     saga — vale ler antes de mexer nessa área nunca mais sem reler.
+20. **Quarto round, mesmo dia** — a correção do item 19 ainda tinha 2
+    bugs de geometria (não mais timing/detecção): a "bola" usava
+    `inset()`+`round`, que só limitava a LARGURA da janela (a altura
+    ficava inteira) — dava uma pílula/oval cortando o avatar torto, não
+    um círculo; e a centralização no ponteiro usava o centro da CAIXA
+    INTEIRA, enquanto o avatar (o que fica visível na bola) mora perto
+    da borda esquerda — quanto mais longo o nome, maior o desalinho
+    ("fica mais de ladinho"). Trocado `inset()` por `clip-path:
+    circle(raio at x y)` (círculo de verdade) e a centralização passou a
+    usar uma constante fixa (posição do avatar, não a largura variável
+    da caixa) como ponto de referência único pros dois estados (card
+    normal e bola). Detalhe técnico completo em CLAUDE.md §5, item 12 da
+    mesma saga.
 
 **Skill `/impeccable` instalado de verdade nesta sessão** (v4.3.1, via
 `npx impeccable install` — a instalação anterior via `npx mdskills
