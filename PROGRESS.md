@@ -9,13 +9,25 @@
 
 ## Onde continuar agora
 
-**Última sessão:** 2026-09-16/17 (mesma sessão, bem longa, atravessou
-virada de dia e um reset de limite de uso do Diego no meio). O redesign
-formal completo em 5 fases (INIT → CRITIQUE → SHAPE → CRAFT → POLISH) via
-`/impeccable` **está concluído** — ver "Fase atual" abaixo pro detalhe
-completo de cada fase. **Área do Aluno continua começada e pausada no
-meio** (ver backlog no fim desta seção) — não é o foco agora, não
-terminada, não deixar o usuário achar que está.
+**Última sessão: 2026-09-18** (a mais recente até agora). Resumo rápido,
+detalhe técnico completo nos itens 21-23 mais abaixo e em CLAUDE.md §5:
+retomada do app principal (arrastar-e-soltar de Turmas ganhou mais 2
+rounds de correção real-device — item 21/22), `AlunoDetalhe` virou
+editável de verdade (turma/pacote/pagamento/excluir), e depois uma
+auditoria completa de "autonomia" pedida pelo Diego resultou em
+Solicitações/Pagamentos/Oficinas/Forno todos ganhando ações que antes só
+pareciam funcionar mas não persistiam nada — mais uma seção nova de
+"Avisos" fixados no Dashboard (3 rodadas de redesenho visual no mesmo
+dia). **Working tree limpo, tudo commitado** até `ce2b064`.
+
+O redesign formal completo em 5 fases (INIT → CRITIQUE → SHAPE → CRAFT →
+POLISH) via `/impeccable` **está concluído** — ver "Fase atual" abaixo
+pro detalhe completo de cada fase. **Área do Aluno continua começada e
+pausada no meio** (ver backlog no fim desta seção) — o Diego pediu
+explicitamente pra pausar isso e voltar pro app principal em 2026-09-18
+("continue de onde parou, voltando ao app principal, nao a tela do
+aluno"), não é uma pendência esquecida, foi decisão dele. Ainda não
+retomada; não deixar o usuário achar que está pronta.
 
 **Depois do POLISH, mais uma rodada de iteração ao vivo (2026-09-17),
 fora das 5 fases formais** — pedido do Diego reagindo ao app no celular:
