@@ -5,20 +5,98 @@
 @layer base {
   :root {
     color-scheme: light;
+
+    /* Tokens de cor — espelham exatamente demo/AtelieDemo.jsx (fonte de
+       verdade visual, CLAUDE.md §6.1). "R G B" space-separated para dar
+       suporte nativo a modificador de opacidade do Tailwind (ver
+       tailwind.config.ts / withOpacity). */
+    --cream: 242 242 235; /* #F2F2EB */
+    --cream-soft: 231 228 218; /* #E7E4DA */
+    --line: 222 218 209; /* #DEDAD1 */
+    --ink: 59 56 51; /* #3B3833 */
+    --ink-soft: 107 101 92; /* #6B655C */
+    --accent: 194 65 12; /* #C2410C */
+    --accent-hover: 154 52 18; /* #9A3412 */
+    --accent-soft: 243 225 214; /* #F3E1D6 */
+    --sienna: 139 74 43;
+    --ardosia: 74 97 120;
+    --musgo: 95 107 58;
+    --cafe: 74 52 42;
+    --carvao: 38 38 36;
+
+    /* Tokens de fonte — cada next/font/google expõe sua própria variável
+       (ver layout.tsx); aqui elas se combinam nos 3 papéis semânticos que
+       o app usa (CLAUDE.md §6.1). */
+    --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, sans-serif;
+    --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+    --font-display: var(--font-bebas), var(--font-space-grotesk), var(--font-sans);
   }
-  .dark {
-    color-scheme: dark;
-  }
+
   body {
-    @apply bg-paper text-ink-700 dark:bg-paper-dark dark:text-ink-100;
+    @apply bg-cream text-ink;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
+
   ::selection {
-    @apply bg-clay-200 text-clay-800;
+    @apply bg-accent-soft text-accent;
+  }
+
+  /* Cantos arredondados por padrão em controles sem rounded-* explícito —
+     regra de baixa especificidade, não compete com quem já define a
+     própria classe (mesma regra do demo). */
+  button,
+  input,
+  textarea,
+  select {
+    border-radius: 0.75rem;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  [role="checkbox"]:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+    border-radius: inherit;
   }
 }
 
 @layer utilities {
-  .scrollbar-none::-webkit-scrollbar { display: none; }
-  .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Brilho ao redor do card de forno ativo no Dashboard — cor conforme a
+   temperatura real (--glow-rgb, definido inline por card). Mesma receita
+   do demo (CLAUDE.md, Dashboard): "coloque envolta do card do forno, uma
+   cor encandescente oscilando como se estivesse quente". */
+@keyframes brasaForno {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgb(var(--glow-rgb) / 0.5), 0 0 14px 1px rgb(var(--glow-rgb) / 0.32), 0 0 26px 3px rgb(var(--glow-rgb) / 0.18);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgb(var(--glow-rgb) / 0.85), 0 0 22px 4px rgb(var(--glow-rgb) / 0.55), 0 0 40px 9px rgb(var(--glow-rgb) / 0.34);
+  }
+}
+.forno-brasa {
+  animation: brasaForno 2.6s ease-in-out infinite;
+}
+/* Forno frio/desligado: mesma ideia, azul e bem mais discreto — "o forno
+   q estiver com uma temperatura mais baixa ou desligado, deixe ele com o
+   volto em azul e com menos efeitos". */
+@keyframes brasaFornoFrio {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgb(var(--glow-rgb) / 0.4), 0 0 11px 0px rgb(var(--glow-rgb) / 0.22);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgb(var(--glow-rgb) / 0.6), 0 0 16px 1px rgb(var(--glow-rgb) / 0.32);
+  }
+}
+.forno-fresco {
+  animation: brasaFornoFrio 3.6s ease-in-out infinite;
 }

@@ -64,9 +64,18 @@ Restrições rígidas deste arquivo:
 ### B) Raiz do projeto — Next.js 14 + Supabase (base arquitetural)
 
 Estrutura de produção real: App Router, TypeScript, Tailwind com design
-tokens, Supabase (Auth + Postgres + Storage), RLS completo. **Está
-desatualizado em relação ao demo** — Oficinas, Pagamentos, status de peças,
-presença nos cards etc. só existem no demo por enquanto.
+tokens, Supabase (Auth + Postgres + Storage), RLS completo. **Migração
+em andamento desde 2026-09-20** (decisão do Diego: publicar como PWA
+instalável, sem loja/taxa — precisa de um site real em HTTPS, o que só
+este lado do projeto pode ser; Capacitor/lojas nativas ficaram fora de
+escopo). Plano completo de 12 fases em
+`C:\Users\Usuario\.claude\plans\zippy-frolicking-token.md`. **Fase 1
+(paleta/fontes/componentes base/schema/manifest do PWA) concluída** — ver
+PROGRESS.md, sessão 2026-09-20/21, pro detalhe técnico completo. **Ainda
+desatualizado em conteúdo/comportamento** — Oficinas, Pagamentos, status
+de peças, presença nos cards etc. só existem de verdade no demo; cada
+tela será reconstruída tela por tela nas fases seguintes, demo como
+referência de comportamento.
 
 `supabase/schema.sql` é a peça mais valiosa: schema completo, inclusive das
 telas que ainda não têm UI. **Fonte de verdade do modelo de dados.**
@@ -113,10 +122,16 @@ de subir manualmente. `node_modules`/`package-lock.json` instalados em
 inclusive `/login`) tenta autenticar com Supabase mesmo assim — na prática
 as páginas ainda carregam com os dados mockados que já existem direto nos
 Server Components, mas login/RLS de verdade só funcionam com chaves reais.
-`npm audit` (2026-09-15) apontou **17 vulnerabilidades (1 crítica, 12
-altas)** em `next@14.2.5` — não corrigidas ainda, precisa de
-`npm audit fix`/upgrade de major version avaliado com cuidado (pode quebrar
-App Router) antes de ir pra produção.
+`npm audit` (atualizado 2026-09-21, era 17/1-crítica em 2026-09-15) —
+fixes seguros sem major já aplicados (`next`→14.2.35, `@supabase/
+supabase-js`/`ssr`, `vite`). **Ainda pendente, precisa de decisão do
+Diego antes do deploy real (Fase 11)**: mesmo em 14.2.35, a linha inteira
+do Next 14 carrega 2 CVEs críticos sem patch dentro do major
+(`GHSA-p293-qw3h-jr36` RCE em servidor Windows, `GHSA-2xp9-vwfh-vxw4` RCE
+via AVIF no Image Optimization — este último bate em qualquer host,
+inclusive Vercel) — só fecham com Next ≥15.5.24, upgrade de major
+avaliado com cuidado (pode quebrar App Router), não forçado às cegas.
+Detalhe completo em PROGRESS.md, sessão 2026-09-20/21.
 
 ---
 
@@ -1675,6 +1690,20 @@ decisão no início da §2).
   reportar como concluído.
 - Não reabrir decisões já tomadas listadas em §5/§6 com o cliente sem
   motivo novo.
+- **`next/og` (`ImageResponse`) quebra no Windows quando o caminho do
+  projeto tem espaço** — "APP MTCST" faz o carregador de fonte padrão do
+  Satori montar um `file://` malformado (`Invalid URL` /
+  `fileURLToPath`), mesmo sem nenhum texto na árvore JSX e mesmo
+  fornecendo uma fonte própria via a opção `fonts` (as duas coisas
+  testadas, achado 2026-09-21 ao gerar os ícones do PWA). Não é
+  contornável por cima da chamada — é bug de terceiros. Pra ícone
+  estático (favicon/apple-touch-icon/manifest), usar SVG estático em
+  `public/` em vez de `ImageResponse`: Next.js serve o arquivo direto,
+  zero Satori, zero fonte, funciona em qualquer ambiente. Se algum dia
+  precisar de `ImageResponse` de verdade (ex: OG image dinâmica com dado
+  real), ela só vai funcionar rodando fora deste caminho com espaço
+  (produção na Vercel deve ser imune — o bug é de resolução de path
+  local, não de lógica) — testar lá antes de assumir que quebra também.
 - **`resize_window` (viewport mobile) e `computer{screenshot}` ficaram
   instáveis** no navegador embutido em 2026-09-15 durante uma sessão longa
   (o viewport real não batia com o solicitado, screenshots vinham em branco

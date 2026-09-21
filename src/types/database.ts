@@ -8,6 +8,7 @@ export type MatriculaStatus = "confirmado" | "pendente" | "recusado";
 export type PresencaStatus = "presente" | "falta" | "reposicao" | "pendente";
 export type ReposicaoStatus = "solicitada" | "aprovada" | "recusada" | "realizada";
 export type PagamentoStatus = "pendente" | "pago" | "isento";
+export type PagamentoTipo = "pacote" | "avulsa";
 export type TipoQueima = "esmalte" | "biscoito" | "outro";
 export type EtapaQueimaDB =
   | "aquecendo" | "maxima_atingida" | "patamar" | "resfriando"
@@ -17,6 +18,7 @@ export type NotificacaoTipo =
   | "ultima_aula" | "pacote_encerrado" | "solicitacao_vaga" | "solicitacao_reposicao"
   | "confirmacao_presenca" | "oficina_amanha" | "queima_iniciada" | "queima_finalizada"
   | "pecas_prontas";
+export type AvisoDestinatario = "admin" | "alunos";
 
 export interface Profile {
   id: string;
@@ -58,6 +60,54 @@ export interface Matricula {
   solicitado_em: string;
 }
 
+export interface Aula {
+  id: string;
+  turma_id: string;
+  data: string;
+}
+
+export interface Presenca {
+  id: string;
+  aula_id: string;
+  aluno_id: string;
+  status: PresencaStatus;
+  confirmado_pelo_aluno: boolean;
+  marcado_em: string | null;
+}
+
+export interface Reposicao {
+  id: string;
+  aluno_id: string;
+  aula_origem_id: string | null;
+  turma_destino_id: string;
+  data_destino: string;
+  status: ReposicaoStatus;
+  solicitado_em: string;
+  resolvido_em: string | null;
+}
+
+export interface Oficina {
+  id: string;
+  nome: string;
+  data: string;
+  hora_inicio: string;
+  hora_fim: string;
+  valor: number;
+  max_participantes: number;
+  criado_em: string;
+}
+
+export interface OficinaParticipante {
+  id: string;
+  oficina_id: string;
+  aluno_id: string | null;
+  nome: string;
+  telefone: string | null;
+  email: string | null;
+  pagamento: PagamentoStatus;
+  confirmado: boolean;
+}
+
 export interface Queima {
   id: string;
   tipo: TipoQueima;
@@ -78,6 +128,26 @@ export interface Queima {
   criado_em: string;
 }
 
+export interface QueimaConteudo {
+  id: string;
+  queima_id: string;
+  categoria: ConteudoCategoria;
+  aluno_id: string | null;
+  turma_id: string | null;
+  oficina_id: string | null;
+  cliente_nome: string | null;
+  quantidade: number;
+  valor: number | null;
+  pagamento: PagamentoStatus | null;
+}
+
+export interface QueimaLeitura {
+  id: string;
+  queima_id: string;
+  temperatura: number;
+  registrado_em: string;
+}
+
 export interface Notificacao {
   id: string;
   destinatario_id: string | null;
@@ -90,18 +160,65 @@ export interface Notificacao {
   canal_whatsapp_enviado: boolean;
 }
 
+export interface Pagamento {
+  id: string;
+  aluno_id: string | null;
+  turma_id: string | null;
+  tipo: PagamentoTipo;
+  descricao: string | null;
+  valor: number | null;
+  status: PagamentoStatus;
+  vencimento: string | null;
+  pago_em: string | null;
+  criado_em: string;
+}
+
+export interface Aviso {
+  id: string;
+  texto: string;
+  destinatario: AvisoDestinatario;
+  criado_por: string | null;
+  criado_em: string;
+  ativo: boolean;
+}
+
+// Formato exigido pelo `GenericSchema`/`GenericTable` do postgrest-js —
+// `Relationships` é obrigatório mesmo sem FK modeladas aqui (achado
+// 2026-09-21: sem isso, `Database["public"]` não satisfaz `GenericSchema`
+// e o client Supabase silenciosamente perde o tipo, toda query devolvia
+// `never`). Mesmo formato que `supabase gen types` geraria de verdade.
+type TableOf<Row, InsertRow = Partial<Row>, UpdateRow = Partial<Row>> = {
+  Row: Row;
+  Insert: InsertRow;
+  Update: UpdateRow;
+  Relationships: [];
+};
+
 // Placeholder para o client tipado do Supabase (`Database`).
 // Ao rodar `supabase gen types`, este tipo é substituído pelo real.
 export interface Database {
+  __InternalSupabase: {
+    PostgrestVersion: "12";
+  };
   public: {
     Tables: {
-      profiles: { Row: Profile; Insert: Partial<Profile>; Update: Partial<Profile> };
-      turmas: { Row: Turma; Insert: Partial<Turma>; Update: Partial<Turma> };
-      pacotes: { Row: Pacote; Insert: Partial<Pacote>; Update: Partial<Pacote> };
-      matriculas: { Row: Matricula; Insert: Partial<Matricula>; Update: Partial<Matricula> };
-      queimas: { Row: Queima; Insert: Partial<Queima>; Update: Partial<Queima> };
-      notificacoes: { Row: Notificacao; Insert: Partial<Notificacao>; Update: Partial<Notificacao> };
-      [key: string]: { Row: any; Insert: any; Update: any };
+      profiles: TableOf<Profile>;
+      turmas: TableOf<Turma>;
+      pacotes: TableOf<Pacote>;
+      matriculas: TableOf<Matricula>;
+      aulas: TableOf<Aula>;
+      presencas: TableOf<Presenca>;
+      reposicoes: TableOf<Reposicao>;
+      oficinas: TableOf<Oficina>;
+      oficina_participantes: TableOf<OficinaParticipante>;
+      queimas: TableOf<Queima>;
+      queima_conteudo: TableOf<QueimaConteudo>;
+      queima_leituras: TableOf<QueimaLeitura>;
+      notificacoes: TableOf<Notificacao>;
+      pagamentos: TableOf<Pagamento>;
+      avisos: TableOf<Aviso>;
     };
+    Views: {};
+    Functions: {};
   };
 }

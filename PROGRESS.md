@@ -9,16 +9,67 @@
 
 ## Onde continuar agora
 
-**Última sessão: 2026-09-18** (a mais recente até agora). Resumo rápido,
-detalhe técnico completo nos itens 21-23 mais abaixo e em CLAUDE.md §5:
-retomada do app principal (arrastar-e-soltar de Turmas ganhou mais 2
-rounds de correção real-device — item 21/22), `AlunoDetalhe` virou
-editável de verdade (turma/pacote/pagamento/excluir), e depois uma
-auditoria completa de "autonomia" pedida pelo Diego resultou em
-Solicitações/Pagamentos/Oficinas/Forno todos ganhando ações que antes só
-pareciam funcionar mas não persistiam nada — mais uma seção nova de
-"Avisos" fixados no Dashboard (3 rodadas de redesenho visual no mesmo
-dia). **Working tree limpo, tudo commitado** até `ce2b064`.
+**Última sessão: 2026-09-20/21 — início da migração Next.js + PWA.**
+Depois de fechar a auditoria de autonomia (2026-09-18, ver item 23
+abaixo), o Diego voltou à pergunta de colocar o app "na appstore" — ao
+saber do custo/Mac exigido pelo caminho nativo, decidiu ir de **PWA**
+("Adicionar à tela inicial", sem loja, sem taxa, instalável no Android e
+iPhone). Isso exige um site publicado em HTTPS de verdade, o que só o
+projeto Next.js+Supabase pode ser (o demo é artifact do Claude.ai, sem
+domínio próprio) — plano completo de migração aprovado (12 fases, ver
+`C:\Users\Usuario\.claude\plans\zippy-frolicking-token.md`), Capacitor/
+lojas nativas explicitamente fora de escopo por decisão do Diego.
+
+**Fase 1 (fundação técnica) concluída nesta sessão**, sem tocar em
+nenhuma tela ainda (isso é Fase 2 em diante):
+- Paleta do demo portada pro `tailwind.config.ts`/`globals.css`
+  (tokens `cream`/`ink`/`accent`/identidade de turma, com suporte nativo
+  a `/opacidade` do Tailwind) — os 16 arquivos que usavam a paleta antiga
+  (`paper`/`clay`/`glaze`/`ink-50..900`) foram todos atualizados, dark
+  mode morto removido (nunca teve toggle). Fontes trocadas pra
+  `next/font/google` real: Bebas Neue + Space Grotesk + Inter + IBM Plex
+  Mono, mesmos papéis semânticos do demo.
+- Sidebar estreitada pra bater com a regra já registrada (§6, "não
+  alargar"), logo virou o wordmark "MTCST" (mesma lógica do `LogoMark`
+  do demo — nunca mais imagem).
+- Componentes que faltavam criados: `Modal`, `Toggle`, `StatCard`.
+- Schema estendido com `pagamentos` e `avisos` (+ RLS); `database.ts`
+  agora tipa as 13 tabelas (antes só 6).
+- **Ícone do PWA — achado um bug real do `next/og` no Windows** (path
+  com espaço em "APP MTCST" quebra o carregamento de fonte do
+  `ImageResponse`, mesmo sem nenhum texto na árvore e mesmo fornecendo
+  fonte própria — ver detalhe técnico no item novo do Histórico de
+  sessões). Resolvido com um SVG estático (`public/icon.svg`, a
+  silhueta do vaso) em vez de gerado — nunca depende de fonte, funciona
+  em qualquer ambiente. `manifest.json` corrigido (nome "MTCST", cores
+  certas, ícone que existe de verdade).
+- **`npm audit` — só os fixes seguros (sem major) aplicados**: `next`
+  14.2.5→14.2.35, `@supabase/supabase-js`/`ssr`, `vite` (usado só pelo
+  preview do demo). **Achado importante, ainda pendente de decisão do
+  Diego**: mesmo em 14.2.35, a linha inteira do Next 14 tem 2
+  vulnerabilidades CRÍTICAS sem patch dentro do major
+  (`GHSA-p293-qw3h-jr36` RCE não-autenticado em servidor Windows,
+  `GHSA-2xp9-vwfh-vxw4` RCE via AVIF no Image Optimization API) — só
+  fecham de verdade com Next ≥15.5.24. Upgrade de major fica pra decidir
+  com calma antes da Fase 11 (deploy real), não forçado aqui (pode
+  quebrar o App Router, CLAUDE.md já sinalizava essa cautela). Ver
+  próxima sessão.
+- Verificado ao vivo: Dashboard/Turmas/Forno/Login rodando sem erro de
+  console em `localhost:3000` (aba nova a cada checagem, não reaproveitei
+  abas com erro antigo em cache).
+
+**Ainda não commitado** — working tree deste trabalho de Fase 1 precisa
+de `git status`/revisão antes do próximo commit.
+
+Resumo da sessão anterior (2026-09-18), pra contexto: retomada do app
+principal (arrastar-e-soltar de Turmas ganhou mais 2 rounds de correção
+real-device — item 21/22), `AlunoDetalhe` virou editável de verdade
+(turma/pacote/pagamento/excluir), e depois uma auditoria completa de
+"autonomia" pedida pelo Diego resultou em Solicitações/Pagamentos/
+Oficinas/Forno todos ganhando ações que antes só pareciam funcionar mas
+não persistiam nada — mais uma seção nova de "Avisos" fixados no
+Dashboard (3 rodadas de redesenho visual no mesmo dia). Tudo isso
+commitado até `ce2b064`.
 
 O redesign formal completo em 5 fases (INIT → CRITIQUE → SHAPE → CRAFT →
 POLISH) via `/impeccable` **está concluído** — ver "Fase atual" abaixo
@@ -1410,3 +1461,397 @@ ainda não veio do Diego (cosmético, avatar da sidebar mostra só "H").
 depois fase POLISH — tipografia/espaçamento/estados/contraste fina, ou
 CRAFT de continuação se ele quiser o mesmo tratamento em mais lugares
 (Dashboard, sidebar) antes de fechar a fase.
+
+---
+
+### 2026-09-20/21 — Migração Next.js + PWA, Fase 1 (fundação técnica)
+
+**Contexto da decisão** (resumo completo em "Onde continuar agora" no
+topo): o Diego reabriu a pergunta de app store ("gente ja nao consegue ja
+começar a colocar ela nas appstore para rodar como um app nativo?"), foi
+informado do custo ($99/ano Apple + necessidade de Mac/Xcode pra iOS
+nativo — bloqueio real, não contornável no Windows dele) e perguntou por
+uma alternativa sem loja/taxa que não parecesse "página de navegador"
+("tem algum jeito de publicar o app q nao precisa colocar no appstore...
+porem q ele nao pareça uma pagina de navegador?"). PWA resolve
+exatamente isso — confirmado por ele ("vms para pwa primeiro entao").
+Plano de 12 fases aprovado via Plan Mode, salvo em
+`C:\Users\Usuario\.claude\plans\zippy-frolicking-token.md`. Capacitor e
+as duas lojas nativas ficaram explicitamente fora de escopo (decisão do
+próprio Diego, não esquecimento).
+
+Como PWA só instala a partir de HTTPS publicado de verdade (não dá pra
+instalar o demo, artifact sem domínio próprio, nem `localhost`), o
+caminho é terminar de portar o app pro Next.js+Supabase (que está com só
+3 telas com visual antigo e dado 100% mockado) antes de publicar. Fase 1
+é a fundação — nenhuma tela foi reconstruída ainda, isso é Fase 2+.
+
+**O que foi feito:**
+
+1. **Paleta**: `tailwind.config.ts` reescrito do zero — saiu a paleta
+   antiga (`paper`/`surface`/`ink` 50-900/`clay` 50-900/`glaze`, mais
+   `darkMode:"class"` sem nenhum toggle em lugar nenhum do projeto,
+   confirmado via busca — código morto) e entrou a paleta do demo:
+   `cream`/`cream-soft`/`line`/`ink`/`ink-soft`/`accent`(+hover/soft) +
+   as 5 cores de identidade (`sienna`/`ardosia`/`musgo`/`cafe`/`carvao`).
+   Implementadas como função `withOpacity()` lendo CSS custom properties
+   "R G B" espaçadas — dá suporte nativo a `bg-accent/40` etc., versão
+   mais idiomática do que o `rgbCor()` do demo precisa fazer na mão (o
+   ambiente de artifact não permite Tailwind config customizado, o
+   Next.js permite). Tokens definidos em `globals.css` `:root`. Removido
+   o override de `borderRadius` (xl/2xl) que existia só pra imitar
+   cantos do sistema antigo — a escala padrão do Tailwind já bate com o
+   demo (`rounded-2xl`=1rem, `rounded-3xl`=1.5rem); em troca, entrou a
+   regra global de baixa especificidade do demo (`button, input,
+   textarea, select { border-radius: 0.75rem }`).
+2. **Fontes**: trocadas de Fraunces/Inter/JetBrains Mono (que nunca
+   bateram com o demo) pra Bebas Neue + Space Grotesk + Inter + IBM Plex
+   Mono via `next/font/google` (melhor que o `@import` do Google Fonts
+   que o demo usa — só existe por causa da limitação do artifact).
+   `--font-display`/`--font-sans`/`--font-mono` compõem as variáveis que
+   cada `next/font` já gera, mesmos 3 papéis semânticos documentados no
+   CLAUDE.md §6.1.
+3. **16 arquivos que usavam a paleta antiga** (grep confirmou 0 restantes
+   depois): `Card`/`Badge`/`Button`/`Avatar`/`ProgressRing` (ui),
+   `Sidebar`/`MobileNav` (layout), `VagaCard`, `KpiCard`/`KilnLiveCard`
+   (dashboard), as 4 `page.tsx` (dashboard/forno/turmas/login) +
+   `(admin)/layout.tsx` + `globals.css`. `dark:` removido de todo mundo
+   junto (nunca teve toggle, era código morto desde sempre nesse
+   projeto). `Badge` perdeu o tom "glaze" (não existe mais 2ª cor de
+   acento, só `accent` + tons semânticos Tailwind core pra status).
+   `Avatar` ganhou `anelCor` opcional e `ProgressRing` ganhou
+   `color`/`trackColor` customizáveis — preparação pra portar a feature
+   de vaga provisória (contorno da turma de origem) nas fases seguintes,
+   sem precisar reabrir esses componentes de novo.
+4. **Sidebar**: `w-64` → `w-32` com ícone+rótulo empilhado — a regra "não
+   alargar" já estava em CLAUDE.md §6 (pedido antigo do Diego, nunca
+   aplicado nesse lado do código porque o Next.js nunca foi atualizado
+   junto). `VaseMark` (SVG do vaso antigo) removido, logo virou o
+   wordmark "MTCST" em Bebas Neue — mesma decisão já tomada no demo
+   (§6, `LogoMark`), só nunca replicada aqui. Rodapé da sidebar
+   simplificado pra só o avatar (removido texto "Administrador" +
+   nome + chevron que sugeria um menu que não existe — o demo não tem
+   isso, era invenção do Next.js antigo).
+5. **`MobileNav`**: tabs alinhadas ao que CLAUDE.md já documentava como
+   decisão fechada (Início/Turmas/Forno/Oficinas/Mais — Solicitações
+   saiu da barra fixa em 2026-09-17 no demo, nunca propagado aqui) +
+   visual de pílula flutuante de vidro igual ao demo (antes era uma
+   barra reta colada, quase opaca).
+6. **Componentes novos**: `Modal.tsx`, `Toggle.tsx`, `StatCard.tsx` —
+   portas diretas dos equivalentes do demo, nenhum ainda usado em tela
+   nenhuma (isso é Fase 2+).
+7. **Schema** (`supabase/schema.sql`): duas tabelas novas com RLS —
+   `pagamentos` (aluno/turma/tipo pacote-avulsa/valor nullable/status,
+   reaproveitando o enum `pagamento_status` que já existia) e `avisos`
+   (texto/destinatario admin-alunos/ativo). RLS de `avisos` deixa "pra
+   alunos" visível a qualquer autenticado e "pra admin" só admin — a
+   escrita é sempre admin nos dois casos. `src/types/database.ts`
+   reescrito: as 13 tabelas do schema agora têm tipo (antes só 6 —
+   `Aula`/`Presenca`/`Reposicao`/`Oficina`/`OficinaParticipante`/
+   `QueimaConteudo`/`QueimaLeitura` estavam faltando, mais as 2 novas).
+8. **Manifest/ícone do PWA — achado um bug real do `next/og` no Windows**:
+   `ImageResponse` (usada nos arquivos de convenção `icon.tsx`/
+   `apple-icon.tsx`/rotas customizadas) quebrava com `TypeError: Invalid
+   URL` (`fileURLToPath` recebendo uma string tipo
+   `.\file:\C:\Users\...\APP%20MTCST\...\noto-sans-v27-latin-regular.ttf`
+   malformada) ao tentar carregar a fonte padrão embutida — **acontece
+   mesmo sem nenhum texto na árvore JSX e mesmo fornecendo uma fonte
+   própria via a opção `fonts`** (testei as duas coisas, achado real via
+   preview + `preview_logs`, não suposição): o Satori tenta carregar a
+   fonte padrão dele incondicionalmente antes de olhar o conteúdo,
+   então não tem workaround por cima da própria chamada de
+   `ImageResponse` — é um bug de terceiros específico de Windows +
+   espaço no caminho do projeto ("APP MTCST"), não algo que dá pra
+   corrigir editando o código da aplicação. **Resolvido trocando pra um
+   SVG estático** (`public/icon.svg`, a silhueta do vaso antigo —
+   `VaseMark`, nunca mais usada como logo dentro do app, mas apropriada
+   aqui: ícone de ~48px na tela do celular lê melhor como marca gráfica
+   do que "MTCST" em texto condensado) — Next.js serve arquivo estático
+   direto, zero Satori, zero fonte, funciona em qualquer ambiente (dev
+   Windows e produção Vercel/Linux igual). `manifest.json` corrigido:
+   nome "MTCST" (era "Ateliê de Cerâmica"), `background_color`/
+   `theme_color` nas cores certas, ícone único `sizes:"any"` (SVG
+   escala). `layout.tsx` ganhou `metadata.icons` apontando pro mesmo
+   arquivo (favicon + apple-touch-icon). **Pendência conhecida, não
+   gravidade alta**: apple-touch-icon em SVG tem suporte inconsistente
+   em iOS mais antigo (PNG seria mais seguro pra 100% de compatibilidade)
+   — não resolvido por falta de ferramenta de rasterização no ambiente
+   (sem ImageMagick/sharp/rsvg-convert instalados); revisitar se isso
+   incomodar na prática ao testar num iPhone real (Fase 12), ou se o
+   Diego quiser encomendar um ícone PNG de verdade da Hanna depois.
+9. **`npm audit`**: 19 vulnerabilidades no início (4 low, 1 moderate, 13
+   high, 1 critical). Aplicado o que é seguro sem major version:
+   `next` 14.2.5→14.2.35, `@supabase/supabase-js`→2.116.0, `@supabase/
+   ssr`→0.5.2, `vite`→5.4.21 (usado só pelo `preview:demo`, nunca vai
+   pra produção do app real). **Achado sério, não resolvido de
+   propósito**: mesmo em 14.2.35, `next` continua listado como CRÍTICO —
+   investigando o motivo real (não só confiando no resumo do `npm
+   audit`), são 2 CVEs sem patch em NENHUMA versão 14.x:
+   `GHSA-p293-qw3h-jr36` (RCE não-autenticado em servidor hospedado em
+   Windows) e `GHSA-2xp9-vwfh-vxw4` (RCE não-autenticado no Image
+   Optimization API ao processar AVIF) — só fecham de verdade com Next
+   ≥15.5.24. A sugestão automática do `npm audit fix --force` pula
+   direto pro Next 16 (major, quebra bem provável no App Router,
+   CLAUDE.md já pedia cautela nisso). Como o destino de produção é
+   Vercel (Linux), o primeiro CVE não bate no deploy real, mas bate em
+   qualquer um rodando `npm run dev`/self-host Windows; o segundo (AVIF)
+   bate em qualquer lugar que sirva imagem otimizada, incluindo Vercel.
+   **Não fiz o upgrade de major sozinho** — decisão que precisa do
+   Diego, propus fazer como tarefa própria (build completo + smoke test
+   de toda a Fase 2+ depois) antes da Fase 11 (deploy real), não
+   misturado com o resto da Fase 1. `eslint-config-next`14→16 (major)
+   também ficou de fora, mesma lógica (ferramenta de lint/build, não
+   necessidade). Resto das vulnerabilidades (`next-pwa`→`workbox`→
+   `serialize-javascript`, sugestão de downgrade pra `next-pwa@2.0.2`)
+   também não mexido — a "correção" sugerida é uma versão MAIS ANTIGA
+   que `next-pwa` 5.6.0 atual, quase certamente perde suporte a App
+   Router (a versão 2.x é da era do Pages Router); aplicar isso às
+   cegas provavelmente quebra o PWA inteiro. Risco real mas baixo na
+   prática (workbox/terser rodam só em build time pra gerar o service
+   worker, não ficam expostos em requisição de usuário final).
+10. **Verificação ao vivo**: `npm run dev` rodando, testado
+    Dashboard/Turmas(Terça)/Forno/Login em abas novas (não reaproveitei
+    abas que tinham visto erro antigo — lição já registrada no CLAUDE.md
+    sobre cache de console do HMR mascarar o estado real) — sem erro de
+    servidor (`preview_logs` limpo) nem de console, texto em português
+    renderizando certo, cores/fontes batendo com o demo. Único warning
+    visto (`recharts`/`defaultProps` no gráfico do Forno) é da própria
+    lib, pré-existente, não relacionado a nada mexido aqui.
+
+**Não mexido nesta sessão** (de propósito, é Fase 2+): conteúdo/dado
+mockado de cada tela continua mockado (TODOs comentados intactos); o
+gráfico "Curva da queima" continua no Forno (o demo removeu isso a
+pedido do Diego em 2026-09-17, mas essa é uma mudança de conteúdo/
+comportamento da tela, não de paleta — fica pra quando Forno for
+reconstruído de verdade); cabeçalho mobile (o demo tem uma pílula
+flutuante com o logo — o Next.js hoje não tem cabeçalho mobile nenhum,
+só a `Sidebar` desktop + `MobileNav` — construir um do zero é trabalho
+de tela, não de fundação, fica pra Fase 2 junto do resto do
+`AdminLayout`).
+
+**Problemas pendentes:** decisão do Diego sobre o upgrade major do
+Next.js (14→15/16, resolve os 2 CVEs críticos) antes do deploy real;
+apple-touch-icon em SVG (compatibilidade iOS mais antiga, ver item 8);
+`login/page.tsx` tem 1 erro de tipo (`role` on `never`) que sobrou depois
+do bump de `@supabase/supabase-js` — a versão nova exige um formato mais
+estrito de `Database` (`Relationships`/`Views`/`Functions`/
+`__InternalSupabase`, já adicionados) mas ainda não fechou 100%; não
+bloqueia o dev server (só `tsc --noEmit`/build), não investigado até o
+fim por causa da prioridade abaixo; working tree ainda não commitado.
+
+**Correção no meio da sessão — o Diego testou o preview e apontou que
+Turmas/Forno ainda pareciam com o Next.js antigo, não com o demo**
+("vc leu oq eu falei? q qro q o aplicativo seja como estava no demo e
+nao como esta no localhost3000"). Procedente — Fase 1 só tinha portado
+cor/fonte, o CONTEÚDO de cada tela continuava sendo o mock antigo do
+Next.js (nomes fictícios, e o Forno especificamente ainda tinha o
+gráfico "Curva da queima" que o próprio Diego pediu pra tirar do demo em
+2026-09-17). Puxei a reconstrução do **Forno** pra esta sessão (seria
+Fase 3) por ser a tela mais visivelmente errada e "o coração do ateliê":
+
+- Gráfico removido (import do `recharts` inteiro saiu do arquivo).
+- **2 fornos com abas** (Forno 1/Forno 2, ponto verde indicando qual tem
+  fornada ativa) — antes só existia o conceito de "a queima", singular.
+- Painel da fornada ativa reconstruído fiel ao demo:
+  `ProgressRing` + StatCards (Tempo decorrido/Temp. máxima/Tempo
+  restante/Patamar/Abertura segura/Etapa atual), "Conteúdo do forno" por
+  categorias (Peças de alunos/oficinas/Encomendas/Queimas por fora — sem
+  "Misturado", removida a pedido faz tempo) com botão Editar, lista de
+  Observações, os 3 botões grandes (Atualizar temperatura/Adicionar
+  observação/Finalizar fornada) + "Cancelar fornada" discreto abaixo.
+  Estado vazio ("Nenhuma fornada em andamento no Forno X") quando o
+  forno selecionado não tem fornada ativa.
+- **Modal "Nova fornada"** funcional (tipo com presets/temp. máxima/
+  categorias/detalhes) — simplificação deliberada do fluxo do demo (lá é
+  página dedicada com mais seções; aqui é modal, pra não estourar o
+  escopo desta correção). Ao iniciar com uma fornada já ativa no forno,
+  pede confirmação (vira "Interrompida", nunca apaga) antes de criar a
+  nova — mesma regra do demo.
+- `paramsDe()` (função nova, local ao arquivo) faz a ponte entre o
+  formato de fornada da tela (`config`+`iniciadoEm`+`leituras[]`
+  separados, mesma forma do demo) e `ParametrosQueima` de
+  `src/lib/forno.ts` (formato achatado) — **`calcularPrevisao` em si não
+  foi reescrita**, só chamada com os dados remontados (regra do
+  CLAUDE.md §2B respeitada).
+- Estado 100% local (`useState`, mesmo padrão "TODO conectar dados
+  reais" já usado no resto do projeto) — Supabase ainda não entra aqui.
+- Testado ao vivo: troquei de aba (Forno 2 mostra o estado vazio
+  corretamente), criei uma fornada nova de verdade no Forno 2 (apareceu
+  no histórico, painel ativo mostrando 25°C/00:00:00 decorrido),
+  histórico filtra certo por forno. `tsc --noEmit` limpo nesse arquivo.
+
+**Ainda no Next.js antigo, não tocado ainda** (mesma lista de sempre,
+Fases 2+): Turmas (roster fictício, sem arrastar/mover, sem busca),
+Dashboard (KPIs/agenda ainda mockados, sem Avisos), Oficinas/Pagamentos/
+Alunos/Solicitações (nenhuma tela existe de verdade ainda no Next.js).
+
+**Turmas também reconstruída na mesma sessão**, mesma lógica (é a 2ª
+tela mais visivelmente errada). Portado fiel ao demo:
+- **Roster real das 4 turmas** (`VAGAS_POR_TURMA_INICIAL`) — os mesmos
+  46 nomes/números reais do demo, copiados exatamente (dado real do
+  Diego, não inventar de novo). Abas de dia (Seg-Dom, só Ter/Qua/Qui
+  disponíveis) + sub-pills de horário só na Quinta (2 turmas).
+- **Cor de identidade por turma de verdade** (sienna/ardósia/musgo/café)
+  aplicada em borda do card, pills ativas/inativas, anel de progresso —
+  usando os tokens Tailwind já criados na Fase 1. Achado técnico
+  importante: cor NÃO pode ser um nome de classe montado em runtime
+  (tipo `"border-" + cor`) porque o Tailwind só gera CSS pra classes que
+  aparecem como texto literal no arquivo — usei tabelas de lookup
+  (`PILL_ATIVA`, `BORDA_CARD` etc.) com a string completa escrita à mão
+  pra cada cor, indexadas em runtime. Registrar essa armadilha caso
+  apareça de novo em Oficinas/Dashboard.
+- Chip verde/vermelho de presença da aula (toggle), badge Pendente/
+  Renovar, anel de pacote com fração dentro (ex: "3/4"), toggle de
+  presença **reversível** (incrementa/decrementa o pacote, testado ao
+  vivo nos dois sentidos — Bia foi de 1/4 a 2/4 e voltou a 1/4).
+- Vaga vazia → "Cadastrar aluno" (modal nome+pacote 4/8/12).
+- **Mover aluno**: só a versão "toque" (modal 2 passos: escolher turma
+  → confirmar), sem o gesto de arrastar-e-soltar — decisão já registrada
+  no plano de migração (a saga de 14+ rounds do drag-and-drop no demo
+  vira fase própria, não replicada agora). Dentro disso, também
+  simplificado pra só transferência FIXA (sem "vaga provisória" — exige
+  rastrear turma de origem/visitante pra funcionar direito, registrado
+  como gap consciente, não esquecimento).
+- `VagaCard.tsx`/`src/components/turmas/` **removidos** — layout de
+  grid de cards não existe no demo (lá é lista dividida, uma linha por
+  aluno), ficou órfão assim que reescrevi pra bater com o layout real.
+- Testado ao vivo: Terça (14/12, sienna), Quinta 14:30 (musgo, sub-pill),
+  presença reversível nos dois sentidos, sem erro de console em aba nova.
+
+**Simplificações desta rodada, registradas pra não esquecer**:
+"Solicitações pendentes" na lateral da tela sempre mostra vazio (não há
+fonte de dado real ainda — vira a fonte de verdade só quando
+Solicitações ganhar sua própria fase); sem parallax/foto de fundo por
+dia (decoração, não comportamento); sem badge "provisório"/aluno-visita
+entre turmas (ver acima).
+
+**Dashboard também reconstruído na mesma sessão** (o Diego confirmou via
+pergunta direta: "continuar agora" depois de ver Forno/Turmas). Portado
+fiel ao demo:
+- **Layout mudou de grid 2×4 largura total pra `300px` (KPIs 2×2) +
+  resto do espaço pros 2 cards de forno lado a lado** — proporção exata
+  do demo, não só cor. KPIs agora linkam de verdade pra cada tela
+  (antes só decoravam).
+- **`FornoResumoCard` novo** (`src/components/dashboard/
+  FornoResumoCard.tsx`) substitui o antigo `KilnLiveCard` (card único
+  grande, com gráfico embutido) — 2 cards compactos, um por forno, com
+  o **brilho pulsante por temperatura** (`corIncandescente()`, rampa
+  vermelho-escuro→amarelo-claro, keyframes `forno-brasa`/`forno-fresco`
+  adicionados no `globals.css`) — forno ativo e quente (≥250°C) pulsa
+  laranja/vermelho, frio ou sem fornada pulsa azul discreto. Forno sem
+  fornada mostra "Nenhuma fornada ativa". Os dois levam pra `/forno`
+  (não há deep-link pra uma aba específica ainda — simplificação
+  consciente, a página já abre na fornada ativa que existir).
+- **`AgendaSemanaCard` novo** ("Turmas da semana") — não existia
+  NENHUMA versão disso no Next.js antes. Lista vertical (sem scroll
+  lateral), um card por dia da semana com data real (`datasDaSemanaAtual`/
+  `formatarDiaMes`, mesmas funções do demo), selo do dia na cor de
+  identidade da turma (sienna/ardósia/musgo), avatares empilhados com
+  o roster real, "Hoje" no dia atual, estado vazio com ícone+frase nos
+  dias sem turma. Clicar num dia leva pra `/turmas/{id}`. **Não
+  portado**: foto de fundo por dia (`FUNDOS_ARGILA`, decoração pura,
+  fica pra depois se importar) e Sábado com a cor "carvão" (sem
+  oficina real cadastrada ainda pra testar isso direito).
+- "Próximas oficinas" trocado pro dado real do demo (2× "Kit Café da
+  Manhã", 10 e 24 de outubro) — antes tinha "Modelagem Manual"/
+  "Esmaltação Criativa" com datas de maio, claramente obsoletas/
+  fictícias.
+- `KilnLiveCard.tsx`/`KpiCard.tsx` **removidos** (substituídos, ficaram
+  órfãos — confirmado via busca antes de apagar).
+- Testado ao vivo: glow visível nos 2 fornos (laranja no ativo/quente,
+  azul no vazio), agenda mostrando datas/nomes reais corretos, sem erro
+  de console em aba nova.
+
+**Três telas do plano de migração agora fiéis ao demo nesta sessão:
+Forno, Turmas, Dashboard.** Faltam: Oficinas, Pagamentos, Alunos,
+Solicitações — nenhuma existe de verdade no Next.js ainda (só
+placeholder/mock antigo ou nem isso).
+
+**Oficinas construída do zero nesta sessão** (não existia NENHUM arquivo
+antes — nem lista nem detalhe). `src/lib/oficinas.ts` novo, dado
+compartilhado (tipos + `oficinasIniciais()`, os 6 registros reais do
+demo: 4× Kit Café da Manhã, Enfeites de Natal, Peças Marmorizadas,
+datas reais out-dez/2026) entre:
+- `/oficinas` (lista): grid 2 col, anel de progresso por ocupação, cor
+  de identidade rotativa por oficina (`corOficina`, hash determinístico
+  do id — mesmo algoritmo do demo), "+" abre `ModalOficina` (criar).
+- `/oficinas/[oficinaId]` (detalhe, rota nova): Status das peças (4
+  etapas clicáveis), StatCards (Participantes/Pagos/Pendentes/Duplas),
+  Sobre/Receita/Observações, lista de participantes (vaga vazia →
+  cadastrar; preenchida → editar/remover, mesmo modal nos dois modos),
+  "Ver como aluno" (toggle read-only), "Editar oficina" reaproveitando
+  o `ModalOficina` da lista (exportado e importado entre os 2 arquivos
+  de rota — variação aceitável de reuso, não uma pasta `lib` só pra
+  isso).
+- Testado ao vivo: criar oficina, abrir detalhe, cadastrar participante
+  (Participantes foi de 0/12 pra 1/12, Pendentes 0→1, confirmado no
+  texto da página), sem erro de servidor.
+- **Limitação aceita conscientemente**: lista e detalhe têm cada um seu
+  próprio `useState` local (mesmo padrão de Turmas/Forno) — cadastrar
+  um participante no detalhe não atualiza a ocupação mostrada na lista
+  até recarregar a página. Native do estágio "mock pré-Supabase":
+  construir um Context só pra isso seria arquitetura descartável (Fase
+  11 troca tudo por query real, que naturalmente compartilha fonte via
+  banco). Mesma decisão já vale pra Turmas/Forno, não é regressão nova.
+
+**Sessão continuou e fechou as 3 telas restantes do plano: Alunos,
+Pagamentos, Solicitações.** Achado real no meio do caminho: exportar um
+componente extra (`ModalOficina`) de dentro de `oficinas/page.tsx`
+quebra a validação de rotas do Next.js (`.next/types` reclama que
+`page.tsx` só pode exportar `default`/`metadata`/etc.) — corrigido
+extraindo pra `src/components/oficinas/ModalOficina.tsx`, importado
+pelos dois arquivos de rota. **Lição pra próximas telas**: nunca
+exportar um componente extra de um arquivo `page.tsx`, sempre extrair
+pra `src/components/`.
+
+- **`src/lib/vagasPorTurma.ts` (novo)** — o roster real das 4 turmas
+  (antes só existia dentro de `turmas/[turmaId]/page.tsx`) virou lib
+  compartilhada, igual já tinha sido feito pra Oficinas/Alunos.
+  `turmas/[turmaId]/page.tsx` foi atualizado pra importar de lá em vez
+  de ter a própria cópia local — uma fonte só do roster real agora.
+  `pagamentosIniciais(vagasPorTurma)` (mesma função/regra do demo) mora
+  no mesmo arquivo, deriva os pendentes reais direto do roster.
+- **`src/lib/whatsapp.ts` (novo)** — `mensagemCobranca`/
+  `abrirWhatsAppCobranca` extraídas (mesma correção do demo: `valor`
+  null não vira mais "R$ null" na mensagem), compartilhadas entre
+  Pagamentos e AlunoDetalhe.
+- **`/alunos` + `/alunos/[index]`**: roster real (46 pessoas, confirmado
+  ao vivo: 14+11+10+11 nas 4 turmas, bate com CLAUDE.md), busca por nome,
+  acordeão por turma com cor de identidade, página de detalhe editável
+  (turma/pacote/pagamento, aula clampada [0,total]), "Cobrar no
+  WhatsApp"/"Marcar como pago" quando pendente, excluir com
+  confirmação. Rota usa índice do array como id (`/alunos/0`) — sem
+  Supabase ainda não tem UUID de verdade, índice é suficiente por ora.
+- **`/pagamentos`**: StatCards, busca, pendentes derivados do roster
+  real (14 cobranças reais, bate com CLAUDE.md), "Marcar como pago"
+  reativo (testado ao vivo: Cintya marcada, contagem caiu de 14→13 na
+  hora), modal "Cobrar no WhatsApp" com a mensagem corrigida.
+- **`/solicitacoes`**: mock de 3 solicitações (nunca foi dado real, só
+  as 4 turmas/roster são reais — mesma nota já registrada no CLAUDE.md),
+  "Aprovar" abre modal de pacote e insere de verdade na vaga livre da
+  turma certa (`vagasPorTurma` local desta rota), "Recusar" remove da
+  lista. Testado ao vivo: aprovar Beatriz Almeida removeu ela da lista
+  corretamente, sem erro de console.
+- **Mesma limitação de sempre, aceita conscientemente**: cada rota tem
+  seu próprio `useState` do roster — marcar um pagamento em Pagamentos
+  não atualiza o que Turmas mostra até recarregar. Fica assim até a
+  Fase 11 trocar tudo por Supabase de verdade (fonte compartilhada via
+  banco, não Context React descartável).
+
+**As 7 telas do plano de migração agora existem e são fiéis ao demo:
+Dashboard, Turmas, Forno, Oficinas, Alunos, Pagamentos, Solicitações.**
+`tsc --noEmit` limpo (só o erro pré-existente do login, não
+relacionado). Nenhuma tela testada ainda no celular real do Diego — só
+no navegador embutido, viewport desktop. Working tree inteiro desta
+sessão (Fase 1 + todas as 7 telas) ainda não commitado.
+
+**Próximos passos:** pedir pro Diego testar no celular antes de
+considerar as 7 telas "prontas" de verdade (padrão do projeto: cliente
+testa e reporta por screenshot, espaçamento/largura é o que ele mais
+nota — CLAUDE.md §8). Decisão do Next.js major (CVEs críticos) ainda em
+aberto, não bloqueia esse trabalho de tela — mas precisa ser resolvida
+antes da Fase 11 (deploy real). Depois: Fase 0 (Diego cria contas
+Supabase/Vercel, pode ser feito em paralelo a qualquer momento), Fase
+11 (conectar Supabase de verdade, substitui todo o `useState` local por
+queries reais — dissolve a limitação de fontes duplicadas citada
+acima), Fase 12 (confirmar instalação PWA num Android e iPhone reais).

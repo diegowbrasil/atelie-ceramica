@@ -1,13 +1,12 @@
 {
-  "name": "Ateliê de Cerâmica",
-  "short_name": "Ateliê",
-  "description": "Gestão de turmas, oficinas e queimas.",
+  "name": "MTCST",
+  "short_name": "MTCST",
+  "description": "Gestão de turmas, oficinas e queimas do ateliê de cerâmica.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#FBF8F3",
-  "theme_color": "#B85A2C",
+  "background_color": "#F2F2EB",
+  "theme_color": "#C2410C",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }

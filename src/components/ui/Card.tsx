@@ -2,16 +2,7 @@ import { cn } from "@/lib/utils";
 import type { HTMLAttributes } from "react";
 
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn(
-        "rounded-2xl border border-ink-100/70 bg-surface shadow-card",
-        "dark:bg-surface-dark dark:border-ink-700/60",
-        className
-      )}
-      {...props}
-    />
-  );
+  return <div className={cn("min-w-0 rounded-2xl border border-line bg-white shadow-card", className)} {...props} />;
 }
 
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
@@ -19,7 +10,7 @@ export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElemen
 }
 
 export function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
-  return <h3 className={cn("text-sm font-semibold text-ink-700 dark:text-ink-100", className)} {...props} />;
+  return <h3 className={cn("text-sm font-semibold text-ink", className)} {...props} />;
 }
 
 export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {

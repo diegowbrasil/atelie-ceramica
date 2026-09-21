@@ -3,20 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Home, Users, Flame, Bell, Menu } from "lucide-react";
+import { Home, Users, Flame, MessageSquare, Menu } from "lucide-react";
 
 const TABS = [
   { href: "/dashboard", label: "Início", icon: Home },
   { href: "/turmas", label: "Turmas", icon: Users },
   { href: "/forno", label: "Forno", icon: Flame },
-  { href: "/solicitacoes", label: "Avisos", icon: Bell },
+  { href: "/oficinas", label: "Oficinas", icon: MessageSquare },
   { href: "/mais", label: "Mais", icon: Menu },
 ] as const;
 
 export function MobileNav() {
   const pathname = usePathname();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-ink-100 bg-surface/95 backdrop-blur px-2 py-1.5 pb-[env(safe-area-inset-bottom)] md:hidden dark:border-ink-700 dark:bg-surface-dark/95">
+    <nav className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-around gap-1 rounded-full border border-white/70 bg-gradient-to-b from-white/70 to-white/35 px-2 py-2 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.8),0_10px_24px_-6px_rgba(59,56,51,0.22)] backdrop-blur-2xl backdrop-saturate-150 md:hidden">
       {TABS.map(({ href, label, icon: Icon }) => {
         const active = pathname.startsWith(href);
         return (
@@ -24,11 +24,11 @@ export function MobileNav() {
             key={href}
             href={href}
             className={cn(
-              "flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[11px] font-medium",
-              active ? "text-clay-600" : "text-ink-400"
+              "flex flex-col items-center gap-0.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors",
+              active ? "text-accent" : "text-ink-soft"
             )}
           >
-            <Icon size={20} strokeWidth={active ? 2.3 : 1.8} />
+            <Icon size={20} strokeWidth={active ? 2.4 : 1.8} />
             {label}
           </Link>
         );

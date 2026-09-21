@@ -131,6 +131,24 @@ create table oficina_participantes (
 );
 
 -- ---------------------------------------------------------
+-- PAGAMENTOS (histórico de cobrança — pacotes e aulas avulsas)
+-- ---------------------------------------------------------
+create type pagamento_tipo as enum ('pacote', 'avulsa');
+
+create table pagamentos (
+  id uuid primary key default uuid_generate_v4(),
+  aluno_id uuid references profiles(id) on delete set null,
+  turma_id uuid references turmas(id),
+  tipo pagamento_tipo not null default 'pacote',
+  descricao text,                       -- ex: "Pacote 4 aulas"
+  valor numeric(10,2),                  -- null = valor ainda não informado
+  status pagamento_status not null default 'pendente',
+  vencimento date,
+  pago_em timestamptz,
+  criado_em timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------
 -- FORNO / QUEIMAS
 -- ---------------------------------------------------------
 create type tipo_queima as enum ('esmalte','biscoito','outro');
@@ -205,6 +223,21 @@ create table notificacoes (
 );
 
 -- ---------------------------------------------------------
+-- AVISOS (banner fixado no topo do Dashboard — livre, sem tipo automático;
+-- diferente de `notificacoes`, que é pra alertas tipados do sistema)
+-- ---------------------------------------------------------
+create type aviso_destinatario as enum ('admin', 'alunos');
+
+create table avisos (
+  id uuid primary key default uuid_generate_v4(),
+  texto text not null,
+  destinatario aviso_destinatario not null default 'admin',
+  criado_por uuid references profiles(id),
+  criado_em timestamptz not null default now(),
+  ativo boolean not null default true
+);
+
+-- ---------------------------------------------------------
 -- ÍNDICES
 -- ---------------------------------------------------------
 create index idx_pacotes_aluno on pacotes(aluno_id);
@@ -212,6 +245,9 @@ create index idx_matriculas_turma on matriculas(turma_id);
 create index idx_presencas_aula on presencas(aula_id);
 create index idx_notificacoes_destinatario on notificacoes(destinatario_id, lida);
 create index idx_queimas_etapa on queimas(etapa_atual) where etapa_atual <> 'finalizada';
+create index idx_pagamentos_aluno on pagamentos(aluno_id);
+create index idx_pagamentos_pendentes on pagamentos(status) where status = 'pendente';
+create index idx_avisos_ativos on avisos(destinatario) where ativo;
 
 -- ---------------------------------------------------------
 -- RLS
@@ -229,6 +265,8 @@ alter table queimas enable row level security;
 alter table queima_conteudo enable row level security;
 alter table queima_leituras enable row level security;
 alter table notificacoes enable row level security;
+alter table pagamentos enable row level security;
+alter table avisos enable row level security;
 
 -- helper: função que checa se o usuário logado é admin
 create or replace function is_admin() returns boolean as $$
@@ -305,3 +343,16 @@ create policy "notificacoes_admin_write" on notificacoes for all
 create policy "notificacoes_aluno_marca_lida" on notificacoes for update
   using (destinatario_id = auth.uid())
   with check (destinatario_id = auth.uid());
+
+-- pagamentos: aluno vê os próprios (read-only); admin vê/edita todos
+create policy "pagamentos_select" on pagamentos for select
+  using (aluno_id = auth.uid() or is_admin());
+create policy "pagamentos_admin_write" on pagamentos for all
+  using (is_admin()) with check (is_admin());
+
+-- avisos: "para alunos" é visível a qualquer autenticado; "para admin" só admin.
+-- Escrita sempre admin (é quem cria o aviso, pros dois destinatários).
+create policy "avisos_select" on avisos for select
+  using ((destinatario = 'alunos' and auth.uid() is not null) or (destinatario = 'admin' and is_admin()));
+create policy "avisos_admin_write" on avisos for all
+  using (is_admin()) with check (is_admin());

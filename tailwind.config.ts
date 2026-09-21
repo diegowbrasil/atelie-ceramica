@@ -1,69 +1,52 @@
 import type { Config } from "tailwindcss";
 
+/** Cor lida de uma CSS custom property "R G B" (space-separated), com suporte
+ *  nativo a modificador de opacidade do Tailwind (`bg-accent/40` etc.) — mesmo
+ *  valor que `rgbCor()` do demo resolve à mão, aqui expresso do jeito idiomático
+ *  do Tailwind (ver CLAUDE.md §8, armadilha de opacidade em token hex). */
+function withOpacity(variable: string) {
+  return ({ opacityValue }: { opacityValue?: string }) =>
+    opacityValue !== undefined ? `rgb(var(${variable}) / ${opacityValue})` : `rgb(var(${variable}))`;
+}
+
+// O tipo `Config` do pacote `tailwindcss` não modela cor como função (o
+// suporte a `{opacityValue}` é documentado pelo próprio Tailwind, só não
+// está refletido no @types) — `as Config["theme"]["extend"]["colors"]`
+// não existe porque `extend` também não é opcional lá dentro; `any` local
+// e comentado é mais direto que brigar com o tipo por algo que funciona
+// de verdade em runtime (confirmado ao vivo, `bg-accent/40` etc. geram CSS
+// válido).
+const cores: any = {
+  // Base — paleta "cru + terracota" do demo (fonte de verdade visual, CLAUDE.md §6.1)
+  cream: { DEFAULT: withOpacity("--cream"), soft: withOpacity("--cream-soft") },
+  line: withOpacity("--line"),
+  ink: { DEFAULT: withOpacity("--ink"), soft: withOpacity("--ink-soft") },
+  accent: {
+    DEFAULT: withOpacity("--accent"),
+    hover: withOpacity("--accent-hover"),
+    soft: withOpacity("--accent-soft"),
+  },
+  // Identidade por turma/oficina — pigmentos de argila (nunca usar como accent/ação)
+  sienna: withOpacity("--sienna"),
+  ardosia: withOpacity("--ardosia"),
+  musgo: withOpacity("--musgo"),
+  cafe: withOpacity("--cafe"),
+  carvao: withOpacity("--carvao"),
+};
+
 const config: Config = {
-  darkMode: "class",
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
-      colors: {
-        // Base — "argila e papel"
-        paper: {
-          DEFAULT: "#FBF8F3",
-          dark: "#181410",
-        },
-        surface: {
-          DEFAULT: "#FFFFFF",
-          dark: "#211B15",
-        },
-        ink: {
-          50: "#F6F3EE",
-          100: "#E7E0D6",
-          200: "#CFC3B2",
-          300: "#A99884",
-          400: "#7C6B58",
-          500: "#544636",
-          600: "#3A2F24",
-          700: "#291F17",
-          800: "#1C1410",
-          900: "#120D0A",
-        },
-        // Acento — terracota / esmalte queimado (identidade do forno)
-        clay: {
-          50: "#FBEEE7",
-          100: "#F5D8C6",
-          200: "#EBB491",
-          300: "#DE8E60",
-          400: "#CE703F",
-          500: "#B85A2C", // acento primário
-          600: "#9A4823",
-          700: "#7A381B",
-          800: "#5A2A15",
-          900: "#3D1C0E",
-        },
-        // Esmalte celadon — segunda cor, usada em confirmações e no forno "seguro"
-        glaze: {
-          50: "#EEF3EE",
-          100: "#D6E3D6",
-          300: "#9BB89B",
-          500: "#5B8A6C",
-          700: "#3A5C46",
-        },
-        // Estado
-        amber: { 500: "#C08A2E" },
-        rose: { 500: "#B3503F" },
-      },
+      colors: cores,
       fontFamily: {
-        display: ["var(--font-fraunces)", "Georgia", "serif"],
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-        mono: ["var(--font-jetbrains)", "monospace"],
-      },
-      borderRadius: {
-        xl: "14px",
-        "2xl": "20px",
+        display: ["var(--font-display)"],
+        sans: ["var(--font-sans)"],
+        mono: ["var(--font-mono)"],
       },
       boxShadow: {
-        soft: "0 1px 2px rgba(28,20,16,0.04), 0 8px 24px -12px rgba(28,20,16,0.10)",
-        card: "0 1px 1px rgba(28,20,16,0.03), 0 2px 8px rgba(28,20,16,0.06)",
+        soft: "0 1px 2px rgba(59,56,51,0.04), 0 8px 24px -12px rgba(59,56,51,0.10)",
+        card: "0 1px 1px rgba(59,56,51,0.03), 0 2px 8px rgba(59,56,51,0.06)",
       },
       keyframes: {
         "fade-up": {

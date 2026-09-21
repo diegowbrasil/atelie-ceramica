@@ -1,232 +1,760 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Modal } from "@/components/ui/Modal";
+import { StatCard } from "@/components/ui/StatCard";
 import { ProgressRing } from "@/components/ui/ProgressRing";
-import { calcularPrevisao, ETAPA_LABEL, formatarDuracao, type EtapaQueima, type ParametrosQueima } from "@/lib/forno";
-import { format } from "date-fns";
-import { Thermometer } from "lucide-react";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-} from "recharts";
+  calcularPrevisao, ETAPA_LABEL, formatarDuracao,
+  type ParametrosQueima,
+} from "@/lib/forno";
+import {
+  Flame, Plus, Clock, ShieldCheck, Thermometer, MessageCircle, Pencil, Check,
+  School, GraduationCap, Package, Truck, type LucideIcon,
+} from "lucide-react";
 
-const ETAPAS_ORDEM: EtapaQueima[] = [
-  "aquecendo", "maxima_atingida", "patamar", "resfriando", "aguardando_segura", "liberado_abrir", "finalizada",
+// Referência de comportamento: demo/AtelieDemo.jsx (PainelForno/FornadaAtivaPainel).
+// TODO(conectar dados reais): fornadas/leituras/observações viram
+// `queimas`/`queima_leituras` reais via Server Actions quando o Supabase
+// estiver provisionado — hoje é só estado local (useState), igual o demo
+// antes de ganhar backend.
+
+type FornoId = "forno1" | "forno2";
+const FORNOS: { id: FornoId; nome: string }[] = [
+  { id: "forno1", nome: "Forno 1" },
+  { id: "forno2", nome: "Forno 2" },
 ];
 
-// TODO(conectar dados reais): substituir pelos parâmetros da queima ativa
-// vindos de `select * from queimas where etapa_atual <> 'finalizada' limit 1`
-// e das leituras de `queima_leituras` para o gráfico estimado x real.
-const PARAMS: ParametrosQueima = {
-  temperaturaInicial: 25,
-  temperaturaMaxima: 1240,
-  velocidadeAquecimento: 3,
-  tempoPatamarMin: 15,
-  velocidadeResfriamento: 2.5,
-  temperaturaSegura: 80,
-  iniciadoEm: new Date(Date.now() - 6.7 * 3600 * 1000),
+type TipoQueima = "esmalte" | "biscoito" | "outro";
+const TIPO_LABEL: Record<TipoQueima, string> = { esmalte: "Esmalte", biscoito: "Biscoito", outro: "Outros" };
+
+type CategoriaId = "alunos" | "oficinas" | "encomendas" | "fora";
+const CATEGORIAS: { id: CategoriaId; label: string; icon: LucideIcon }[] = [
+  { id: "alunos", label: "Peças de alunos", icon: School },
+  { id: "oficinas", label: "Peças de oficinas", icon: GraduationCap },
+  { id: "encomendas", label: "Encomendas", icon: Package },
+  { id: "fora", label: "Queimas por fora", icon: Truck },
+];
+
+type FornadaStatus = "andamento" | "finalizada" | "interrompida" | "cancelada";
+const STATUS_LABEL: Record<FornadaStatus, string> = {
+  andamento: "Em andamento", finalizada: "Finalizada", interrompida: "Interrompida", cancelada: "Cancelada",
+};
+const STATUS_TONE: Record<FornadaStatus, "warning" | "success" | "info" | "neutral"> = {
+  andamento: "warning", finalizada: "success", interrompida: "info", cancelada: "neutral",
 };
 
+type ConfigQueima = Omit<ParametrosQueima, "iniciadoEm" | "finalizadoEm" | "ultimaLeitura">;
+const PRESETS: Record<TipoQueima, ConfigQueima> = {
+  esmalte: { temperaturaInicial: 25, temperaturaMaxima: 1240, velocidadeAquecimento: 3, tempoPatamarMin: 15, velocidadeResfriamento: 2.5, temperaturaSegura: 80 },
+  biscoito: { temperaturaInicial: 25, temperaturaMaxima: 980, velocidadeAquecimento: 4, tempoPatamarMin: 20, velocidadeResfriamento: 3, temperaturaSegura: 80 },
+  outro: { temperaturaInicial: 25, temperaturaMaxima: 1000, velocidadeAquecimento: 3, tempoPatamarMin: 10, velocidadeResfriamento: 2.5, temperaturaSegura: 80 },
+};
+
+interface Fornada {
+  id: string;
+  fornoId: FornoId;
+  tipo: TipoQueima;
+  tipoDescricao: string;
+  categorias: CategoriaId[];
+  detalhesConteudo: string;
+  config: ConfigQueima;
+  iniciadoEm: Date;
+  finalizadoEm: Date | null;
+  status: FornadaStatus;
+  leituras: { temperatura: number; em: Date }[];
+  observacoes: { em: Date; texto: string }[];
+}
+
+function fornadasIniciais(): Fornada[] {
+  const agora = Date.now();
+  return [
+    {
+      id: "f1", fornoId: "forno1", tipo: "esmalte", tipoDescricao: "", categorias: ["alunos", "encomendas"],
+      detalhesConteudo: "Peças da turma de terça, duas encomendas e uma queima externa (cliente João).",
+      config: PRESETS.esmalte,
+      iniciadoEm: new Date(agora - 6.7 * 3600 * 1000), finalizadoEm: null, status: "andamento",
+      leituras: [{ temperatura: 920, em: new Date(agora - 15 * 60 * 1000) }],
+      observacoes: [
+        { em: new Date(agora - 6.7 * 3600 * 1000), texto: "Início da queima às 08:08." },
+        { em: new Date(agora - 1.2 * 3600 * 1000), texto: "Atingiu 600°C. Queima está estável." },
+      ],
+    },
+    {
+      id: "f2", fornoId: "forno2", tipo: "biscoito", tipoDescricao: "", categorias: ["oficinas"],
+      detalhesConteudo: "", config: PRESETS.biscoito,
+      iniciadoEm: new Date(agora - 3 * 24 * 3600 * 1000),
+      finalizadoEm: new Date(agora - 3 * 24 * 3600 * 1000 + 9 * 3600 * 1000),
+      status: "finalizada", leituras: [], observacoes: [],
+    },
+    {
+      id: "f3", fornoId: "forno1", tipo: "outro", tipoDescricao: "Lustre", categorias: ["fora"],
+      detalhesConteudo: "", config: { ...PRESETS.outro, temperaturaMaxima: 1220 },
+      iniciadoEm: new Date(agora - 10 * 24 * 3600 * 1000),
+      finalizadoEm: new Date(agora - 10 * 24 * 3600 * 1000 + 5 * 3600 * 1000),
+      status: "interrompida", leituras: [], observacoes: [],
+    },
+    {
+      id: "f4", fornoId: "forno2", tipo: "esmalte", tipoDescricao: "", categorias: ["alunos"],
+      detalhesConteudo: "", config: PRESETS.esmalte,
+      iniciadoEm: new Date(agora - 15 * 24 * 3600 * 1000),
+      finalizadoEm: new Date(agora - 15 * 24 * 3600 * 1000 + 1 * 3600 * 1000),
+      status: "cancelada", leituras: [], observacoes: [],
+    },
+  ];
+}
+
+function fmtDuracaoCurta(seg: number) {
+  const h = Math.floor(seg / 3600);
+  const m = Math.floor((seg % 3600) / 60);
+  return h > 0 ? `${h}h ${String(m).padStart(2, "0")}min` : `${m}min`;
+}
+function fmtHora(d: Date) {
+  return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+function fmtDiaHora(d: Date) {
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " às " + fmtHora(d);
+}
+function fmtRelativo(d: Date, agora: Date) {
+  const min = Math.round((agora.getTime() - d.getTime()) / 60000);
+  if (min < 1) return "agora mesmo";
+  if (min < 60) return `há ${min} min`;
+  return `há ${Math.floor(min / 60)}h`;
+}
+function paramsDe(f: Fornada): ParametrosQueima {
+  const ultima = f.leituras[f.leituras.length - 1];
+  return {
+    ...f.config,
+    iniciadoEm: f.iniciadoEm,
+    finalizadoEm: f.finalizadoEm,
+    ultimaLeitura: ultima ? { temperatura: ultima.temperatura, em: ultima.em } : null,
+  };
+}
+
 export default function FornoPage() {
+  const [fornadas, setFornadas] = useState<Fornada[]>(fornadasIniciais);
+  const [fornoSel, setFornoSel] = useState<FornoId>(
+    () => fornadas.find((f) => f.status === "andamento")?.fornoId ?? FORNOS[0].id
+  );
   const [agora, setAgora] = useState(() => new Date());
-  const [temperaturaInput, setTemperaturaInput] = useState("");
+  const [modalTemp, setModalTemp] = useState(false);
+  const [modalObs, setModalObs] = useState(false);
+  const [modalFinalizar, setModalFinalizar] = useState(false);
+  const [modalCancelar, setModalCancelar] = useState(false);
+  const [modalEditarConteudo, setModalEditarConteudo] = useState(false);
+  const [modalNovaFornada, setModalNovaFornada] = useState(false);
+  const [inputTemp, setInputTemp] = useState("");
+  const [inputObs, setInputObs] = useState("");
 
   useEffect(() => {
     const id = setInterval(() => setAgora(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const previsao = calcularPrevisao(PARAMS, agora);
-  const dadosGrafico = useMemo(() => gerarDadosGrafico(PARAMS), []);
+  const ativa = fornadas.find((f) => f.status === "andamento" && f.fornoId === fornoSel) ?? null;
+  const historico = fornadas.filter((f) => f.fornoId === fornoSel);
+
+  function atualizarTemperatura(valor: number) {
+    if (!ativa) return;
+    setFornadas((fs) => fs.map((f) => (f.id !== ativa.id ? f : { ...f, leituras: [...f.leituras, { temperatura: valor, em: new Date() }] })));
+  }
+  function adicionarObservacao(texto: string) {
+    if (!ativa) return;
+    setFornadas((fs) => fs.map((f) => (f.id !== ativa.id ? f : { ...f, observacoes: [...f.observacoes, { em: new Date(), texto }] })));
+  }
+  function finalizarFornada() {
+    if (!ativa) return;
+    setFornadas((fs) => fs.map((f) => (f.id !== ativa.id ? f : { ...f, status: "finalizada", finalizadoEm: new Date() })));
+  }
+  function cancelarFornada() {
+    if (!ativa) return;
+    setFornadas((fs) => fs.map((f) => (f.id !== ativa.id ? f : { ...f, status: "cancelada", finalizadoEm: new Date() })));
+  }
+  function editarConteudo(categorias: CategoriaId[], detalhesConteudo: string) {
+    if (!ativa) return;
+    setFornadas((fs) => fs.map((f) => (f.id !== ativa.id ? f : { ...f, categorias, detalhesConteudo })));
+  }
+  /** Se já tem fornada ativa nesse forno, ela vira "Interrompida" (nunca apagada) — mesma regra do demo. */
+  function iniciarFornada(dados: { tipo: TipoQueima; tipoDescricao: string; categorias: CategoriaId[]; detalhesConteudo: string; config: ConfigQueima }) {
+    setFornadas((fs) => {
+      const substituidas = fs.map((f) => (f.status === "andamento" && f.fornoId === fornoSel ? { ...f, status: "interrompida" as const, finalizadoEm: new Date() } : f));
+      const nova: Fornada = {
+        id: `f${Date.now()}`,
+        fornoId: fornoSel,
+        tipo: dados.tipo,
+        tipoDescricao: dados.tipoDescricao,
+        categorias: dados.categorias,
+        detalhesConteudo: dados.detalhesConteudo,
+        config: dados.config,
+        iniciadoEm: new Date(),
+        finalizadoEm: null,
+        status: "andamento",
+        leituras: [],
+        observacoes: [],
+      };
+      return [nova, ...substituidas];
+    });
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-24 pt-6 md:px-8 md:pb-10">
-      <header className="mb-5 flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl text-ink-800 dark:text-ink-50">Forno</h1>
-          <p className="text-sm text-ink-400">Queima de Esmalte · iniciada em {format(PARAMS.iniciadoEm, "dd/MM 'às' HH:mm")}</p>
-        </div>
-        <button className="rounded-xl border border-rose-300 px-4 py-2 text-sm font-medium text-rose-500 hover:bg-rose-500/5">
-          Encerrar queima
+      <div className="relative mb-5 flex min-h-[2.75rem] items-center justify-end gap-3">
+        <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-display text-2xl uppercase tracking-wide text-ink">
+          Forno
+        </h1>
+        <button
+          onClick={() => setModalNovaFornada(true)}
+          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white shadow-soft hover:bg-accent-hover"
+        >
+          <Plus size={16} strokeWidth={2.5} />
+          Nova fornada
         </button>
-      </header>
+      </div>
 
-      <div className="mb-5 flex gap-2 border-b border-ink-100 text-sm dark:border-ink-700">
-        {["Em andamento", "Histórico", "Nova queima"].map((tab, i) => (
+      <div className="mb-5 flex gap-2">
+        {FORNOS.map((forno) => {
+          const temAtiva = fornadas.some((f) => f.status === "andamento" && f.fornoId === forno.id);
+          const ativoTab = fornoSel === forno.id;
+          return (
+            <button
+              key={forno.id}
+              onClick={() => setFornoSel(forno.id)}
+              className={"flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium " + (ativoTab ? "bg-accent text-white" : "bg-cream-soft text-ink-soft")}
+            >
+              {forno.nome}
+              {temAtiva && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />}
+            </button>
+          );
+        })}
+      </div>
+
+      {!ativa ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-line bg-white px-6 py-16 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-cream-soft text-ink-soft">
+            <Flame size={26} />
+          </div>
+          <h2 className="text-lg font-semibold text-ink">Nenhuma fornada em andamento no {FORNOS.find((f) => f.id === fornoSel)?.nome}</h2>
+          <p className="max-w-sm text-sm text-ink-soft">
+            Inicie uma nova fornada para começar o acompanhamento em tempo real da temperatura, etapas e previsões.
+          </p>
           <button
-            key={tab}
+            onClick={() => setModalNovaFornada(true)}
+            className="mt-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white shadow-soft hover:bg-accent-hover"
+          >
+            + Nova fornada
+          </button>
+        </div>
+      ) : (
+        <FornadaAtivaPainel
+          fornada={ativa}
+          agora={agora}
+          onAtualizarTemp={() => setModalTemp(true)}
+          onAdicionarObs={() => setModalObs(true)}
+          onFinalizar={() => setModalFinalizar(true)}
+          onCancelar={() => setModalCancelar(true)}
+          onEditarConteudo={() => setModalEditarConteudo(true)}
+        />
+      )}
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_320px]">
+        <div />
+        <Card className="p-4 lg:col-start-2">
+          <h3 className="mb-3 text-sm font-semibold text-ink">Histórico — {FORNOS.find((f) => f.id === fornoSel)?.nome}</h3>
+          <ul className="space-y-3">
+            {historico.map((f) => (
+              <li key={f.id} className="rounded-xl border border-line p-3">
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-xs text-ink-soft">{fmtDiaHora(f.iniciadoEm)}</span>
+                  <Badge tone={STATUS_TONE[f.status]}>{STATUS_LABEL[f.status]}</Badge>
+                </div>
+                <div className="text-sm font-medium text-ink">
+                  {TIPO_LABEL[f.tipo]}
+                  {f.tipoDescricao ? ` (${f.tipoDescricao})` : ""}
+                </div>
+                <div className="text-xs text-ink-soft">
+                  {f.categorias.map((c) => CATEGORIAS.find((x) => x.id === c)?.label).join(", ") || "—"}
+                </div>
+                <div className="mt-1 text-xs text-ink-soft">Temp. máx: {f.config.temperaturaMaxima}°C</div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
+
+      {modalTemp && (
+        <Modal onClose={() => setModalTemp(false)}>
+          <h3 className="mb-3 text-base font-semibold text-ink">Atualizar temperatura</h3>
+          <form
+            onSubmit={(e: FormEvent) => {
+              e.preventDefault();
+              const v = parseFloat(inputTemp);
+              if (!isNaN(v)) {
+                atualizarTemperatura(v);
+                setModalTemp(false);
+                setInputTemp("");
+              }
+            }}
+          >
+            <label className="mb-1 block text-xs font-medium text-ink-soft">Temperatura real (°C)</label>
+            <input
+              autoFocus
+              value={inputTemp}
+              onChange={(e) => setInputTemp(e.target.value)}
+              type="number"
+              className="mb-4 w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-ink"
+              placeholder="Ex: 920"
+            />
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setModalTemp(false)} className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink">
+                Cancelar
+              </button>
+              <button type="submit" className="flex-1 rounded-xl bg-accent py-2.5 text-sm font-medium text-white hover:bg-accent-hover">
+                Atualizar
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {modalObs && (
+        <Modal onClose={() => setModalObs(false)}>
+          <h3 className="mb-3 text-base font-semibold text-ink">Adicionar observação</h3>
+          <form
+            onSubmit={(e: FormEvent) => {
+              e.preventDefault();
+              if (inputObs.trim()) {
+                adicionarObservacao(inputObs.trim());
+                setModalObs(false);
+                setInputObs("");
+              }
+            }}
+          >
+            <textarea
+              autoFocus
+              value={inputObs}
+              onChange={(e) => setInputObs(e.target.value)}
+              rows={3}
+              className="mb-4 w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-ink"
+              placeholder="Ex: Patamar iniciado."
+            />
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setModalObs(false)} className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink">
+                Cancelar
+              </button>
+              <button type="submit" className="flex-1 rounded-xl bg-accent py-2.5 text-sm font-medium text-white hover:bg-accent-hover">
+                Adicionar
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {modalFinalizar && (
+        <Modal onClose={() => setModalFinalizar(false)}>
+          <h3 className="mb-2 text-base font-semibold text-ink">Finalizar fornada?</h3>
+          <p className="mb-5 text-sm text-ink-soft">
+            A fornada será marcada como Finalizada e todo o histórico (temperaturas, observações e conteúdo) será salvo.
+          </p>
+          <div className="flex gap-2">
+            <button onClick={() => setModalFinalizar(false)} className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink">
+              Cancelar
+            </button>
+            <button
+              onClick={() => {
+                finalizarFornada();
+                setModalFinalizar(false);
+              }}
+              className="flex-1 rounded-xl bg-rose-600 py-2.5 text-sm font-medium text-white hover:bg-rose-700"
+            >
+              Finalizar
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {modalCancelar && (
+        <Modal onClose={() => setModalCancelar(false)}>
+          <h3 className="mb-2 text-base font-semibold text-ink">Cancelar fornada?</h3>
+          <p className="mb-5 text-sm text-ink-soft">
+            A fornada será marcada como Cancelada e sai do acompanhamento ativo. O histórico (temperaturas, observações registradas até agora) continua salvo.
+          </p>
+          <div className="flex gap-2">
+            <button onClick={() => setModalCancelar(false)} className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink">
+              Voltar
+            </button>
+            <button
+              onClick={() => {
+                cancelarFornada();
+                setModalCancelar(false);
+              }}
+              className="flex-1 rounded-xl bg-rose-600 py-2.5 text-sm font-medium text-white hover:bg-rose-700"
+            >
+              Cancelar fornada
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {modalEditarConteudo && ativa && (
+        <ModalEditarConteudoForno
+          fornada={ativa}
+          onClose={() => setModalEditarConteudo(false)}
+          onSalvar={(categorias, detalhes) => {
+            editarConteudo(categorias, detalhes);
+            setModalEditarConteudo(false);
+          }}
+        />
+      )}
+
+      {modalNovaFornada && (
+        <ModalNovaFornada
+          fornoNome={FORNOS.find((f) => f.id === fornoSel)?.nome ?? ""}
+          temFornadaAtiva={!!ativa}
+          onClose={() => setModalNovaFornada(false)}
+          onIniciar={(dados) => {
+            iniciarFornada(dados);
+            setModalNovaFornada(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function FornadaAtivaPainel({
+  fornada, agora, onAtualizarTemp, onAdicionarObs, onFinalizar, onCancelar, onEditarConteudo,
+}: {
+  fornada: Fornada;
+  agora: Date;
+  onAtualizarTemp: () => void;
+  onAdicionarObs: () => void;
+  onFinalizar: () => void;
+  onCancelar: () => void;
+  onEditarConteudo: () => void;
+}) {
+  const ultima = fornada.leituras[fornada.leituras.length - 1] ?? null;
+  const p = calcularPrevisao(paramsDe(fornada), agora);
+  const restantePatamarSeg = Math.max((p.horarioFimPatamar.getTime() - agora.getTime()) / 1000, 0);
+  const emAquecimentoOuPatamar = p.etapaAtual === "aquecendo" || p.etapaAtual === "patamar" || p.etapaAtual === "maxima_atingida";
+
+  return (
+    <>
+      <Card className="p-5">
+        <div className="flex flex-col items-center gap-6 sm:flex-row">
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative">
+              <ProgressRing percentual={p.percentualAteMaxima} size={176} stroke={12} />
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className="text-4xl font-semibold leading-none text-ink">{p.temperaturaEstimada}°</div>
+                <div className="mt-1.5 text-xs text-ink-soft">de {fornada.config.temperaturaMaxima}°C</div>
+              </div>
+            </div>
+            {ultima && (
+              <div className="text-center text-xs text-ink-soft">
+                Última informada: <span className="font-medium text-ink">{ultima.temperatura}°C</span> · {fmtRelativo(ultima.em, agora)}
+              </div>
+            )}
+          </div>
+          <div className="grid w-full flex-1 grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="flex flex-col items-center gap-1 sm:items-start">
+              <span className="flex items-center gap-1 text-xs text-ink-soft">
+                <Flame size={13} />
+                Etapa atual
+              </span>
+              <Badge tone="warning">{ETAPA_LABEL[p.etapaAtual]}</Badge>
+            </div>
+            <div className="flex flex-col items-center gap-0.5 sm:items-start">
+              <span className="flex items-center gap-1 text-xs text-ink-soft">
+                <Clock size={13} />
+                Previsão temp. máxima
+              </span>
+              <span className="text-sm font-semibold text-ink">{fmtDiaHora(p.horarioMaxima)}</span>
+            </div>
+            <div className="flex flex-col items-center gap-0.5 sm:items-start">
+              <span className="flex items-center gap-1 text-xs text-ink-soft">
+                <ShieldCheck size={13} />
+                Previsão abertura segura
+              </span>
+              <span className="text-sm font-semibold text-ink">{fmtDiaHora(p.horarioSeguroParaAbrir)}</span>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <StatCard icon={Clock} label="Tempo decorrido" value={formatarDuracao(p.tempoDecorridoSeg)} mono />
+        <StatCard icon={Thermometer} label="Temp. máxima" value={fornada.config.temperaturaMaxima + "°C"} />
+        <StatCard icon={Clock} label="Tempo restante" value={formatarDuracao(p.tempoRestanteSeg)} mono />
+        <StatCard
+          icon={Thermometer}
+          label="Patamar"
+          value={fmtHora(p.horarioFimPatamar)}
+          sub={emAquecimentoOuPatamar ? `restam ${fmtDuracaoCurta(restantePatamarSeg)}` : undefined}
+        />
+        <StatCard icon={ShieldCheck} label="Abertura segura" value={fmtDiaHora(p.horarioSeguroParaAbrir)} />
+        <StatCard icon={Flame} label="Etapa atual" value={ETAPA_LABEL[p.etapaAtual]} />
+      </div>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1fr_280px]">
+        <Card className="p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-ink">Conteúdo do forno</h3>
+            <button onClick={onEditarConteudo} className="flex items-center gap-1 text-xs font-medium text-ink-soft hover:text-ink">
+              <Pencil size={13} />
+              Editar
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {fornada.categorias.map((c) => {
+              const cat = CATEGORIAS.find((x) => x.id === c);
+              if (!cat) return null;
+              return (
+                <span key={c} className="inline-flex items-center gap-1 rounded-full bg-cream-soft px-2.5 py-1 text-xs font-medium text-ink">
+                  <cat.icon size={13} />
+                  {cat.label}
+                </span>
+              );
+            })}
+          </div>
+          {fornada.detalhesConteudo && <p className="mt-3 text-sm text-ink-soft">{fornada.detalhesConteudo}</p>}
+        </Card>
+
+        <Card className="p-4">
+          <h3 className="mb-3 text-sm font-semibold text-ink">Observações</h3>
+          <ul className="max-h-44 space-y-3 overflow-y-auto pr-1 text-sm">
+            {[...fornada.observacoes].reverse().map((o, i) => (
+              <li key={i}>
+                <span className="mr-2 font-mono text-xs text-ink-soft">{fmtHora(o.em)}</span>
+                <span className="text-ink">{o.texto}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+
+        <div className="flex flex-col gap-2.5">
+          <button onClick={onAtualizarTemp} className="flex items-center justify-center gap-2 rounded-xl bg-accent py-3.5 text-sm font-semibold text-white shadow-soft hover:bg-accent-hover">
+            <Thermometer size={17} />
+            Atualizar temperatura
+          </button>
+          <button onClick={onAdicionarObs} className="flex items-center justify-center gap-2 rounded-xl border border-line bg-white py-3.5 text-sm font-semibold text-ink hover:bg-cream">
+            <MessageCircle size={17} />
+            Adicionar observação
+          </button>
+          <button onClick={onFinalizar} className="flex items-center justify-center gap-2 rounded-xl bg-rose-50 py-3.5 text-sm font-semibold text-rose-600 hover:bg-rose-100">
+            Finalizar fornada
+          </button>
+          {/* Discreto de propósito — CLAUDE.md documenta "3 botões grandes" como
+             regra do painel; cancelar é bem menos comum, não compete com eles. */}
+          <button onClick={onCancelar} className="py-1.5 text-xs font-medium text-ink-soft hover:text-rose-600">
+            Cancelar fornada
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ModalEditarConteudoForno({
+  fornada, onClose, onSalvar,
+}: {
+  fornada: Fornada;
+  onClose: () => void;
+  onSalvar: (categorias: CategoriaId[], detalhes: string) => void;
+}) {
+  const [categorias, setCategorias] = useState<CategoriaId[]>(fornada.categorias);
+  const [detalhes, setDetalhes] = useState(fornada.detalhesConteudo || "");
+
+  function toggleCategoria(id: CategoriaId) {
+    setCategorias((cs) => (cs.includes(id) ? cs.filter((c) => c !== id) : [...cs, id]));
+  }
+
+  return (
+    <Modal onClose={onClose}>
+      <h3 className="mb-3 text-base font-semibold text-ink">Editar conteúdo do forno</h3>
+      <div className="mb-4 grid grid-cols-2 gap-2.5">
+        {CATEGORIAS.map((c) => {
+          const ativo = categorias.includes(c.id);
+          return (
+            <button
+              type="button"
+              key={c.id}
+              onClick={() => toggleCategoria(c.id)}
+              className={
+                "relative flex flex-col items-center gap-1.5 rounded-xl border-2 px-3 py-4 text-center text-xs font-medium transition-all " +
+                (ativo ? "border-accent bg-accent-soft text-accent" : "border-line text-ink-soft hover:border-ink-soft")
+              }
+            >
+              {ativo && (
+                <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-white">
+                  <Check size={10} strokeWidth={3} />
+                </span>
+              )}
+              <c.icon size={18} />
+              {c.label}
+            </button>
+          );
+        })}
+      </div>
+      <label className="mb-1 block text-xs font-medium text-ink-soft">Detalhes do conteúdo (opcional)</label>
+      <textarea
+        value={detalhes}
+        onChange={(e) => setDetalhes(e.target.value)}
+        rows={2}
+        className="mb-4 w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-ink"
+        placeholder="Ex: Peças da turma de terça junto com uma encomenda da Marina."
+      />
+      <div className="flex gap-2">
+        <button onClick={onClose} className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink">
+          Cancelar
+        </button>
+        <button
+          onClick={() => onSalvar(categorias, detalhes.trim())}
+          className="flex-1 rounded-xl bg-accent py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
+        >
+          Salvar
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function ModalNovaFornada({
+  fornoNome, temFornadaAtiva, onClose, onIniciar,
+}: {
+  fornoNome: string;
+  temFornadaAtiva: boolean;
+  onClose: () => void;
+  onIniciar: (dados: { tipo: TipoQueima; tipoDescricao: string; categorias: CategoriaId[]; detalhesConteudo: string; config: ConfigQueima }) => void;
+}) {
+  const [tipo, setTipo] = useState<TipoQueima>("esmalte");
+  const [tipoDescricao, setTipoDescricao] = useState("");
+  const [categorias, setCategorias] = useState<CategoriaId[]>([]);
+  const [detalhes, setDetalhes] = useState("");
+  const [temperaturaMaxima, setTemperaturaMaxima] = useState(PRESETS.esmalte.temperaturaMaxima);
+  const [confirmarSubstituicao, setConfirmarSubstituicao] = useState(false);
+
+  function selecionarTipo(t: TipoQueima) {
+    setTipo(t);
+    setTemperaturaMaxima(PRESETS[t].temperaturaMaxima);
+  }
+  function toggleCategoria(id: CategoriaId) {
+    setCategorias((cs) => (cs.includes(id) ? cs.filter((c) => c !== id) : [...cs, id]));
+  }
+  function confirmar() {
+    onIniciar({
+      tipo,
+      tipoDescricao,
+      categorias,
+      detalhesConteudo: detalhes.trim(),
+      config: { ...PRESETS[tipo], temperaturaMaxima },
+    });
+  }
+
+  if (confirmarSubstituicao) {
+    return (
+      <Modal onClose={onClose}>
+        <h3 className="mb-2 text-base font-semibold text-ink">{fornoNome} já tem uma fornada em andamento</h3>
+        <p className="mb-5 text-sm leading-relaxed text-ink-soft">
+          Esse forno já está sendo acompanhado. Ao iniciar uma nova fornada nele, a atual será marcada como Interrompida e salva no histórico — nenhuma informação será perdida.
+        </p>
+        <div className="flex gap-2">
+          <button onClick={() => setConfirmarSubstituicao(false)} className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink">
+            Voltar
+          </button>
+          <button onClick={confirmar} className="flex-1 rounded-xl bg-accent py-2.5 text-sm font-medium text-white hover:bg-accent-hover">
+            Salvar e criar nova
+          </button>
+        </div>
+      </Modal>
+    );
+  }
+
+  return (
+    <Modal onClose={onClose}>
+      <h3 className="mb-3 text-base font-semibold text-ink">Nova fornada — {fornoNome}</h3>
+
+      <label className="mb-1.5 block text-xs font-medium text-ink-soft">Tipo de queima</label>
+      <div className="mb-4 grid grid-cols-3 gap-2">
+        {(Object.keys(TIPO_LABEL) as TipoQueima[]).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => selecionarTipo(t)}
             className={
-              "border-b-2 px-3 pb-2.5 font-medium " +
-              (i === 0 ? "border-clay-500 text-clay-600" : "border-transparent text-ink-400")
+              "rounded-xl border-2 px-2 py-2.5 text-center text-xs font-medium " +
+              (tipo === t ? "border-accent bg-accent-soft text-accent" : "border-line text-ink-soft hover:border-ink-soft")
             }
           >
-            {tab}
+            {TIPO_LABEL[t]}
           </button>
         ))}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
-        <div className="space-y-5">
-          <Card className="p-5">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <ProgressRing percentual={previsao.percentualAteMaxima} size={104} stroke={9} />
-                  <span className="absolute inset-0 flex items-center justify-center font-display text-lg text-ink-800 dark:text-ink-50">
-                    {previsao.percentualAteMaxima}%
-                  </span>
-                </div>
-                <div>
-                  <div className="font-display text-3xl text-ink-800 dark:text-ink-50">
-                    {previsao.temperaturaEstimada}°C
-                  </div>
-                  <div className="text-sm text-ink-400">Temperatura atual (estimada)</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="font-display text-xl text-ink-700 dark:text-ink-100">{PARAMS.temperaturaMaxima}°C</div>
-                <div className="text-sm text-ink-400">
-                  Faltam {previsao.grausRestantesAteMaxima}°C para a temperatura máxima
-                </div>
-              </div>
-            </div>
+      {tipo === "outro" && (
+        <input
+          value={tipoDescricao}
+          onChange={(e) => setTipoDescricao(e.target.value)}
+          placeholder="Descreva o tipo (ex: Lustre)"
+          className="mb-4 w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-ink"
+        />
+      )}
 
-            <EtapaTimeline etapaAtual={previsao.etapaAtual} />
+      <label className="mb-1.5 block text-xs font-medium text-ink-soft">Temperatura máxima (°C)</label>
+      <input
+        type="number"
+        value={temperaturaMaxima}
+        onChange={(e) => setTemperaturaMaxima(Number(e.target.value))}
+        className="mb-4 w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-ink"
+      />
 
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <MiniStat label="Tempo decorrido" value={formatarDuracao(previsao.tempoDecorridoSeg)} mono />
-              <MiniStat label="Tempo restante (estimado)" value={formatarDuracao(previsao.tempoRestanteSeg)} mono />
-              <MiniStat label="Previsão máx. temp." value={format(previsao.horarioMaxima, "HH:mm")} />
-              <MiniStat label="Previsão segura para abrir" value={format(previsao.horarioSeguroParaAbrir, "dd/MM 'às' HH:mm")} />
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-ink-50 px-3 py-2.5 dark:bg-ink-800">
-              <form
-                className="flex items-center gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  // TODO: persistir em `queima_leituras` + atualizar `queimas.temperatura_real`
-                  // — isso recalibra automaticamente toda a previsão (ver lib/forno.ts).
-                  setTemperaturaInput("");
-                }}
-              >
-                <Thermometer size={16} className="text-clay-500" />
-                <input
-                  value={temperaturaInput}
-                  onChange={(e) => setTemperaturaInput(e.target.value)}
-                  placeholder="Temperatura real (°C)"
-                  className="w-40 rounded-lg border border-ink-200 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-clay-400 dark:border-ink-600 dark:bg-surface-dark"
-                />
-                <button className="rounded-lg bg-clay-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-clay-600">
-                  Atualizar temperatura
-                </button>
-              </form>
-              <span className="text-xs text-ink-400">
-                Última leitura real: {PARAMS.ultimaLeitura ? `${PARAMS.ultimaLeitura.temperatura}°C` : "— (usando estimativa)"}
-              </span>
-            </div>
-          </Card>
-
-          <Card className="p-5">
-            <h3 className="mb-3 text-sm font-semibold text-ink-700 dark:text-ink-100">Gráfico da queima</h3>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dadosGrafico}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--tw-ink-100, #E7E0D6)" />
-                  <XAxis dataKey="hora" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} unit="°C" width={50} />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="estimada" name="Temperatura estimada" stroke="#DE8E60" strokeDasharray="4 3" dot={false} />
-                  <Line type="monotone" dataKey="real" name="Temperatura real" stroke="#B85A2C" strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </div>
-
-        <div className="space-y-5">
-          <Card className="p-4">
-            <h3 className="mb-3 text-sm font-semibold text-ink-700 dark:text-ink-100">Informações da queima</h3>
-            <dl className="grid grid-cols-2 gap-y-3 text-sm">
-              <dt className="text-ink-400">Tipo</dt><dd className="text-right font-medium">Esmalte</dd>
-              <dt className="text-ink-400">Vel. aquecimento</dt><dd className="text-right font-medium">{PARAMS.velocidadeAquecimento}°C/min</dd>
-              <dt className="text-ink-400">Temp. inicial</dt><dd className="text-right font-medium">{PARAMS.temperaturaInicial}°C</dd>
-              <dt className="text-ink-400">Vel. resfriamento</dt><dd className="text-right font-medium">{PARAMS.velocidadeResfriamento}°C/min</dd>
-              <dt className="text-ink-400">Temp. máxima</dt><dd className="text-right font-medium">{PARAMS.temperaturaMaxima}°C</dd>
-              <dt className="text-ink-400">Temp. segura</dt><dd className="text-right font-medium">{PARAMS.temperaturaSegura}°C</dd>
-              <dt className="text-ink-400">Tempo de patamar</dt><dd className="text-right font-medium">{PARAMS.tempoPatamarMin} minutos</dd>
-              <dt className="text-ink-400">Conteúdo</dt><dd className="text-right font-medium">Misturado</dd>
-            </dl>
-          </Card>
-
-          <Card className="p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-ink-700 dark:text-ink-100">Conteúdo do forno</h3>
-              <button className="text-xs font-medium text-clay-600 hover:underline">Ver detalhes</button>
-            </div>
-            <ul className="space-y-2.5 text-sm">
-              <li className="flex justify-between"><span className="text-ink-400">Peças de alunos</span><span className="font-medium">10 alunos · 32 peças</span></li>
-              <li className="flex justify-between"><span className="text-ink-400">Peças de oficinas</span><span className="font-medium">18 peças</span></li>
-              <li className="flex justify-between"><span className="text-ink-400">Encomendas</span><span className="font-medium">3 · 12 peças</span></li>
-              <li className="flex justify-between"><span className="text-ink-400">Queimas por fora</span><span className="font-medium">2 · 15 peças</span></li>
-              <li className="mt-1 flex justify-between border-t border-ink-100 pt-2 font-semibold text-ink-700 dark:border-ink-700 dark:text-ink-100">
-                <span>Total geral</span><span>77 peças</span>
-              </li>
-            </ul>
-          </Card>
-        </div>
+      <label className="mb-1.5 block text-xs font-medium text-ink-soft">Conteúdo do forno</label>
+      <div className="mb-4 grid grid-cols-2 gap-2">
+        {CATEGORIAS.map((c) => {
+          const ativo = categorias.includes(c.id);
+          return (
+            <button
+              type="button"
+              key={c.id}
+              onClick={() => toggleCategoria(c.id)}
+              className={
+                "relative flex flex-col items-center gap-1.5 rounded-xl border-2 px-3 py-4 text-center text-xs font-medium transition-all " +
+                (ativo ? "border-accent bg-accent-soft text-accent" : "border-line text-ink-soft hover:border-ink-soft")
+              }
+            >
+              {ativo && (
+                <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-white">
+                  <Check size={10} strokeWidth={3} />
+                </span>
+              )}
+              <c.icon size={18} />
+              {c.label}
+            </button>
+          );
+        })}
       </div>
-    </div>
-  );
-}
 
-function EtapaTimeline({ etapaAtual }: { etapaAtual: EtapaQueima }) {
-  const idxAtual = ETAPAS_ORDEM.indexOf(etapaAtual);
-  return (
-    <div className="flex items-center gap-1">
-      {ETAPAS_ORDEM.map((etapa, i) => (
-        <div key={etapa} className="flex flex-1 items-center gap-1">
-          <div
-            className={
-              "flex h-7 flex-1 items-center justify-center rounded-lg text-center text-[11px] font-medium leading-tight " +
-              (i === idxAtual
-                ? "bg-clay-500 text-white"
-                : i < idxAtual
-                ? "bg-clay-100 text-clay-600"
-                : "bg-ink-50 text-ink-300 dark:bg-ink-800")
-            }
-            title={ETAPA_LABEL[etapa]}
-          >
-            {ETAPA_LABEL[etapa]}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+      <label className="mb-1 block text-xs font-medium text-ink-soft">Detalhes do conteúdo (opcional)</label>
+      <textarea
+        value={detalhes}
+        onChange={(e) => setDetalhes(e.target.value)}
+        rows={2}
+        className="mb-4 w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-ink"
+        placeholder="Ex: Peças da turma de terça junto com uma encomenda da Marina."
+      />
 
-function MiniStat({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="rounded-xl bg-ink-50 px-3 py-2.5 dark:bg-ink-800">
-      <div className={"text-base font-semibold text-ink-700 dark:text-ink-100 " + (mono ? "font-mono" : "")}>{value}</div>
-      <div className="text-xs text-ink-400">{label}</div>
-    </div>
+      <div className="flex gap-2">
+        <button onClick={onClose} className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink">
+          Cancelar
+        </button>
+        <button
+          onClick={() => (temFornadaAtiva ? setConfirmarSubstituicao(true) : confirmar())}
+          className="flex-1 rounded-xl bg-accent py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
+        >
+          Iniciar fornada
+        </button>
+      </div>
+    </Modal>
   );
-}
-
-/** Gera pontos de amostra (estimada x real) para o gráfico, a partir dos parâmetros. */
-function gerarDadosGrafico(params: ParametrosQueima) {
-  const pontos = [];
-  const passos = 12;
-  for (let i = 0; i <= passos; i++) {
-    const t = new Date(params.iniciadoEm.getTime() + (i / passos) * 16 * 3600 * 1000);
-    const p = calcularPrevisao(params, t);
-    pontos.push({
-      hora: format(t, "HH:mm"),
-      estimada: p.temperaturaEstimada,
-      real: t <= new Date() ? p.temperaturaEstimada + (Math.random() * 20 - 10) : null,
-    });
-  }
-  return pontos;
 }

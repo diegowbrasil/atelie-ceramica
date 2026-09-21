@@ -38,30 +38,30 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-paper px-4 dark:bg-paper-dark">
-      <Card className="w-full max-w-sm p-6 animate-fade-up">
-        <h1 className="mb-1 font-display text-xl text-ink-800 dark:text-ink-50">Ateliê de Cerâmica</h1>
-        <p className="mb-6 text-sm text-ink-400">Entre para acessar sua conta.</p>
+    <div className="flex min-h-screen items-center justify-center bg-cream px-4">
+      <Card className="w-full max-w-sm animate-fade-up p-6">
+        <span className="mb-1 block font-display text-2xl uppercase leading-none tracking-wide text-ink">MTCST</span>
+        <p className="mb-6 text-sm text-ink-soft">Entre para acessar sua conta.</p>
 
         <form onSubmit={entrar} className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-500">E-mail</label>
+            <label className="mb-1 block text-xs font-medium text-ink-soft">E-mail</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-ink-200 bg-white px-3 py-2 text-sm outline-none focus:border-clay-400 dark:border-ink-600 dark:bg-surface-dark"
+              className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-accent"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ink-500">Senha</label>
+            <label className="mb-1 block text-xs font-medium text-ink-soft">Senha</label>
             <input
               type="password"
               required
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              className="w-full rounded-xl border border-ink-200 bg-white px-3 py-2 text-sm outline-none focus:border-clay-400 dark:border-ink-600 dark:bg-surface-dark"
+              className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-accent"
             />
           </div>
           {erro && <p className="text-sm text-rose-500">{erro}</p>}
