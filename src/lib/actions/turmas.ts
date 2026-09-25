@@ -168,13 +168,50 @@ export async function getRosterTurma(turmaId: string, diaId: string, capacidade:
   return [...ocupadas, ...vazias];
 }
 
-/** Cadastra um aluno novo numa vaga vazia: profile, pacote e matrícula
- *  confirmada, nessa ordem (cada um referencia o anterior). Aluno cadastrado
- *  pelo admin não ganha conta de login nenhuma — `profiles` não exige mais
- *  isso (schema.sql, decisão 2026-09-23 revertendo a versão anterior que
- *  criava uma conta "muda" só pra satisfazer uma FK que não precisava mais
- *  existir). Não recebe `numero` (não existe no schema, ver comentário no
- *  topo do arquivo) — só entra na próxima posição. */
+/** Pacote + matrícula confirmada + cobrança pra um `aluno_id` que JÁ
+ *  existe (profile já criado em algum outro lugar) — extraído de
+ *  `cadastrarAluno` (2026-09-25) pra ser reaproveitado por
+ *  `aprovarSolicitacao` (solicitacoes.ts), que precisa matricular gente
+ *  que já tem profile/conta própria sem duplicar o profile dela (era
+ *  exatamente esse o bug: aprovar sempre criava um profile NOVO, mesmo
+ *  quando a solicitação já vinha com `aluno_id` de uma conta real). */
+export async function matricularAlunoExistente(alunoId: string, turmaId: string, total: number) {
+  const supabase = createClient();
+
+  const { data: pacote, error: pacoteError } = await supabase
+    .from("pacotes")
+    .insert({ aluno_id: alunoId, turma_id: turmaId, total_aulas: total, aulas_usadas: 0, status: "ativo" })
+    .select("id")
+    .single();
+  if (pacoteError) throw new Error(`Falha ao criar pacote: ${pacoteError.message}`);
+
+  const { error: matriculaError } = await supabase
+    .from("matriculas")
+    .insert({ turma_id: turmaId, aluno_id: alunoId, pacote_id: pacote.id, status: "confirmado", provisorio: false });
+  if (matriculaError) throw new Error(`Falha ao matricular aluno: ${matriculaError.message}`);
+
+  // Cobrança do pacote novo, pendente até o admin marcar como pago em
+  // Pagamentos (ver src/lib/actions/pagamentos.ts) — sem isso, o aluno
+  // nunca apareceria lá até alguém criar o registro na mão.
+  const { error: pagamentoError } = await supabase.from("pagamentos").insert({
+    aluno_id: alunoId,
+    turma_id: turmaId,
+    tipo: "pacote",
+    descricao: `Pacote ${total} aulas`,
+    valor: null,
+    status: "pendente",
+  });
+  if (pagamentoError) throw new Error(`Falha ao criar cobrança: ${pagamentoError.message}`);
+}
+
+/** Cadastra um aluno novo numa vaga vazia: profile, depois pacote +
+ *  matrícula + cobrança (`matricularAlunoExistente`, acima). Aluno
+ *  cadastrado pelo admin não ganha conta de login nenhuma — `profiles`
+ *  não exige mais isso (schema.sql, decisão 2026-09-23 revertendo a
+ *  versão anterior que criava uma conta "muda" só pra satisfazer uma FK
+ *  que não precisava mais existir). Não recebe `numero` (não existe no
+ *  schema, ver comentário no topo do arquivo) — só entra na próxima
+ *  posição. */
 export async function cadastrarAluno(turmaId: string, dados: { nome: string; total: number; telefone?: string | null }) {
   const supabase = createClient();
 
@@ -185,30 +222,7 @@ export async function cadastrarAluno(turmaId: string, dados: { nome: string; tot
     .single();
   if (profileError) throw new Error(`Falha ao criar profile: ${profileError.message}`);
 
-  const { data: pacote, error: pacoteError } = await supabase
-    .from("pacotes")
-    .insert({ aluno_id: profile.id, turma_id: turmaId, total_aulas: dados.total, aulas_usadas: 0, status: "ativo" })
-    .select("id")
-    .single();
-  if (pacoteError) throw new Error(`Falha ao criar pacote: ${pacoteError.message}`);
-
-  const { error: matriculaError } = await supabase
-    .from("matriculas")
-    .insert({ turma_id: turmaId, aluno_id: profile.id, pacote_id: pacote.id, status: "confirmado", provisorio: false });
-  if (matriculaError) throw new Error(`Falha ao matricular aluno: ${matriculaError.message}`);
-
-  // Cobrança do pacote novo, pendente até o admin marcar como pago em
-  // Pagamentos (ver src/lib/actions/pagamentos.ts) — sem isso, o aluno
-  // nunca apareceria lá até alguém criar o registro na mão.
-  const { error: pagamentoError } = await supabase.from("pagamentos").insert({
-    aluno_id: profile.id,
-    turma_id: turmaId,
-    tipo: "pacote",
-    descricao: `Pacote ${dados.total} aulas`,
-    valor: null,
-    status: "pendente",
-  });
-  if (pagamentoError) throw new Error(`Falha ao criar cobrança: ${pagamentoError.message}`);
+  await matricularAlunoExistente(profile.id, turmaId, dados.total);
 
   revalidatePath(`/turmas/${turmaId}`);
   revalidatePath("/pagamentos");
@@ -284,26 +298,51 @@ export async function marcarPresenca(turmaId: string, diaId: string, alunoId: st
   revalidatePath(`/turmas/${turmaId}`);
 }
 
-/** Move um aluno pra outra turma — só transferência FIXA por enquanto
- *  (mesmo escopo já decidido pro Next.js, "provisório" fica pro gesto de
- *  arrastar-e-soltar completo, que também não foi portado ainda, ver
- *  turmas/[turmaId]/page.tsx). Encerra a matrícula antiga (não apaga —
- *  vira `status: 'recusado'`, preserva histórico) e cria uma nova. O
- *  pacote em si (progresso de aulas) migra junto, só troca de turma. */
-export async function moverAluno(matriculaId: string, alunoId: string, pacoteId: string | null, turmaOrigemId: string, turmaDestinoId: string) {
+/** Move um aluno pra outra turma. Dois modos, escolhidos por `tipo`:
+ *  - `"fixa"` (padrão, comportamento original): encerra a matrícula
+ *    antiga (não apaga — vira `status: 'recusado'`, preserva histórico)
+ *    e cria uma nova. O pacote em si (progresso de aulas) migra junto,
+ *    só troca de turma.
+ *  - `"provisoria"` (2026-09-25, ligado por `aprovarSolicitacao` — o
+ *    campo já existia no schema desde sempre, mas nada no Next.js
+ *    escrevia nele até agora, ver PROGRESS.md): a matrícula antiga NÃO
+ *    é encerrada, o pacote NÃO migra (continua pertencendo à turma de
+ *    origem) — só consome uma aula dele (mesmo cálculo de
+ *    `marcarPresenca`) e cria uma matrícula NOVA, `provisorio: true`, na
+ *    turma de destino. O aluno fica matriculado nas duas ao mesmo tempo
+ *    de propósito. */
+export async function moverAluno(
+  matriculaId: string,
+  alunoId: string,
+  pacoteId: string | null,
+  turmaOrigemId: string,
+  turmaDestinoId: string,
+  tipo: "fixa" | "provisoria" = "fixa"
+) {
   const supabase = createClient();
 
-  const { error: encerrarError } = await supabase.from("matriculas").update({ status: "recusado" }).eq("id", matriculaId);
-  if (encerrarError) throw new Error(`Falha ao encerrar matrícula antiga: ${encerrarError.message}`);
+  if (tipo === "fixa") {
+    const { error: encerrarError } = await supabase.from("matriculas").update({ status: "recusado" }).eq("id", matriculaId);
+    if (encerrarError) throw new Error(`Falha ao encerrar matrícula antiga: ${encerrarError.message}`);
 
-  if (pacoteId) {
-    const { error: pacoteError } = await supabase.from("pacotes").update({ turma_id: turmaDestinoId }).eq("id", pacoteId);
-    if (pacoteError) throw new Error(`Falha ao migrar pacote: ${pacoteError.message}`);
+    if (pacoteId) {
+      const { error: pacoteError } = await supabase.from("pacotes").update({ turma_id: turmaDestinoId }).eq("id", pacoteId);
+      if (pacoteError) throw new Error(`Falha ao migrar pacote: ${pacoteError.message}`);
+    }
+  } else if (pacoteId) {
+    const { data: pacote, error: pacoteReadError } = await supabase.from("pacotes").select("aulas_usadas, total_aulas").eq("id", pacoteId).single();
+    if (pacoteReadError) throw new Error(`Falha ao ler pacote: ${pacoteReadError.message}`);
+    const novaContagem = Math.min(pacote.aulas_usadas + 1, pacote.total_aulas);
+    const { error: pacoteError } = await supabase
+      .from("pacotes")
+      .update({ aulas_usadas: novaContagem, status: novaContagem === pacote.total_aulas ? "ultima_aula" : "ativo", atualizado_em: new Date().toISOString() })
+      .eq("id", pacoteId);
+    if (pacoteError) throw new Error(`Falha ao consumir aula do pacote: ${pacoteError.message}`);
   }
 
   const { error: novaMatriculaError } = await supabase
     .from("matriculas")
-    .insert({ turma_id: turmaDestinoId, aluno_id: alunoId, pacote_id: pacoteId, status: "confirmado", provisorio: false });
+    .insert({ turma_id: turmaDestinoId, aluno_id: alunoId, pacote_id: pacoteId, status: "confirmado", provisorio: tipo === "provisoria" });
   if (novaMatriculaError) throw new Error(`Falha ao matricular na turma nova: ${novaMatriculaError.message}`);
 
   revalidatePath(`/turmas/${turmaOrigemId}`);

@@ -37,14 +37,51 @@ export interface TurmaParaAluno {
   hora: string;
   ocupadas: number;
   capacidade: number;
+  /** Já é matrícula FIXA do próprio aluno logado (2026-09-25, pedido do
+   *  Diego: "na turma dela precisa estar escrito minha turma... e nao
+   *  solicitar vaga em todas") — essa turma não mostra botão de
+   *  solicitar, mostra que é a turma dele. */
+  souEuFixo: boolean;
+  /** Solicitação MAIS RECENTE do próprio aluno pra essa turma (2026-09-25,
+   *  "vai estar pendente ou confirmada na tela dela"). `null` = nunca
+   *  pediu, ou a mais recente já foi resolvida há tempo (não filtramos
+   *  por data — a mais recente por `solicitado_em` já resolve o caso
+   *  comum de pedir de novo depois de uma recusa). RLS não libera aluno
+   *  ler a própria `solicitacoes_vaga` (só admin, ver schema) — por isso
+   *  usa `admin`, já em uso nesta função pelo mesmo motivo do
+   *  `matriculas`/`oficina_participantes`. */
+  minhaSolicitacao: { id: string; status: "pendente" | "aprovada" | "recusada"; tipo: string } | null;
 }
 
 export async function getTurmasParaAluno(): Promise<TurmaParaAluno[]> {
+  const meuId = await meuProfileId();
   const admin = createAdminClient();
   const { data: turmas, error } = await admin.from("turmas").select("id, nome, dia, hora_inicio, hora_fim, capacidade").order("dia").order("hora_inicio");
   if (error) throw new Error(`Falha ao buscar turmas: ${error.message}`);
 
   const DIA_LABEL: Record<string, string> = { seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta", sab: "Sábado", dom: "Domingo" };
+
+  const minhasPorTurma = new Map<string, { id: string; status: "pendente" | "aprovada" | "recusada"; tipo: string }>();
+  let minhaTurmaFixaId: string | null = null;
+  if (meuId) {
+    const { data: solicitacoes } = await admin
+      .from("solicitacoes_vaga")
+      .select("id, turma_id, status, tipo")
+      .eq("aluno_id", meuId)
+      .order("solicitado_em", { ascending: false });
+    for (const s of solicitacoes ?? []) {
+      if (!minhasPorTurma.has(s.turma_id)) minhasPorTurma.set(s.turma_id, { id: s.id, status: s.status, tipo: s.tipo });
+    }
+
+    const { data: matriculaFixa } = await admin
+      .from("matriculas")
+      .select("turma_id")
+      .eq("aluno_id", meuId)
+      .eq("status", "confirmado")
+      .eq("provisorio", false)
+      .maybeSingle();
+    minhaTurmaFixaId = matriculaFixa?.turma_id ?? null;
+  }
 
   return Promise.all(
     (turmas ?? []).map(async (t): Promise<TurmaParaAluno> => {
@@ -56,6 +93,8 @@ export async function getTurmasParaAluno(): Promise<TurmaParaAluno[]> {
         hora: `${t.hora_inicio.slice(0, 5)} às ${t.hora_fim.slice(0, 5)}`,
         ocupadas: count ?? 0,
         capacidade: t.capacidade,
+        souEuFixo: t.id === minhaTurmaFixaId,
+        minhaSolicitacao: minhasPorTurma.get(t.id) ?? null,
       };
     })
   );
@@ -80,6 +119,24 @@ export async function solicitarVaga(turmaId: string, tipo: string) {
   const { error } = await supabase.from("solicitacoes_vaga").insert({ nome: perfil.nome, tipo, turma_id: turmaId, aluno_id: perfil.id });
   if (error) throw new Error(`Falha ao enviar solicitação: ${error.message}`);
 
+  revalidatePath("/aluno/turmas");
+}
+
+/** Cancela a própria solicitação, só enquanto pendente — RLS
+ *  (`solicitacoes_vaga_aluno_delete`) já garante as duas coisas: só
+ *  apaga se for do próprio aluno E se ainda estiver pendente (uma já
+ *  aprovada/recusada não pode "sumir" por engano). "Editar" (pedido do
+ *  Diego) vira cancelar + abrir o modal de novo na UI, não um formulário
+ *  separado — mais simples e cobre o mesmo caso de uso. */
+export async function cancelarSolicitacao(solicitacaoId: string) {
+  const supabase = createClient();
+  // `.select()` no delete pra distinguir "apagou de verdade" de "RLS
+  // bloqueou silenciosamente" — um delete que a policy nega não vem com
+  // `error` nenhum, só devolve 0 linhas (achado testando esta mesma
+  // função antes do patch da policy chegar no banco do Diego).
+  const { data, error } = await supabase.from("solicitacoes_vaga").delete().eq("id", solicitacaoId).select("id");
+  if (error) throw new Error(`Falha ao cancelar solicitação: ${error.message}`);
+  if (!data || data.length === 0) throw new Error("Não foi possível cancelar essa solicitação — ela pode já ter sido resolvida.");
   revalidatePath("/aluno/turmas");
 }
 

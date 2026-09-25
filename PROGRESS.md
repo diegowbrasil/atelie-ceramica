@@ -42,12 +42,13 @@ commitada**. Detalhe completo na entrada "Mesma sessão, logo em
 seguida" dentro de "2026-09-25" no Histórico de sessões.
 
 **Pendências do lado do Diego** (nada bloqueando mais trabalho meu):
-rodar o patch `fix-profiles-delete-policy.sql` (`profiles` sem policy de
-`delete`) se ainda não rodou — a última confirmação registrada no
-Histórico de sessões (2026-09-24, continuação 5) é "patch enviado, ainda
-não aplicado"; vale confirmar com ele antes de assumir que já foi. Fora
-isso, só restam as Fases 11/12 do plano (deploy real na Vercel + PWA
-instalável), explicitamente adiadas.
+2 patches de RLS — `fix-profiles-delete-policy.sql` (`profiles` sem
+policy de `delete`; última confirmação registrada era "enviado, ainda
+não aplicado", vale confirmar) e `add-solicitacao-aluno-delete-policy.sql`
+(novo, 2026-09-25 — sem ele, "Cancelar" solicitação na Área do Aluno
+não funciona de verdade, só mostra erro claro em vez de fingir sucesso).
+Fora isso, só restam as Fases 11/12 do plano (deploy real na Vercel +
+PWA instalável), explicitamente adiadas.
 
 <details>
 <summary>Histórico mais antigo desta seção (sessões até 2026-09-22, mantido por referência)</summary>
@@ -3124,3 +3125,64 @@ projeto.
 
 Nenhum commit feito ainda dessa leva (Histórico + widget de
 demonstração).
+
+### 2026-09-25 (continuação) — "Solicitar vaga" do aluno virou fluxo de verdade
+
+Diego perguntou se ainda dava pra solicitar vaga provisória ou trocar
+de turma pela aba Turmas do aluno. Investigando a fundo: o PEDIDO
+sempre funcionou, mas **aprovar sempre criava um profile duplicado** —
+`aprovarSolicitacao` chamava o mesmo `cadastrarAluno` de "vaga vazia",
+sem saber que quem pediu já era um aluno logado com conta própria.
+"Provisório"/"trocar de turma" nunca existiam de verdade no Next.js
+(só documentados como pendência).
+
+Rodada de refinamento de copy com o Diego em tempo real — "preciso
+repor aula" foi rejeitado ("as vezes a pessoa só quer ir um dia
+diferente, não é sempre reposição"), testei várias sugestões até ele
+escolher: **"Quero trocar para essa turma"** (com aviso de confirmação
+antes de enviar, pedido dele: "tem certeza? sua vaga atual será
+liberada") e **"Quero experimentar essa turma um dia"** (visita
+provisória, sem mexer na turma fixa).
+
+Implementado:
+- `moverAluno` (`turmas.ts`) ganhou modo `"provisoria"` — nunca tinha
+  sido escrito de verdade no Next.js. Mantém a matrícula fixa,
+  consome 1 aula do pacote existente, cria uma segunda matrícula
+  (`provisorio: true`) na turma nova. `"fixa"` é o comportamento
+  original.
+- `aprovarSolicitacao` liga de volta ao `aluno_id` da solicitação: sem
+  matrícula fixa → matricula sem duplicar profile
+  (`matricularAlunoExistente`, extraído de `cadastrarAluno`); com
+  matrícula fixa → `moverAluno` no modo certo.
+- Depois de aprovado, ainda mid-turn o Diego pediu mais 2 coisas: a
+  tela do aluno precisa mostrar se a solicitação está pendente ou
+  confirmada ("algo assim: pendente aguarde, confirmada pode ir pra
+  aula") — feito, com o TIPO junto ("Pendente (troca de turma)"); e
+  pra quem já tem turma fixa, o card dela precisa dizer "Minha turma"
+  em vez de "Solicitar vaga" em todas — `souEuFixo` novo em
+  `getTurmasParaAluno`. E por último: precisa dar pra cancelar ou
+  editar a solicitação — `cancelarSolicitacao` nova (RLS: só apaga se
+  for do próprio aluno E ainda pendente, policy nova enviada como
+  patch), "editar" virou cancelar + reenviar em vez de formulário
+  separado.
+- **Achado testando o cancelar antes do patch chegar no banco**: um
+  `.delete()` que a RLS bloqueia não vem com `error`, só devolve 0
+  linhas — o código original teria tratado isso como sucesso
+  silencioso. Corrigido com `.select("id")` no delete pra checar se
+  alguma linha realmente saiu, e erro claro se não saiu.
+
+**Verificado ao vivo, ponta a ponta, com o banco real** (aluno de
+teste fixo em Terça 18:30 + admin de teste, os dois descartados
+depois): pediu visita avulsa em Quarta → aprovado → matrícula
+provisória criada, pacote foi de 2/4 pra 3/4, Terça continuou intacta;
+pediu trocar pra Quinta 14:30 → aprovado → Terça virou `recusado`,
+pacote migrou pra Quinta (ainda 3/4) — conferido direto nas tabelas
+(`matriculas`/`pacotes`), não só pela tela. "Minha turma" confirmado
+na turma nova. Card "Pendente (visita avulsa)" + "Cancelar" testado
+(cancelar falhou como esperado, sem o patch ainda aplicado — mensagem
+de erro clara, não um no-op silencioso).
+
+`tsc` limpo. Patch `add-solicitacao-aluno-delete-policy.sql` enviado
+ao Diego (RLS `solicitacoes_vaga_aluno_delete`) — sem ele, "Cancelar"
+não funciona de verdade em produção. Nenhum commit feito ainda desta
+leva.

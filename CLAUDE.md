@@ -125,8 +125,46 @@ efetivamente marcou presença/falta desde então. Pagamentos usa a mesma
 `aluno_id = current_profile_id()`. Verificado ao vivo com histórico de
 teste (3 aulas passadas + 2 pagamentos).
 
-Ainda falta: Diego rodar o patch de RLS pendente (`profiles` sem
-policy de delete) e as Fases 11/12 do plano (deploy real + PWA
+**"Solicitar vaga" (Turmas do aluno) virou o fluxo de verdade
+(2026-09-25)** — achado ao investigar a pergunta do Diego ("ainda
+consigo solicitar provisório ou trocar de turma?"): o pedido em si
+sempre funcionou, mas aprovar SEMPRE criava um profile novo do zero
+(`cadastrarAluno`), mesmo quando quem pediu já era um aluno logado —
+"provisório"/"trocar de turma" nunca tocavam a matrícula/pacote reais
+de quem pediu. Corrigido:
+- **Dois tipos, textos escolhidos com o Diego depois de várias rodadas**
+  ("preciso repor aula" foi rejeitado — nem toda visita ocasional é pra
+  repor falta): "Quero trocar para essa turma" (`TIPO_TROCA`, com aviso
+  de confirmação antes de enviar — "sua vaga na turma atual será
+  liberada") e "Quero experimentar essa turma um dia" (visita
+  provisória, sem mexer na turma fixa).
+- **`moverAluno` (`turmas.ts`) ganhou o modo `"provisoria"`** que nunca
+  tinha sido implementado de verdade no Next.js (só documentado como
+  pendente) — mantém a matrícula fixa intacta, consome 1 aula do pacote
+  existente (mesmo cálculo de `marcarPresenca`) e cria uma segunda
+  matrícula, `provisorio: true`, na turma nova. `"fixa"` é o
+  comportamento original (encerra a antiga, migra o pacote).
+- **`aprovarSolicitacao` (`solicitacoes.ts`) agora liga de volta ao
+  `aluno_id` da solicitação**: sem matrícula fixa → matricula
+  (`matricularAlunoExistente`, sem duplicar profile); com matrícula fixa
+  → `moverAluno` no modo certo conforme o tipo.
+- **Turmas do aluno mostra "Minha turma" na turma fixa dele** (sem botão
+  de solicitar) e o status de cada solicitação já mostra o tipo
+  ("Pendente (troca de turma)"/"Confirmada (visita avulsa)"), com botão
+  "Cancelar" pra pendente (`cancelarSolicitacao`, RLS —
+  `solicitacoes_vaga_aluno_delete`, patch pendente do Diego — só apaga
+  se for do próprio aluno E ainda pendente). "Editar" virou cancelar +
+  reenviar, não um formulário separado.
+- **Verificado ao vivo, ponta a ponta, com o banco real**: aluno de
+  teste fixo em Terça pediu visita avulsa em outra turma (aprovado →
+  matrícula provisória criada, pacote da Terça foi de 2/4 pra 3/4,
+  Terça continuou intacta) e depois trocar pra uma terceira turma
+  (aprovado → Terça virou `recusado`, pacote migrou pra turma nova,
+  ainda em 3/4) — conferido direto nas tabelas, não só na tela.
+
+Ainda falta: Diego rodar os 2 patches de RLS pendentes (`profiles` sem
+policy de delete; `solicitacoes_vaga` sem policy de delete pro aluno
+cancelar) e as Fases 11/12 do plano (deploy real + PWA
 instalável). Fora isso, demo deixou de estar "à frente" do Next.js em
 comportamento — os dois lados agora fazem a mesma coisa, o demo é só
 mais rápido de iterar visualmente (artifact do Claude.ai, sem precisar

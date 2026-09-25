@@ -456,6 +456,11 @@ create policy "solicitacoes_vaga_admin_all" on solicitacoes_vaga for all
   using (is_admin()) with check (is_admin());
 create policy "solicitacoes_vaga_aluno_insert" on solicitacoes_vaga for insert
   with check (aluno_id = current_profile_id());
+-- Aluno cancela a própria solicitação, só enquanto ainda está pendente
+-- (2026-09-25, "q ela consiga cancelar ou editar a solicitação" — editar
+-- vira cancelar + reenviar na UI, não um formulário de edição separado).
+create policy "solicitacoes_vaga_aluno_delete" on solicitacoes_vaga for delete
+  using (aluno_id = current_profile_id() and status = 'pendente');
 
 -- oficinas: leitura autenticada; escrita admin
 create policy "oficinas_select" on oficinas for select using (auth.uid() is not null);

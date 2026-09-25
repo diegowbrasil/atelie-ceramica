@@ -21,6 +21,7 @@ export function SolicitacoesClient({ solicitacoesIniciais, turmas }: Props) {
   const [solicitacoes, setSolicitacoes] = useState<SolicitacaoReal[]>(solicitacoesIniciais);
   const [modalAprovar, setModalAprovar] = useState<SolicitacaoReal | null>(null);
   const [pendente, setPendente] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   // Esta tela não remonta sozinha ao navegar (sem param dinâmico na rota)
   // — mesmo padrão de resync de AvisosCard/AlunosListClient/PagamentosClient.
@@ -37,11 +38,14 @@ export function SolicitacoesClient({ solicitacoesIniciais, turmas }: Props) {
   }
   async function aprovar(sol: SolicitacaoReal, total: number) {
     setPendente(true);
+    setErro(null);
     try {
-      await aprovarSolicitacao(sol.id, sol.nome, sol.turmaId, total);
+      await aprovarSolicitacao(sol.id, sol.alunoId, sol.nome, sol.turmaId, total);
       setSolicitacoes((ss) => ss.filter((s) => s.id !== sol.id));
       setModalAprovar(null);
       router.refresh();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não deu pra aprovar essa solicitação. Tenta de novo.");
     } finally {
       setPendente(false);
     }
@@ -83,7 +87,8 @@ export function SolicitacoesClient({ solicitacoesIniciais, turmas }: Props) {
           solicitacao={modalAprovar}
           labelTurma={labelTurma(modalAprovar.turmaId)}
           pendente={pendente}
-          onClose={() => setModalAprovar(null)}
+          erro={erro}
+          onClose={() => { setModalAprovar(null); setErro(null); }}
           onConfirmar={(total) => aprovar(modalAprovar, total)}
         />
       )}
@@ -92,11 +97,12 @@ export function SolicitacoesClient({ solicitacoesIniciais, turmas }: Props) {
 }
 
 function ModalAprovarSolicitacao({
-  solicitacao, labelTurma, pendente, onClose, onConfirmar,
+  solicitacao, labelTurma, pendente, erro, onClose, onConfirmar,
 }: {
   solicitacao: SolicitacaoReal;
   labelTurma: string;
   pendente: boolean;
+  erro: string | null;
   onClose: () => void;
   onConfirmar: (total: number) => void;
 }) {
@@ -106,7 +112,7 @@ function ModalAprovarSolicitacao({
       <h3 className="mb-1 text-base font-semibold text-ink">Aprovar {solicitacao.nome}</h3>
       <p className="mb-3 text-sm text-ink-soft">Turma: {labelTurma}</p>
       <label className="mb-1 block text-xs font-medium text-ink-soft">Pacote</label>
-      <div className="mb-4 flex gap-2">
+      <div className="mb-1 flex gap-2">
         {[4, 8, 12].map((n) => (
           <button
             type="button"
@@ -118,7 +124,11 @@ function ModalAprovarSolicitacao({
           </button>
         ))}
       </div>
-      <div className="flex gap-2">
+      {solicitacao.alunoId && (
+        <p className="mb-3 text-xs text-ink-soft">Se ela já tiver um pacote em outra turma, o pacote atual dela é reaproveitado — esse número só vale pra matrícula nova.</p>
+      )}
+      {erro && <p className="mb-3 mt-2 text-sm text-rose-500">{erro}</p>}
+      <div className="mt-4 flex gap-2">
         <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink">
           Cancelar
         </button>
