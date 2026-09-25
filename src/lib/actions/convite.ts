@@ -30,7 +30,7 @@ import { emailSinteticoDoTelefone } from "@/lib/telefone";
 const CONVITE_VALIDADE_DIAS = 7;
 
 export async function gerarConvite(alunoId: string): Promise<{ token: string; expiraEm: string }> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: perfil, error: perfilError } = await supabase.from("profiles").select("auth_user_id, telefone").eq("id", alunoId).single();
   if (perfilError) throw new Error(`Falha ao buscar aluno: ${perfilError.message}`);
@@ -94,7 +94,7 @@ export async function aceitarConvite(token: string, senha: string): Promise<{ ok
   // admin) escreve os cookies de sessão certos porque roda dentro do
   // mesmo request desta Server Action, evitando uma segunda ida à tela
   // de login logo depois de criar a conta.
-  const cliente = createClient();
+  const cliente = await createClient();
   const { error: loginError } = await cliente.auth.signInWithPassword({ email: emailSintetico, password: senha });
   if (loginError) return { ok: false, erro: `Conta criada, mas o login automático falhou — entre pela tela de login. (${loginError.message})` };
 

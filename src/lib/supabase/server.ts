@@ -2,9 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database";
 
-/** Cliente Supabase para uso em Server Components / Route Handlers. */
-export function createClient() {
-  const cookieStore = cookies();
+/** Cliente Supabase para uso em Server Components / Route Handlers.
+ *  `async` desde o upgrade pro Next 15 (2026-09-25) — `cookies()` virou
+ *  assíncrono nessa versão, então todo call site (`await createClient()`,
+ *  ~45 lugares) também precisou mudar. */
+export async function createClient() {
+  const cookieStore = await cookies();
 
   // `getAll`/`setAll` (não mais `get`/`set`/`remove`, ver middleware.ts).
   // `setAll` pode ser chamado de dentro de um Server Component, onde

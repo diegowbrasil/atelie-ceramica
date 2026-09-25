@@ -31,7 +31,7 @@ export interface AlunoReal {
   temContaAtiva: boolean;
 }
 
-async function montarAlunoReal(supabase: ReturnType<typeof createClient>, alunoId: string) {
+async function montarAlunoReal(supabase: Awaited<ReturnType<typeof createClient>>, alunoId: string) {
   const { data: matricula } = await supabase
     .from("matriculas")
     .select("id, pacote_id, turma_id, turmas(nome)")
@@ -67,7 +67,7 @@ async function montarAlunoReal(supabase: ReturnType<typeof createClient>, alunoI
 }
 
 export async function getAlunosReal(): Promise<AlunoReal[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: perfis, error } = await supabase.from("profiles").select("id, nome, telefone, auth_user_id").eq("role", "aluno").order("nome", { ascending: true });
   if (error) throw new Error(`Falha ao buscar alunos: ${error.message}`);
 
@@ -92,7 +92,7 @@ export async function getAlunosReal(): Promise<AlunoReal[]> {
 }
 
 export async function getAlunoReal(id: string): Promise<AlunoReal | null> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: p, error } = await supabase.from("profiles").select("id, nome, telefone, auth_user_id").eq("id", id).maybeSingle();
   if (error) throw new Error(`Falha ao buscar aluno: ${error.message}`);
   if (!p) return null;
@@ -123,7 +123,7 @@ export async function editarAluno(
   alunoId: string,
   dados: { turmaId: string; total: number; aulaAtual: number; pago: boolean; telefone?: string | null }
 ) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   if (dados.telefone !== undefined) {
     const { error } = await supabase.from("profiles").update({ telefone: dados.telefone }).eq("id", alunoId);
@@ -195,7 +195,7 @@ export async function editarAluno(
  *  `on delete set null` de propósito (mantém o histórico de cobrança
  *  mesmo se a pessoa for excluída, só perde o vínculo com o nome). */
 export async function excluirAluno(alunoId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.from("profiles").delete().eq("id", alunoId);
   if (error) throw new Error(`Falha ao excluir aluno: ${error.message}`);
   revalidatePath("/alunos");

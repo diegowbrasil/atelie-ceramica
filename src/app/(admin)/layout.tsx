@@ -10,7 +10,7 @@ import { MobileHeader } from "@/components/layout/MobileHeader";
 // da migração de dados reais, nunca fechado quando os outros 7
 // domínios foram ligados.
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

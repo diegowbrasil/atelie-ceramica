@@ -32,7 +32,7 @@ const COR_TRACK: Record<CorIdentidade, string> = {
 // vazio com CTA pra Turmas, em vez de mostrar um anel de pacote 0/0 sem
 // sentido.
 export default async function AlunoHomePage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

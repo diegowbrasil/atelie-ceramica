@@ -5,6 +5,13 @@ node_modules/
 tsconfig.tsbuildinfo
 supabase/.temp/
 
+# Service worker gerado pelo next-pwa a cada `next build` (2026-09-25,
+# primeira vez que um build de produção rodou de verdade neste projeto)
+# — a Vercel gera o dela própria no deploy, commitar a versão local só
+# gera diff/lixo a cada build (o hash do workbox muda toda vez).
+public/sw.js
+public/workbox-*.js
+
 # Personal Claude Code tooling (skills/agents/local settings) — not app source,
 # specific to whoever's machine is driving the session, not the ateliê project.
 .claude/skills/

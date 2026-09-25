@@ -18,7 +18,7 @@ export interface AvisoReal {
 /** RLS já filtra pelo destinatário certo (admin vê os dois; visão de
  *  aluno, quando existir, só veria "alunos") — só pede os ativos. */
 export async function getAvisosReal(): Promise<AvisoReal[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("avisos")
     .select("id, texto, destinatario")
@@ -29,7 +29,7 @@ export async function getAvisosReal(): Promise<AvisoReal[]> {
 }
 
 export async function criarAviso(texto: string, destinatario: AvisoDestinatario) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.from("avisos").insert({ texto, destinatario });
   if (error) throw new Error(`Falha ao criar aviso: ${error.message}`);
   revalidatePath("/dashboard");
@@ -39,7 +39,7 @@ export async function criarAviso(texto: string, destinatario: AvisoDestinatario)
  *  sem confirmar" do resto do app; aqui nem pede confirmação porque
  *  remover um aviso já é reversível: basta criar de novo). */
 export async function removerAviso(id: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.from("avisos").update({ ativo: false }).eq("id", id);
   if (error) throw new Error(`Falha ao remover aviso: ${error.message}`);
   revalidatePath("/dashboard");

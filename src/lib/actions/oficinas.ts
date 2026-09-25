@@ -100,7 +100,7 @@ async function montarOficinaReal(row: {
 }
 
 export async function getOficinasReal(): Promise<OficinaReal[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("oficinas")
     .select("*, oficina_participantes(id, nome, tipo, dupla_com, pagamento, criado_em)")
@@ -111,7 +111,7 @@ export async function getOficinasReal(): Promise<OficinaReal[]> {
 }
 
 export async function getOficinaReal(id: string): Promise<OficinaReal | null> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("oficinas")
     .select("*, oficina_participantes(id, nome, tipo, dupla_com, pagamento, criado_em)")
@@ -132,7 +132,7 @@ export async function criarOficina(dados: {
   descricao: string;
   observacoes: string;
 }) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.from("oficinas").insert({
     nome: dados.nome,
     data: dados.data,
@@ -166,7 +166,7 @@ export async function editarOficina(
     statusPecas: StatusPecas;
   }>
 ) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   if (dados.vagas !== undefined) {
     const { count, error: countError } = await supabase
@@ -202,7 +202,7 @@ export async function cadastrarParticipante(
   oficinaId: string,
   dados: { nome: string; tipo: "individual" | "dupla"; duplaCom?: string | null; pagamento: "pendente" | "pago" }
 ) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.from("oficina_participantes").insert({
     oficina_id: oficinaId,
     nome: dados.nome,
@@ -220,7 +220,7 @@ export async function editarParticipante(
   oficinaId: string,
   dados: { nome: string; tipo: "individual" | "dupla"; duplaCom?: string | null; pagamento: "pendente" | "pago" }
 ) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase
     .from("oficina_participantes")
     .update({ nome: dados.nome, tipo: dados.tipo, dupla_com: dados.duplaCom ?? null, pagamento: dados.pagamento })
@@ -230,7 +230,7 @@ export async function editarParticipante(
 }
 
 export async function removerParticipante(participanteId: string, oficinaId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.from("oficina_participantes").delete().eq("id", participanteId);
   if (error) throw new Error(`Falha ao remover participante: ${error.message}`);
   revalidatePath(`/oficinas/${oficinaId}`);

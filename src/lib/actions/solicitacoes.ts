@@ -23,7 +23,7 @@ function formatarQuando(iso: string): string {
 }
 
 export async function getSolicitacoesReal(): Promise<SolicitacaoReal[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("solicitacoes_vaga")
     .select("id, aluno_id, nome, tipo, turma_id, solicitado_em")
@@ -61,7 +61,7 @@ export async function getSolicitacoesReal(): Promise<SolicitacaoReal[]> {
  *     (aviso mora em AlunoTurmasClient, antes de chamar isto);
  *     experimentar não mexe na turma fixa. */
 export async function aprovarSolicitacao(solicitacaoId: string, alunoId: string | null, nome: string, turmaId: string, totalAulas: number) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: solicitacao } = await supabase.from("solicitacoes_vaga").select("tipo").eq("id", solicitacaoId).maybeSingle();
   const ehTrocaFixa = solicitacao?.tipo?.startsWith("Quer trocar para essa turma") ?? false;
@@ -98,7 +98,7 @@ export async function aprovarSolicitacao(solicitacaoId: string, alunoId: string 
 }
 
 export async function recusarSolicitacao(solicitacaoId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase
     .from("solicitacoes_vaga")
     .update({ status: "recusada", resolvido_em: new Date().toISOString() })

@@ -3228,3 +3228,74 @@ próximas rodadas: avaliar upgrade do Next.js (14→15+, por causa das 2
 CVEs críticas sem patch no major atual), deploy real (Vercel) e
 escolher qual tela ainda-não-construída vira prioridade (Relatórios,
 Configurações ou Notificações).
+
+### 2026-09-25 (continuação) — Upgrade pro Next 15.5.24
+
+Diego escolheu as 4 opções ("fechar pontas soltas" já feito acima).
+Antes de mexer em código, pesquisei as 2 CVEs de verdade (não só
+repeti o que já estava documentado): as duas só fecham na 15.5.24 (ou
+16.3.3+). Achado relevante que mudou a urgência real: a falha do
+Windows nem chega a valer numa Vercel (roda Linux); a do AVIF bate em
+qualquer host, mas só é explorável se o app processar AVIF de fonte
+não confiável pelo `next/image` — hoje não processa (as fotos de fundo
+são JPEG fixas, que eu inseri). Expliquei isso pro Diego e ele confirmou
+fazer o upgrade mesmo assim, antes do deploy.
+
+**Escopo real do upgrade**: `cookies()`/`headers()`/`params` viram
+assíncronos no Next 15 — bate direto no `createClient()`
+(`src/lib/supabase/server.ts`), usado em praticamente toda Server
+Action/página do projeto.
+- `npm install next@15.5.24 eslint-config-next@15.5.24`.
+- `createClient()` virou `async function`, `cookies()` → `await
+  cookies()`.
+- **45 chamadas em 14 arquivos** (`const supabase = createClient();`)
+  ganharam `await` — feito com `sed` em lote (todos os arquivos
+  confirmados um a um antes, checando o import real de cada um pra não
+  mexer sem querer no `createClient` do CLIENTE em `login/page.tsx`,
+  que é outro arquivo/outra função, sem nada a ver com essa mudança).
+- **4 rotas dinâmicas** (`turmas/[turmaId]`, `alunos/[id]`,
+  `oficinas/[oficinaId]`, `convite/[token]`) tiveram `params`
+  embrulhado em `Promise<{...}>` + `await params` no topo da função.
+  Confirmado por glob que essas eram as ÚNICAS 4 rotas dinâmicas reais
+  do projeto — outras ocorrências da palavra "params" encontradas por
+  grep (`dashboard/page.tsx`, `FornoResumoCard.tsx`, `forno.ts`) eram
+  falso-positivo, um campo `params` de configuração de queima do forno,
+  nada a ver com rota do Next.
+- **Achado no caminho, TypeScript pegou na hora**: `alunos.ts` tinha um
+  helper interno (`montarAlunoReal`) tipado como `supabase:
+  ReturnType<typeof createClient>` — precisou virar `Awaited<
+  ReturnType<typeof createClient>>`, já que o tipo de retorno da
+  função em si mudou de `SupabaseClient` pra `Promise<SupabaseClient>`.
+  Confirma o valor de rodar `tsc` a cada passo nessa migração — esse
+  tipo de erro não aparece rodando só o app manualmente.
+- `middleware.ts` e `src/lib/supabase/admin.ts` **não precisaram
+  mudar** — nenhum dos dois usa `cookies()` de `next/headers`
+  (middleware usa `request.cookies`/`response.cookies` direto; o
+  client admin é service_role, sem sessão).
+
+**`npm run build` rodou de verdade pela primeira vez no projeto
+inteiro** (nunca tinha rodado antes desta sessão, CLAUDE.md já
+registrava isso como pendência da Fase 12) — passou limpo de primeira,
+inclusive o service worker do PWA. Pesquisei antes se `next-pwa`
+(pacote sem atualização há 8+ meses) teria problema real com Next 15 —
+o risco documentado era conflito com Turbopack, que este projeto não
+usa (`next dev`/`next build` sem `--turbo`) — e na prática compilou
+sem erro nenhum. `public/sw.js`/`public/workbox-*.js` (gerados a cada
+build, hash muda toda vez) entraram no `.gitignore` — nunca tinha sido
+necessário antes por nunca ter rodado um build de produção de verdade.
+
+**Verificado ao vivo** com um admin de teste descartável: login →
+`/turmas/ter-1830` (rota dinâmica, roster real das 14 pessoas) →
+`/alunos` → busquei "Isadora" → cliquei no resultado → navegou pra
+`/alunos/[id]` de verdade, carregou os dados dela — as duas rotas
+dinâmicas que eu mexi, confirmadas sem erro de servidor. Aluno de
+teste removido depois.
+
+`tsc` limpo. `npm audit`: 9 vulnerabilidades restantes, nenhuma mais
+crítica — todas em dependências de build/dev (esbuild do Vite do
+preview do demo, postcss empacotado dentro do próprio pacote `next`,
+a cadeia `workbox`/`serialize-javascript` do `next-pwa`), nenhuma
+afeta o app rodando em produção. Registradas, não perseguidas agora —
+`npm audit fix --force` levaria a mais 2 majors (`next@16`,
+`next-pwa@2.0.2`) que não foram pedidos nem avaliados. Nenhum commit
+feito ainda desta leva.

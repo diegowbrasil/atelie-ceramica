@@ -7,9 +7,10 @@ import { TURMAS_DIAS, type DiaId } from "@/lib/turmasDias";
 // slug→UUID (getTurmaPorSlug, ver comentário lá) antes de renderizar; a
 // interatividade (tabs, modais, mutações) mora em TurmaDetalheClient.
 // Referência de comportamento: demo/AtelieDemo.jsx (Turmas).
-export default async function TurmaPage({ params }: { params: { turmaId: string } }) {
-  const diaValido = TURMAS_DIAS.find((d) => d.turmas.some((t) => t.id === params.turmaId) && d.disponivel) ?? TURMAS_DIAS.find((d) => d.id === "ter")!;
-  const turmaInfo = diaValido.turmas.find((t) => t.id === params.turmaId) ?? diaValido.turmas[0];
+export default async function TurmaPage({ params }: { params: Promise<{ turmaId: string }> }) {
+  const { turmaId } = await params;
+  const diaValido = TURMAS_DIAS.find((d) => d.turmas.some((t) => t.id === turmaId) && d.disponivel) ?? TURMAS_DIAS.find((d) => d.id === "ter")!;
+  const turmaInfo = diaValido.turmas.find((t) => t.id === turmaId) ?? diaValido.turmas[0];
 
   const turmaReal = await getTurmaPorSlug(turmaInfo.id);
   if (!turmaReal) {

@@ -28,7 +28,7 @@ function formatarDataCurta(iso: string): string {
 }
 
 export async function getPagamentosReal(): Promise<PagamentoReal[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: pagamentos, error } = await supabase
     .from("pagamentos")
@@ -80,7 +80,7 @@ export async function getPagamentosReal(): Promise<PagamentoReal[]> {
 }
 
 export async function marcarComoPago(pagamentoId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.from("pagamentos").update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", pagamentoId);
   if (error) throw new Error(`Falha ao marcar como pago: ${error.message}`);
   revalidatePath("/pagamentos");

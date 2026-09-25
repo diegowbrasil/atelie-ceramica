@@ -21,7 +21,7 @@ import { revalidatePath } from "next/cache";
 import type { StatusPecas } from "@/types/database";
 
 async function meuProfileId(): Promise<string | null> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -107,7 +107,7 @@ export async function getTurmasParaAluno(): Promise<TurmaParaAluno[]> {
  *  se um dia isso importar (hoje `aprovarSolicitacao` ainda trata como
  *  "pessoa nova", mesma simplificação deliberada já documentada). */
 export async function solicitarVaga(turmaId: string, tipo: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -129,7 +129,7 @@ export async function solicitarVaga(turmaId: string, tipo: string) {
  *  Diego) vira cancelar + abrir o modal de novo na UI, não um formulário
  *  separado — mais simples e cobre o mesmo caso de uso. */
 export async function cancelarSolicitacao(solicitacaoId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   // `.select()` no delete pra distinguir "apagou de verdade" de "RLS
   // bloqueou silenciosamente" — um delete que a policy nega não vem com
   // `error` nenhum, só devolve 0 linhas (achado testando esta mesma
@@ -206,7 +206,7 @@ export interface AulaHistorico {
 export async function getHistoricoAulas(): Promise<AulaHistorico[]> {
   const meuId = await meuProfileId();
   if (!meuId) return [];
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("presencas")
@@ -232,7 +232,7 @@ export interface PagamentoHistorico {
 export async function getHistoricoPagamentos(): Promise<PagamentoHistorico[]> {
   const meuId = await meuProfileId();
   if (!meuId) return [];
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("pagamentos")

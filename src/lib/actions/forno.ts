@@ -44,7 +44,7 @@ export interface FornadaReal {
 /** Todas as fornadas (histórico + ativa, se houver) de um forno físico,
  *  mais novas primeiro — mesmo formato da lista lateral de histórico. */
 export async function getFornadasReal(fornoId: FornoFisico): Promise<FornadaReal[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: queimas, error } = await supabase
     .from("queimas")
@@ -123,7 +123,7 @@ export async function iniciarFornada(
     };
   }
 ) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { error: interromperError } = await supabase
     .from("queimas")
@@ -158,7 +158,7 @@ export async function iniciarFornada(
  *  sozinha a partir de `temperatura_real`/`temperatura_real_em`; não criar
  *  lógica separada de "recalcular", CLAUDE.md §5 Forno). */
 export async function atualizarTemperatura(queimaId: string, valor: number) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const agora = new Date().toISOString();
 
   const { error: leituraError } = await supabase.from("queima_leituras").insert({ queima_id: queimaId, temperatura: valor, registrado_em: agora });
@@ -174,14 +174,14 @@ export async function atualizarTemperatura(queimaId: string, valor: number) {
 }
 
 export async function adicionarObservacao(queimaId: string, texto: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase.from("queima_observacoes").insert({ queima_id: queimaId, texto });
   if (error) throw new Error(`Falha ao adicionar observação: ${error.message}`);
   revalidatePath("/forno");
 }
 
 export async function finalizarFornada(queimaId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase
     .from("queimas")
     .update({ status: "finalizada", etapa_atual: "finalizada", finalizado_em: new Date().toISOString() })
@@ -193,7 +193,7 @@ export async function finalizarFornada(queimaId: string) {
 /** Botão discreto, não um 4º botão grande (CLAUDE.md §5 Forno) — só muda
  *  `status`, nunca apaga, mesmo padrão de `finalizarFornada`. */
 export async function cancelarFornada(queimaId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase
     .from("queimas")
     .update({ status: "cancelada", finalizado_em: new Date().toISOString() })
@@ -206,7 +206,7 @@ export async function cancelarFornada(queimaId: string) {
  *  que mudaria retroativamente a curva de previsão já em andamento
  *  (CLAUDE.md §5 Forno, "categoria de edição bem mais delicada"). */
 export async function editarConteudo(queimaId: string, categorias: ConteudoCategoria[], detalhesConteudo: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { error } = await supabase
     .from("queimas")
     .update({ categorias, detalhes_conteudo: detalhesConteudo || null })

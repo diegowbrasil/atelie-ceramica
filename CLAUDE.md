@@ -61,7 +61,7 @@ Restrições rígidas deste arquivo:
   npx esbuild demo/AtelieDemo.jsx --bundle=false --format=esm --outfile=/dev/null
   ```
 
-### B) Raiz do projeto — Next.js 14 + Supabase (base arquitetural)
+### B) Raiz do projeto — Next.js 15 + Supabase (base arquitetural)
 
 Estrutura de produção real: App Router, TypeScript, Tailwind com design
 tokens, Supabase (Auth + Postgres + Storage), RLS completo. **Migração
@@ -232,14 +232,38 @@ as páginas ainda carregam com os dados mockados que já existem direto nos
 Server Components, mas login/RLS de verdade só funcionam com chaves reais.
 `npm audit` (atualizado 2026-09-21, era 17/1-crítica em 2026-09-15) —
 fixes seguros sem major já aplicados (`next`→14.2.35, `@supabase/
-supabase-js`/`ssr`, `vite`). **Ainda pendente, precisa de decisão do
-Diego antes do deploy real (Fase 11)**: mesmo em 14.2.35, a linha inteira
-do Next 14 carrega 2 CVEs críticos sem patch dentro do major
-(`GHSA-p293-qw3h-jr36` RCE em servidor Windows, `GHSA-2xp9-vwfh-vxw4` RCE
-via AVIF no Image Optimization — este último bate em qualquer host,
-inclusive Vercel) — só fecham com Next ≥15.5.24, upgrade de major
-avaliado com cuidado (pode quebrar App Router), não forçado às cegas.
-Detalhe completo em PROGRESS.md, sessão 2026-09-20/21.
+supabase-js`/`ssr`, `vite`).
+
+**Upgrade pro Next 15.5.24 feito (2026-09-25)**, fechando as 2 CVEs
+críticas que a linha 14 carregava sem patch (`GHSA-p293-qw3h-jr36` RCE
+em servidor Windows — nem chegaria a valer na Vercel, que roda Linux;
+`GHSA-2xp9-vwfh-vxw4` RCE via AVIF no Image Optimization — esse sim bate
+em qualquer host, só é explorável se o app processar AVIF de fonte não
+confiável, o que hoje não acontece, mas passaria a valer se um dia
+tiver upload de foto). Mudança mecânica mas ampla: `cookies()`/`params`
+viraram assíncronos no Next 15 — `createClient()`
+(`src/lib/supabase/server.ts`) virou `async`, e as ~45 chamadas em 14
+arquivos ganharam `await`; os 4 arquivos de rota dinâmica
+(`turmas/[turmaId]`, `alunos/[id]`, `oficinas/[oficinaId]`,
+`convite/[token]`) tiveram `params` embrulhado em `Promise`.
+`middleware.ts` e `src/lib/supabase/admin.ts` não usam `cookies()` de
+`next/headers` (o primeiro usa `request.cookies`/`response.cookies`
+direto, o segundo é service_role sem sessão) — nenhum dos dois precisou
+mudar. **`npm run build` rodou de verdade pela primeira vez no
+projeto** (nunca tinha rodado antes desta sessão) — passou limpo,
+inclusive o service worker do PWA (`next-pwa`, que tinha risco real de
+incompatibilidade com Next 15 documentado numa pesquisa antes de
+começar, mas compilou sem erro). `public/sw.js`/`public/workbox-*.js`
+(gerados a cada build, hash muda toda vez) entraram no `.gitignore` —
+a Vercel gera a versão dela própria no deploy, commitar a local só
+sujava o diff. Verificado ao vivo com um admin de teste: rota dinâmica
+de turma e de aluno renderizando sem erro, `tsc` limpo. `npm audit`
+ainda mostra 9 vulnerabilidades, nenhuma mais crítica — as que sobraram
+são de dependências de build/dev (esbuild do Vite do preview do demo,
+postcss empacotado dentro do próprio Next, a cadeia workbox do
+`next-pwa`), nada que afeta o app rodando em produção; registradas mas
+não perseguidas nesta rodada. Detalhe completo em PROGRESS.md, sessão
+2026-09-20/21 (achado original) e 2026-09-25 (upgrade em si).
 
 ---
 

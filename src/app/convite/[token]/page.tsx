@@ -5,8 +5,9 @@ import { Card } from "@/components/ui/Card";
 // Página pública (fora de (admin)/(auth)/(aluno), sem sessão nenhuma —
 // middleware.ts libera /convite explicitamente). Referência: nova feature
 // 2026-09-24, "convite por telefone/nome" — ver src/lib/actions/convite.ts.
-export default async function ConvitePage({ params }: { params: { token: string } }) {
-  const info = await verificarConvite(params.token);
+export default async function ConvitePage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
+  const info = await verificarConvite(token);
 
   if (!info) {
     return (
@@ -20,5 +21,5 @@ export default async function ConvitePage({ params }: { params: { token: string 
     );
   }
 
-  return <AceitarConviteClient token={params.token} nome={info.nome} />;
+  return <AceitarConviteClient token={token} nome={info.nome} />;
 }

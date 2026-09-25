@@ -48,7 +48,7 @@ function dataDestaSemana(diaId: string): string {
  *  hora_inicio="18:30"). Turma real, não uma tabela de rotas — só 4
  *  linhas, comparar direto é suficiente. */
 export async function getTurmaPorSlug(slug: string): Promise<{ id: string; capacidade: number; dia: string; horaInicio: string } | null> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const m = slug.match(/^([a-z]+)-(\d{2})(\d{2})$/);
   if (!m) return null;
   const [, dia, hh, mm] = m;
@@ -68,7 +68,7 @@ export async function getTurmaPorSlug(slug: string): Promise<{ id: string; capac
  *  exatamente com os labels que a tela de Alunos sempre usou, ex: "Terça
  *  18:30" — confirmado direto no banco, não é suposição). */
 export async function listarTurmas(): Promise<{ id: string; nome: string }[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase.from("turmas").select("id, nome").order("dia").order("hora_inicio");
   if (error) throw new Error(`Falha ao listar turmas: ${error.message}`);
   return data ?? [];
@@ -97,7 +97,7 @@ export interface VagaReal extends Vaga {
 /** Lê o roster real de uma turma. Chamável direto de um Server Component
  *  (`await getRosterTurma(turmaId)`). */
 export async function getRosterTurma(turmaId: string, diaId: string, capacidade: number): Promise<VagaReal[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: matriculas, error } = await supabase
     .from("matriculas")
@@ -176,7 +176,7 @@ export async function getRosterTurma(turmaId: string, diaId: string, capacidade:
  *  exatamente esse o bug: aprovar sempre criava um profile NOVO, mesmo
  *  quando a solicitação já vinha com `aluno_id` de uma conta real). */
 export async function matricularAlunoExistente(alunoId: string, turmaId: string, total: number) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: pacote, error: pacoteError } = await supabase
     .from("pacotes")
@@ -213,7 +213,7 @@ export async function matricularAlunoExistente(alunoId: string, turmaId: string,
  *  schema, ver comentário no topo do arquivo) — só entra na próxima
  *  posição. */
 export async function cadastrarAluno(turmaId: string, dados: { nome: string; total: number; telefone?: string | null }) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
@@ -236,7 +236,7 @@ export async function cadastrarAluno(turmaId: string, dados: { nome: string; tot
  *  mesma linha, não apaga histórico de semanas anteriores (essas já são
  *  outras linhas de `aulas`, com outra `data`). */
 export async function toggleStatusAula(turmaId: string, diaId: string, alunoId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const dataAula = dataDestaSemana(diaId);
 
   const { data: aula, error: aulaError } = await supabase
@@ -261,7 +261,7 @@ export async function toggleStatusAula(turmaId: string, diaId: string, alunoId: 
  *  clicar de novo desfaz e decrementa o pacote (pedido explícito do
  *  Diego, CLAUDE.md §5, "não remover essa reversibilidade"). */
 export async function marcarPresenca(turmaId: string, diaId: string, alunoId: string, pacoteId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const dataAula = dataDestaSemana(diaId);
 
   const { data: aula, error: aulaError } = await supabase
@@ -319,7 +319,7 @@ export async function moverAluno(
   turmaDestinoId: string,
   tipo: "fixa" | "provisoria" = "fixa"
 ) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   if (tipo === "fixa") {
     const { error: encerrarError } = await supabase.from("matriculas").update({ status: "recusado" }).eq("id", matriculaId);
