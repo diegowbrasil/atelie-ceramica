@@ -130,3 +130,67 @@ export async function getOficinasParaAluno(): Promise<OficinaParaAluno[]> {
     };
   });
 }
+
+/** Histórico de aulas/pagamentos do próprio aluno (2026-09-25). As duas
+ *  tabelas por trás (aulas/presencas) só passaram a ser gravadas de
+ *  verdade quando os dados reais de Turmas foram ligados (2026-09-24,
+ *  ver toggleStatusAula/marcarPresenca em actions/turmas.ts) — antes
+ *  disso não existe linha nenhuma pra ler, então quem nunca teve
+ *  presença/falta marcada pelo admin desde então simplesmente não
+ *  aparece aqui (não é bug, é ausência real de dado anterior a essa
+ *  data). RLS já cobre as duas tabelas pro próprio aluno
+ *  (`aluno_id = current_profile_id()`), sem precisar de service_role. */
+export interface AulaHistorico {
+  turma: string;
+  dataFormatada: string;
+  status: "presente" | "falta" | "reposicao" | "pendente";
+}
+
+export async function getHistoricoAulas(): Promise<AulaHistorico[]> {
+  const meuId = await meuProfileId();
+  if (!meuId) return [];
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from("presencas")
+    .select("status, aulas(data, turmas(nome))")
+    .eq("aluno_id", meuId)
+    .overrideTypes<Array<{ status: AulaHistorico["status"]; aulas: { data: string; turmas: { nome: string } | null } | null }>, { merge: false }>();
+  if (error) throw new Error(`Falha ao buscar histórico de aulas: ${error.message}`);
+
+  return (data ?? [])
+    .filter((p): p is typeof p & { aulas: { data: string; turmas: { nome: string } | null } } => !!p.aulas)
+    .sort((a, b) => b.aulas.data.localeCompare(a.aulas.data))
+    .map((p) => ({ turma: p.aulas.turmas?.nome ?? "Turma", dataFormatada: formatarData(p.aulas.data), status: p.status }));
+}
+
+export interface PagamentoHistorico {
+  id: string;
+  descricao: string | null;
+  valor: number | null;
+  status: "pendente" | "pago";
+  dataFormatada: string;
+}
+
+export async function getHistoricoPagamentos(): Promise<PagamentoHistorico[]> {
+  const meuId = await meuProfileId();
+  if (!meuId) return [];
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from("pagamentos")
+    .select("id, descricao, valor, status, criado_em")
+    .eq("aluno_id", meuId)
+    .neq("status", "isento")
+    .order("criado_em", { ascending: false })
+    .overrideTypes<Array<{ id: string; descricao: string | null; valor: number | null; status: "pendente" | "pago"; criado_em: string }>, { merge: false }>();
+  if (error) throw new Error(`Falha ao buscar histórico de pagamentos: ${error.message}`);
+
+  return (data ?? []).map((p) => ({
+    id: p.id,
+    descricao: p.descricao,
+    valor: p.valor,
+    status: p.status,
+    dataFormatada: formatarData(p.criado_em.slice(0, 10)),
+  }));
+}

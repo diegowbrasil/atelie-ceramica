@@ -3,16 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Home, Users, GraduationCap } from "lucide-react";
+import { Home, Users, GraduationCap, History } from "lucide-react";
 
 // Mesma receita visual de MobileNav.tsx (admin) — pílula de vidro
-// flutuante, 3 abas só (Início/Turmas/Oficinas). Sem "Mais"/menu — a
-// Área do Aluno não tem nada além dessas 3 telas ainda (CLAUDE.md,
-// "resto da Fase 9 fica pra depois, deliberadamente").
+// flutuante. 4 abas (Início/Turmas/Oficinas/Histórico) cabem sem
+// precisar de "Mais" — só o admin tem overflow, a Área do Aluno é bem
+// mais enxuta. "Histórico" (2026-09-25) junta aulas + pagamentos numa
+// tela só em vez de virar 2 abas novas (ver AlunoHistoricoClient).
 const TABS = [
   { href: "/aluno", label: "Início", icon: Home },
   { href: "/aluno/turmas", label: "Turmas", icon: Users },
   { href: "/aluno/oficinas", label: "Oficinas", icon: GraduationCap },
+  { href: "/aluno/historico", label: "Histórico", icon: History },
 ] as const;
 
 export function AlunoNav() {

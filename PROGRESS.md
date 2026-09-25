@@ -32,6 +32,15 @@ histórico linha a linha aqui. Detalhe passo a passo nas entradas
 Working tree tem TODAS essas mudanças soltas — perguntar ao Diego antes
 de commitar (padrão do projeto, ver §7 do CLAUDE.md).
 
+**Atualização dentro da mesma sessão**: tudo acima foi commitado
+(`7f68680`) depois que o Diego perguntou "oq seria commitado?" e
+confirmou. Depois do commit, mais uma leva: Início ganhou uma 4ª aba
+"Histórico" (aulas + pagamentos do próprio aluno — achado no caminho:
+`aulas`/`presencas` já vinham sendo gravadas de verdade desde 24/09,
+só não tinham tela nenhuma que lesse isso). Essa leva **ainda não foi
+commitada**. Detalhe completo na entrada "Mesma sessão, logo em
+seguida" dentro de "2026-09-25" no Histórico de sessões.
+
 **Pendências do lado do Diego** (nada bloqueando mais trabalho meu):
 rodar o patch `fix-profiles-delete-policy.sql` (`profiles` sem policy de
 `delete`) se ainda não rodou — a última confirmação registrada no
@@ -3050,3 +3059,68 @@ junto, e sempre só o dado do próprio aluno logado.
   Diego.
 
 `tsc` limpo. Nenhum commit feito.
+
+**Mesma sessão, logo em seguida — commit feito e nova aba "Histórico".**
+Diego perguntou "oq seria commitado?" antes de eu commitar qualquer
+coisa (resposta: 41 arquivos novos + 1 renomeado + ~26 modificados,
+tudo desde `34751af`) — ele confirmou um commit só, mesmo padrão do
+commit anterior. Commitado como `7f68680` ("Wire all 7 admin domains +
+Dashboard to real Supabase data, add 5th turma and full student
+portal"), 69 arquivos, 6553 inserções.
+
+Na sequência, Diego pediu pra ver a Área do Aluno visualmente — só que
+os screenshots que eu tinha tirado direto no navegador embutido (pra
+demonstrar o teste anterior) **não aparecem pro Diego**, só pra mim:
+"vc fez o teste porem eu nao vi". Causa: o navegador embutido é um
+painel separado da conversa, e o system prompt já avisa "assume users
+can't see most tool calls" — só texto de resposta é visível por
+padrão. **Fix pro padrão de demonstração usado daqui pra frente**: em
+vez de só descrever ou depender do painel do navegador, montei um
+mockup HTML fiel (cores/fonte/layout reais do app, dados reais do
+teste) via `mcp__visualize__show_widget`, que renderiza inline na
+própria resposta — garantidamente visível, painel aberto ou não. Regra
+a manter: qualquer demonstração visual pro Diego a partir de agora usa
+esse widget, não só screenshot do navegador embutido.
+
+Diego então perguntou "e o historico das aulas e pagamentos?" — pergunta
+que corrigiu uma suposição antiga minha. Investigando o schema/código
+real (não só CLAUDE.md, que estava desatualizado nesse ponto específico):
+- **Pagamentos**: histórico completo já existe, mas só o admin vê
+  (`/pagamentos`). Aluno não tinha acesso nenhum, só o status atual
+  (badge) no Início.
+- **Aulas/presença**: achado real — as tabelas `aulas`/`presencas` do
+  schema original (sem UI desde sempre) **já estavam sendo gravadas de
+  verdade** desde que Turmas ligou em dado real (2026-09-24):
+  `toggleStatusAula`/`marcarPresenca` (`src/lib/actions/turmas.ts`) já
+  faziam upsert nelas a cada marcação do admin. Só que **nada lia esse
+  histórico** — nem admin nem aluno tinham tela nenhuma pra ele. Dado
+  sendo acumulado silenciosamente, invisível. Só existe a partir de
+  24/09 (antes disso, nenhuma linha).
+
+Diego escolheu construir os dois. **`src/lib/actions/alunoPortal.ts`**
+ganhou `getHistoricoAulas()` (junta `presencas`+`aulas`+`turmas`,
+filtra pelo próprio `aluno_id`, RLS já cobria isso sem precisar de
+service_role) e `getHistoricoPagamentos()` (mesma ideia em
+`pagamentos`, reaproveitando `formatarData`). Em vez de virar 2 abas
+novas na nav (ficaria em 5, pesado pra uma pílula mobile), as duas
+entram numa tela só, **`AlunoHistoricoClient`** (nova, duas seções:
+"Minhas aulas" e "Pagamentos", cards no mesmo padrão visual de
+Turmas/Oficinas do aluno) atrás de uma 4ª aba "Histórico"
+(`AlunoNav.tsx`, ícone `History` do lucide). `tsc` limpo.
+
+**Verificado ao vivo**: aluno de teste descartável (mesmo "Teste
+Vinculado", Terça 18:30) ganhou 3 `aulas` de teste em datas passadas
+(2 presenças + 1 falta) e 2 `pagamentos` (1 pago com valor, 1
+pendente) inseridos direto via service_role. Login por telefone →
+`/aluno/historico` mostrou as 3 aulas ordenadas por data decrescente
+com o rótulo de status certo, e os 2 pagamentos com valor/data
+formatados certo — sem erro de console (os 3 erros que apareceram no
+console eram sobras de navegação de ANTES desse teste nesta mesma aba
+do navegador — uma rota `/mais` inexistente visitada mais cedo na
+sessão — não relacionados ao código novo). Aluno de teste e todas as
+linhas criadas (aulas/presenças/pagamentos/matrícula/pacote/perfil/
+conta auth) apagados logo depois; scripts descartáveis apagados do
+projeto.
+
+Nenhum commit feito ainda dessa leva (Histórico + widget de
+demonstração).

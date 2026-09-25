@@ -108,6 +108,23 @@ turma vinculada mostra estado vazio com CTA "Solicitar uma vaga" em vez
 de um anel de pacote 0/0 sem sentido. Verificado ao vivo com um aluno de
 teste descartável matriculado na turma real "Terça 18:30".
 
+**4ª aba "Histórico" adicionada (2026-09-25)**, juntando aulas +
+pagamentos numa tela só (`AlunoHistoricoClient`) em vez de virar 2 abas
+novas — `getHistoricoAulas`/`getHistoricoPagamentos`
+(`src/lib/actions/alunoPortal.ts`) leem só o próprio aluno, RLS já
+cobria as duas tabelas sem precisar de service_role. **Achado
+importante no caminho**: `aulas`/`presencas` (tabelas do schema
+original, sem UI até então) já estavam sendo gravadas de verdade desde
+que Turmas ligou nos dados reais (2026-09-24, `toggleStatusAula`/
+`marcarPresenca` em `actions/turmas.ts` fazem upsert nelas a cada
+marcação) — só ninguém tinha construído uma tela que LESSE isso ainda.
+Não é histórico completo: só existe dado a partir de 24/09 (antes
+disso não havia linha nenhuma sendo gravada), e só pra quem o admin
+efetivamente marcou presença/falta desde então. Pagamentos usa a mesma
+`pagamentos` que já alimenta a tela admin, filtrado por
+`aluno_id = current_profile_id()`. Verificado ao vivo com histórico de
+teste (3 aulas passadas + 2 pagamentos).
+
 Ainda falta: Diego rodar o patch de RLS pendente (`profiles` sem
 policy de delete) e as Fases 11/12 do plano (deploy real + PWA
 instalável). Fora isso, demo deixou de estar "à frente" do Next.js em
