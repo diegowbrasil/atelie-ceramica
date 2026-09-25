@@ -9,7 +9,13 @@ import { AlunoNav } from "@/components/layout/AlunoNav";
 // no CLAUDE.md), uma aba vazia só pra existir seria pior que não ter.
 export default function AlunoLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-cream">
+    // `pt-[env(safe-area-inset-top)]` — instalado como PWA de verdade em
+    // tela cheia no iOS, sem isso o título de cada tela (ex: "TURMAS")
+    // fica atrás da barra de status (hora/bateria). Só a Área do Aluno
+    // precisa disso: o admin não roda como PWA instalado (é uso interno
+    // da Hanna, sempre pelo navegador comum), e o cabeçalho mobile do
+    // admin já reserva espaço próprio (`pt-24`) por outro motivo.
+    <div className="min-h-screen bg-cream pt-[env(safe-area-inset-top)]">
       {children}
       <AlunoNav />
     </div>

@@ -9,7 +9,7 @@ import { getFornadasReal, type FornadaReal } from "@/lib/actions/forno";
 import { getSolicitacoesReal } from "@/lib/actions/solicitacoes";
 import { getPagamentosReal } from "@/lib/actions/pagamentos";
 import { getOficinasReal, type OficinaReal } from "@/lib/actions/oficinas";
-import { getTurmaPorSlug, getRosterTurma, listarTurmas } from "@/lib/actions/turmas";
+import { getTurmaPorSlug, getRosterTurma, listarTurmas, type VagaReal } from "@/lib/actions/turmas";
 import { TURMAS_DIAS } from "@/lib/turmasDias";
 import { FUNDOS_ARGILA } from "@/lib/fundosArgila";
 import { GraduationCap, Users, RotateCcw, CreditCard, CalendarDays } from "lucide-react";
@@ -57,29 +57,52 @@ function datasDaSemana(): Record<DiaId, string> {
   return mapa;
 }
 
-/** Turmas fixas (roster real, uma busca por turma) + oficinas reais desta
- *  semana (casadas pela data ISO) — mesma fonte que Turmas/Oficinas, sem
- *  duplicar lógica de negócio, só agregando pro card da semana. */
-async function getAgendaSemana(oficinas: OficinaReal[]): Promise<Partial<Record<DiaId, AulaAgenda[]>>> {
-  const aulasPorDia: Partial<Record<DiaId, AulaAgenda[]>> = {};
+interface TurmaComRoster {
+  turmaId: string;
+  diaId: DiaId;
+  hora: string;
+  roster: VagaReal[];
+  capacidade: number;
+}
 
+/** Busca o roster real das 5 turmas fixas UMA VEZ SÓ, todas em paralelo —
+ *  achado 2026-09-25 (Diego reportando lentidão real no celular): antes
+ *  disso o roster de hoje era buscado aqui E DE NOVO dentro de
+ *  `getAgendaSemana` (a mesma turma, duas consultas), e as duas rodadas
+ *  ainda rodavam em SEQUÊNCIA (uma só começa depois que a outra termina)
+ *  em vez de em paralelo com o resto do Dashboard — 3 ondas de ida-e-volta
+ *  ao banco em vez de 1. Essa função vira a ÚNICA fonte, chamada junto
+ *  com as outras 7 dentro do mesmo `Promise.all` em `DashboardPage`. */
+async function getRostersPorTurma(): Promise<TurmaComRoster[]> {
   const diasComTurma = TURMAS_DIAS.filter((d) => d.turmas.length > 0);
-  await Promise.all(
+  const entradas = await Promise.all(
     diasComTurma.flatMap((d) =>
-      d.turmas.map(async (t) => {
+      d.turmas.map(async (t): Promise<TurmaComRoster | null> => {
         const real = await getTurmaPorSlug(t.id);
-        if (!real) return;
+        if (!real) return null;
         const roster = await getRosterTurma(real.id, d.id, real.capacidade);
-        const aula: AulaAgenda = {
-          hora: t.hora,
-          ocupados: roster.filter((v) => v.nome).length,
-          total: real.capacidade,
-          nomes: roster.filter((v) => v.nome).map((v) => v.nome!),
-        };
-        aulasPorDia[d.id as DiaId] = [...(aulasPorDia[d.id as DiaId] ?? []), aula];
+        return { turmaId: t.id, diaId: d.id as DiaId, hora: t.hora, roster, capacidade: real.capacidade };
       })
     )
   );
+  return entradas.filter((e): e is TurmaComRoster => e !== null);
+}
+
+/** Agrega o roster já buscado (`getRostersPorTurma`) + oficinas reais desta
+ *  semana (casadas pela data ISO) pro card da semana — não faz consulta
+ *  nenhuma ao banco, só monta o formato que `AgendaSemanaCard` espera. */
+function getAgendaSemana(turmasComRoster: TurmaComRoster[], oficinas: OficinaReal[]): Partial<Record<DiaId, AulaAgenda[]>> {
+  const aulasPorDia: Partial<Record<DiaId, AulaAgenda[]>> = {};
+
+  for (const t of turmasComRoster) {
+    const aula: AulaAgenda = {
+      hora: t.hora,
+      ocupados: t.roster.filter((v) => v.nome).length,
+      total: t.capacidade,
+      nomes: t.roster.filter((v) => v.nome).map((v) => v.nome!),
+    };
+    aulasPorDia[t.diaId] = [...(aulasPorDia[t.diaId] ?? []), aula];
+  }
 
   const datas = datasDaSemana();
   for (const o of oficinas) {
@@ -107,7 +130,7 @@ export default async function DashboardPage() {
   const hoje = new Date();
   const hojeDiaId = diaIdDeHoje();
 
-  const [avisos, forno1, forno2, solicitacoes, pagamentos, oficinas, turmasLista] = await Promise.all([
+  const [avisos, forno1, forno2, solicitacoes, pagamentos, oficinas, turmasLista, turmasComRoster] = await Promise.all([
     getAvisosReal(),
     getFornadasReal("forno1"),
     getFornadasReal("forno2"),
@@ -115,20 +138,17 @@ export default async function DashboardPage() {
     getPagamentosReal(),
     getOficinasReal(),
     listarTurmas(),
+    getRostersPorTurma(),
   ]);
 
   const diaHojeInfo = TURMAS_DIAS.find((d) => d.id === hojeDiaId);
   const turmasHoje = diaHojeInfo?.turmas ?? [];
-  const rostersHoje = await Promise.all(
-    turmasHoje.map(async (t) => {
-      const real = await getTurmaPorSlug(t.id);
-      if (!real) return [];
-      return getRosterTurma(real.id, hojeDiaId, real.capacidade);
-    })
-  );
-  const alunosConfirmadosHoje = rostersHoje.flat().filter((v) => v.nome && v.statusAula !== "ausente").length;
+  const alunosConfirmadosHoje = turmasComRoster
+    .filter((t) => t.diaId === hojeDiaId)
+    .flatMap((t) => t.roster)
+    .filter((v) => v.nome && v.statusAula !== "ausente").length;
 
-  const agendaSemana = await getAgendaSemana(oficinas);
+  const agendaSemana = getAgendaSemana(turmasComRoster, oficinas);
 
   const kpis = [
     { icon: CalendarDays, value: turmasHoje.length, label: "Aulas hoje", href: turmasHoje[0] ? `/turmas/${turmasHoje[0].id}` : "/turmas", tone: "bg-cream-soft text-ink" },

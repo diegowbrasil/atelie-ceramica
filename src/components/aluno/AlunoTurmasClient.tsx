@@ -7,11 +7,21 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { TURMA_LABEL_COR, type CorIdentidade } from "@/lib/alunos";
 import { solicitarVaga, cancelarSolicitacao, type TurmaParaAluno } from "@/lib/actions/alunoPortal";
+import { FUNDOS_ARGILA, type CorFundoArgila } from "@/lib/fundosArgila";
 import { Clock, Send } from "lucide-react";
 
 const PONTO_COR: Record<CorIdentidade, string> = {
   sienna: "bg-sienna", ardosia: "bg-ardosia", musgo: "bg-musgo", cafe: "bg-cafe", ocre: "bg-ocre",
 };
+const BORDA_COR: Record<CorIdentidade, string> = {
+  sienna: "border-sienna/40", ardosia: "border-ardosia/40", musgo: "border-musgo/40", cafe: "border-cafe/40", ocre: "border-ocre/40",
+};
+// "cafe" (Quinta 18:30) não tem foto própria ainda — mesma solução já
+// usada no Dashboard/demo, usa a foto de "musgo" (Quinta 14:30) por
+// enquanto, ver CLAUDE.md.
+function fotoDaTurma(cor: CorIdentidade): string {
+  return FUNDOS_ARGILA[(cor === "cafe" ? "musgo" : cor) as CorFundoArgila];
+}
 
 // Texto EXATO de "Quer trocar para essa turma" é o que aprovarSolicitacao
 // (src/lib/actions/solicitacoes.ts) usa pra decidir fixa vs. provisória —
@@ -79,42 +89,48 @@ export function AlunoTurmasClient({ turmas }: { turmas: TurmaParaAluno[] }) {
           const rotuloTipo = ehTroca ? "troca de turma" : "visita avulsa";
 
           return (
-            <Card key={t.id} className="p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <span className={"h-2.5 w-2.5 shrink-0 rounded-full " + PONTO_COR[cor]} />
-                <span className="text-sm font-semibold text-ink">{t.dia}</span>
-              </div>
-              <div className="mb-3 flex items-center gap-1.5 text-xs text-ink-soft">
-                <Clock size={13} />
-                {t.hora}
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <Badge tone={cheia ? "danger" : "success"}>{t.ocupadas}/{t.capacidade} vagas</Badge>
+            <Card
+              key={t.id}
+              className={"overflow-hidden p-2 " + BORDA_COR[cor]}
+              style={{ backgroundImage: `url(${fotoDaTurma(cor)})`, backgroundSize: "cover", backgroundPosition: "center" }}
+            >
+              <div className="rounded-xl bg-white p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className={"h-2.5 w-2.5 shrink-0 rounded-full " + PONTO_COR[cor]} />
+                  <span className="text-sm font-semibold text-ink">{t.dia}</span>
+                </div>
+                <div className="mb-3 flex items-center gap-1.5 text-xs text-ink-soft">
+                  <Clock size={13} />
+                  {t.hora}
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <Badge tone={cheia ? "danger" : "success"}>{t.ocupadas}/{t.capacidade} vagas</Badge>
 
-                {t.souEuFixo ? (
-                  <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent">Minha turma</span>
-                ) : sol?.status === "pendente" ? (
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="text-xs font-medium text-amber-600">Pendente ({rotuloTipo})</span>
-                    <button disabled={processando} onClick={() => cancelar(sol.id)} className="text-xs font-medium text-ink-soft underline disabled:opacity-60">
-                      Cancelar
+                  {t.souEuFixo ? (
+                    <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent">Minha turma</span>
+                  ) : sol?.status === "pendente" ? (
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-xs font-medium text-amber-600">Pendente ({rotuloTipo})</span>
+                      <button disabled={processando} onClick={() => cancelar(sol.id)} className="text-xs font-medium text-ink-soft underline disabled:opacity-60">
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : sol?.status === "aprovada" ? (
+                    <span className="text-xs font-medium text-emerald-600">Confirmada ({rotuloTipo})</span>
+                  ) : (
+                    <button
+                      onClick={() => abrirModal(t)}
+                      className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink hover:bg-cream"
+                    >
+                      <Send size={13} />
+                      Solicitar vaga
                     </button>
-                  </div>
-                ) : sol?.status === "aprovada" ? (
-                  <span className="text-xs font-medium text-emerald-600">Confirmada ({rotuloTipo})</span>
-                ) : (
-                  <button
-                    onClick={() => abrirModal(t)}
-                    className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink hover:bg-cream"
-                  >
-                    <Send size={13} />
-                    Solicitar vaga
-                  </button>
-                )}
+                  )}
+                </div>
+                {!t.souEuFixo && sol?.status === "pendente" && <p className="mt-2 text-xs text-ink-soft">Aguarde a confirmação do ateliê antes de ir.</p>}
+                {!t.souEuFixo && sol?.status === "aprovada" && <p className="mt-2 text-xs text-ink-soft">Pode ir pra aula!</p>}
+                {!t.souEuFixo && sol?.status === "recusada" && <p className="mt-2 text-xs text-rose-500">Sua última solicitação foi recusada. Pode tentar de novo.</p>}
               </div>
-              {!t.souEuFixo && sol?.status === "pendente" && <p className="mt-2 text-xs text-ink-soft">Aguarde a confirmação do ateliê antes de ir.</p>}
-              {!t.souEuFixo && sol?.status === "aprovada" && <p className="mt-2 text-xs text-ink-soft">Pode ir pra aula!</p>}
-              {!t.souEuFixo && sol?.status === "recusada" && <p className="mt-2 text-xs text-rose-500">Sua última solicitação foi recusada. Pode tentar de novo.</p>}
             </Card>
           );
         })}

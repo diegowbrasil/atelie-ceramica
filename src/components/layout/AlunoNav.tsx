@@ -20,7 +20,10 @@ const TABS = [
 export function AlunoNav() {
   const pathname = usePathname();
   return (
-    <nav className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-around gap-1 rounded-full border border-white/70 bg-gradient-to-b from-white/70 to-white/35 px-2 py-2 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.8),0_10px_24px_-6px_rgba(59,56,51,0.22)] backdrop-blur-2xl backdrop-saturate-150">
+    // `bottom-[max(...)]` — em iPhones com indicador de home (não é o
+    // caso do SE do Diego, mas vale pros outros aparelhos), a pílula
+    // flutuante fica colada demais nele sem essa margem extra reservada.
+    <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 flex items-center justify-around gap-1 rounded-full border border-white/70 bg-gradient-to-b from-white/70 to-white/35 px-2 py-2 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.8),0_10px_24px_-6px_rgba(59,56,51,0.22)] backdrop-blur-2xl backdrop-saturate-150">
       {TABS.map(({ href, label, icon: Icon }) => {
         const active = href === "/aluno" ? pathname === "/aluno" : pathname.startsWith(href);
         return (

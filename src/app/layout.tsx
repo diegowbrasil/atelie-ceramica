@@ -29,6 +29,15 @@ export const viewport: Viewport = {
   themeColor: "#C2410C",
   width: "device-width",
   initialScale: 1,
+  // `viewport-fit=cover` — sem isso, `env(safe-area-inset-*)` sempre
+  // resolve pra 0 e o conteúdo ignora a área da notch/status bar do
+  // iOS. Achado 2026-09-25: instalado como PWA de verdade (Safari, não
+  // Chrome-shortcut) em tela cheia, o título "TURMAS" da Área do Aluno
+  // ficava atrás da barra de status (hora/bateria) — só aparece assim
+  // no modo standalone real, nunca dentro de uma aba de navegador
+  // comum (onde a barra do próprio Safari/Chrome já ocupa esse
+  // espaço). Ver padding em `(aluno)/layout.tsx`.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
