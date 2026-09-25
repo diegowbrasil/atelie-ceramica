@@ -41,14 +41,29 @@ só não tinham tela nenhuma que lesse isso). Essa leva **ainda não foi
 commitada**. Detalhe completo na entrada "Mesma sessão, logo em
 seguida" dentro de "2026-09-25" no Histórico de sessões.
 
+**App publicado de verdade (2026-09-25): https://atelie-ceramica.vercel.app**
+— Fase 11 do plano concluída. GitHub (`diegowbrasil/atelie-ceramica`,
+público) conectado à Vercel, deploy automático a cada push na `main`.
+No caminho, achado e corrigido um bug de segurança real que só
+aparecia em produção: `middleware.ts` vivia na raiz do projeto em vez
+de `src/middleware.ts` (este projeto usa `src/app/`), então o Next.js
+nunca compilava ele pro build de produção — `next dev` mascarava isso
+o tempo todo. Toda rota admin carregava sem exigir login no primeiro
+deploy; RLS impediu o vazamento de dado de verdade (só a IA achou o
+bug analisando com cuidado, não foi um "quase" tranquilo). Detalhe
+completo, incluindo a pista falsa que consumiu a maior parte do tempo
+de investigação (deploy bloqueado por autoria de commit não reconhecida
+pela Vercel), na entrada "2026-09-25 (continuação) — Deploy real" do
+Histórico de sessões.
+
 **Pendências do lado do Diego** (nada bloqueando mais trabalho meu):
 2 patches de RLS — `fix-profiles-delete-policy.sql` (`profiles` sem
 policy de `delete`; última confirmação registrada era "enviado, ainda
 não aplicado", vale confirmar) e `add-solicitacao-aluno-delete-policy.sql`
 (novo, 2026-09-25 — sem ele, "Cancelar" solicitação na Área do Aluno
-não funciona de verdade, só mostra erro claro em vez de fingir sucesso).
-Fora isso, só restam as Fases 11/12 do plano (deploy real na Vercel +
-PWA instalável), explicitamente adiadas.
+não funciona de verdade, só mostra erro claro em vez de fingir
+sucesso). Fora isso, só resta a Fase 12 do plano (confirmar instalação
+do PWA num Android/iPhone real) — Fase 11 (deploy) já está feita.
 
 <details>
 <summary>Histórico mais antigo desta seção (sessões até 2026-09-22, mantido por referência)</summary>
@@ -3297,5 +3312,113 @@ preview do demo, postcss empacotado dentro do próprio pacote `next`,
 a cadeia `workbox`/`serialize-javascript` do `next-pwa`), nenhuma
 afeta o app rodando em produção. Registradas, não perseguidas agora —
 `npm audit fix --force` levaria a mais 2 majors (`next@16`,
-`next-pwa@2.0.2`) que não foram pedidos nem avaliados. Nenhum commit
-feito ainda desta leva.
+`next-pwa@2.0.2`) que não foram pedidos nem avaliados. Commitado
+(`99b4b9b`).
+
+### 2026-09-25 (continuação) — Deploy real: repositório, Vercel, e um bug de segurança achado só por ter feito o deploy de verdade
+
+Diego confirmou já ter conta na Vercel, então avançamos pro deploy de
+verdade (Fase 11). Virou a sessão mais tensa do dia — três problemas
+reais, cada um só aparecendo porque essa foi a PRIMEIRA VEZ que o
+projeto saiu do ambiente local.
+
+**1. Repositório GitHub criado e conectado.** Sem `gh` CLI instalada
+nesta máquina — Diego criou manualmente em github.com
+(`diegowbrasil/atelie-ceramica`, vazio, sem README/gitignore/license).
+Do lado local: `git branch -m master main` (branch nunca tinha sido
+renomeada) + `git remote add origin` + `git push -u origin main` —
+funcionou de primeira, usando credencial já salva na máquina. CLAUDE.md
+§7 atualizado — a regra antiga ("sem remoto, nada enviado a host
+nenhum") deixou de valer, documentada como decisão consciente do
+Diego, não a IA reabrindo por conta própria.
+
+**2. Import na Vercel + variáveis de ambiente, com bastante fricção
+real do lado do Diego.** Ele não sabia onde achar as 4 chaves
+(`NEXT_PUBLIC_SUPABASE_URL`/`ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
+`SUPABASE_PROJECT_ID`) — guiado até Supabase → Settings → API/General.
+**Ele colou a `anon` key e a `service_role` key direto no chat** (não
+foi pedido, ele que fez) — identifiquei qual era qual decodificando o
+payload do JWT (`role: "anon"` vs `role: "service_role"`) sem repetir
+os tokens de volta, avisei rapidamente que é mais seguro colar direto
+no campo de destino da próxima vez, e segui — não dava pra desfazer o
+que já tinha sido colado, só orientar melhor daí pra frente. Montei o
+bloco `.env` prontinho pra ele colar de uma vez (a Vercel aceita colar
+`.env` inteiro no campo "Key", que ela reconhece e separa sozinha).
+**Achado no meio do caminho**: o card "Optional Integrations →
+Supabase" na tela de criação do projeto Vercel cria um projeto Supabase
+NOVO e separado — avisei pra não clicar, já que a gente configurou as
+variáveis pra apontar pro Supabase real que já existe com todo o dado.
+
+**3. Bug de segurança real: toda rota admin carregava sem login
+nenhum no primeiro deploy.** Testei o link publicado
+(`atelie-ceramica.vercel.app`) e `/dashboard` abriu direto, sem pedir
+login — confirmado limpo com `curl` sem cookie nenhum:
+`HTTP/1.1 200 OK` em vez do `307 → /login` esperado. **A parte que
+evitou um vazamento de verdade**: a página carregou com todos os
+números zerados / turmas vazias — a RLS do Supabase recusou devolver
+qualquer linha pra uma sessão anônima, mesmo com o Middleware deixando
+passar. Exatamente o cenário que a regra "RLS + middleware = defesa em
+profundidade" (CLAUDE.md §7) existe pra cobrir — funcionou, só que o
+Middleware não devia ter deixado chegar até aí.
+
+Diagnóstico teve DUAS camadas de confusão sobrepostas, cada uma
+escondendo a outra:
+- **Camada 1 (falsa pista, consumiu a maior parte do tempo)**: coloquei
+  um `console.log("MARCADOR-...")` na primeira linha do Middleware
+  (mesma técnica já documentada) pra provar se ele executava. Não
+  apareceu nos logs da Vercel — óbvio, pensei, Middleware não roda.
+  **Só que o commit com o marcador nunca tinha sido publicado de
+  verdade**: um e-mail da Vercel ("Failed deployment from denerabr")
+  avisou que o autor dos commits (`Diego <denisatbrasil@gmail.com>`,
+  configurado no git local desde antes de existir repositório remoto)
+  resolve pra uma conta GitHub diferente ("denerabr") da conta usada
+  pra criar o repo (`diegowbrasil`) — a Vercel bloqueia deploy
+  automático via webhook de quem não é membro do time num repo
+  privado. Confirmado na aba Deployments: o commit do marcador ficou
+  "Blocked", nunca chegou a rodar. Diego confirmou que "denerabr" é uma
+  conta dele mesmo, só que configurada por uma sessão de Claude
+  anterior, não intencional — resolvido deixando o repositório
+  **público** (sem custo, sem precisar caçar qual e-mail é "o certo" na
+  conta diegowbrasil; nada de segredo está commitado). Um commit vazio
+  (`--allow-empty`) disparou o redeploy depois disso, e aí sim o
+  marcador tinha uma build de verdade pra rodar — **e mesmo assim
+  continuou sem aparecer nos logs**, mesmo com a aba em modo "Live" e
+  tráfego real confirmado chegando.
+- **Camada 2 (causa raiz de verdade)**: com o marcador definitivamente
+  publicado e ainda ausente, testei local em modo produção de verdade
+  pela primeira vez (`next build` + `next start`, nunca tinha rodado
+  isso além do `next dev` a sessão inteira) — **reproduziu local**.
+  Inspecionar `.next/server/middleware-manifest.json` mostrou
+  `"middleware": {}` vazio. `middleware.ts` sempre viveu na raiz do
+  projeto, mas este projeto usa `src/app/` — pela convenção do
+  Next.js, precisa estar em `src/middleware.ts` quando existe uma
+  pasta `src`. **O arquivo nunca deu erro em lugar nenhum** — nem
+  `tsc`, nem `next dev` (que sempre redirecionou certo, sessão após
+  sessão, porque o dev server é mais tolerante com a localização), nem
+  `next build` (compila limpo, só o manifesto final fica vazio, sem
+  aviso nenhum). Só apareceu agora porque esta foi a primeira vez que
+  `next build`/deploy real rodou pro projeto inteiro — o bug existiu,
+  mascarado, desde que o Middleware foi criado, sessões atrás.
+  **Fix**: `git mv middleware.ts src/middleware.ts`. Rebuild local
+  confirmou `"middleware": {"/": {...}}` populado + `ƒ Middleware 95 kB`
+  no resumo do build; `next start` local confirmou `/dashboard` sem
+  login voltando `307 → /login` de verdade. Commitado e publicado.
+
+**Verificado ao vivo, no site publicado de verdade**: `curl` limpo em
+`/dashboard` e `/turmas` sem cookie → `307 → /login` nos dois; login
+com um admin de teste descartável → caiu em `/dashboard` com os DADOS
+REAIS (Terça 14/14 com os avatares certos, Quarta/Quinta com o roster
+certo, 14 pagamentos pendentes, as oficinas reais) — confirmando que
+RLS libera tudo certo pra sessão autenticada, só bloqueava mesmo pra
+anônimo. Admin de teste removido depois.
+
+**Lição registrada em CLAUDE.md §8**: `next dev` funcionando não é
+prova de que `middleware.ts` (ou `instrumentation.ts`) está no lugar
+certo — só prova que a lógica dentro dele está certa. A prova real é
+inspecionar `middleware-manifest.json` depois de um `next build`. Isso
+vale pra qualquer projeto que use `src/` e tenha um desses arquivos
+especiais na raiz por engano.
+
+`tsc` limpo. Deploy publicado e funcionando:
+`https://atelie-ceramica.vercel.app`. Fase 11 do plano concluída — só
+falta a Fase 12 (confirmar instalação do PWA num Android/iPhone real).
