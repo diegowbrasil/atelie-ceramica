@@ -162,6 +162,21 @@ de quem pediu. Corrigido:
   (aprovado → Terça virou `recusado`, pacote migrou pra turma nova,
   ainda em 3/4) — conferido direto nas tabelas, não só na tela.
 
+**Pontas soltas do admin fechadas (2026-09-25)**, a pedido do Diego
+("quais os próximos caminhos?"): `/mais` (link do rodapé mobile desde
+sempre, nunca teve página — 404 real) agora existe, reunindo
+Alunos/Solicitações/Pagamentos/Relatórios/Configurações + o primeiro
+"Sair" que o admin ganha no projeto inteiro (a Área do Aluno já tinha o
+dela). No caminho, achado que `/relatorios` e `/configuracoes` (linkados
+pela Sidebar desde sempre) também nunca tiveram página — `EmBreve`
+(`src/components/ui/EmBreve.tsx`) cobre as duas, mesmo padrão do
+`EmBreve` do demo. E o `AdminLayout` inteiro (visível em toda página
+admin) ainda tinha o TODO original nunca fechado: nome "Hanna" e badge
+"3" de Solicitações **fixos no código**, não vindos do Supabase — agora
+busca o profile do admin logado de verdade e conta solicitações
+pendentes de verdade. Verificado ao vivo com um admin de teste (nome
+diferente de propósito, pra provar que não é mais hardcoded).
+
 Ainda falta: Diego rodar os 2 patches de RLS pendentes (`profiles` sem
 policy de delete; `solicitacoes_vaga` sem policy de delete pro aluno
 cancelar) e as Fases 11/12 do plano (deploy real + PWA

@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/Avatar";
+import { sair } from "@/lib/actions/auth";
 import {
   Home, Users, GraduationCap, Flame, Bell, CreditCard,
-  MessageSquare, BarChart3, Settings, type LucideIcon,
+  MessageSquare, BarChart3, Settings, LogOut, type LucideIcon,
 } from "lucide-react";
 
 interface NavItem {
@@ -72,8 +73,14 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="mt-3 flex justify-center">
+      <div className="mt-3 flex flex-col items-center gap-2">
         <Avatar nome={userName} fotoUrl={fotoUrl} size={28} />
+        <form action={sair}>
+          <button type="submit" title="Sair" className="flex items-center gap-1 rounded-xl px-2 py-1.5 text-[10px] font-medium text-ink-soft hover:bg-white/60">
+            <LogOut size={14} />
+            Sair
+          </button>
+        </form>
       </div>
     </aside>
   );

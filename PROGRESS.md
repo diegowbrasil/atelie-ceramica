@@ -3184,5 +3184,47 @@ de erro clara, não um no-op silencioso).
 
 `tsc` limpo. Patch `add-solicitacao-aluno-delete-policy.sql` enviado
 ao Diego (RLS `solicitacoes_vaga_aluno_delete`) — sem ele, "Cancelar"
-não funciona de verdade em produção. Nenhum commit feito ainda desta
-leva.
+não funciona de verdade em produção. Commitado (`14307cc`).
+
+### 2026-09-25 (continuação) — "Quais os próximos caminhos?": pontas soltas do admin
+
+Diego escolheu as 4 opções que ofereci (fechar pontas soltas, avaliar
+upgrade do Next.js, deploy real, construir uma tela que falta).
+Comecei pela mais rápida e sem decisão de produto pendente.
+
+Investigando o botão de sair do admin, achei bem mais que isso:
+- **`/mais`, linkado pelo rodapé mobile (`MobileNav.tsx`) desde
+  sempre, nunca teve página — 404 real**, confirmado pelos erros de
+  console que já vinham aparecendo (e eu vinha descartando como
+  "sobra de teste antigo") em VÁRIOS testes anteriores desta sessão.
+  Criada (`src/app/(admin)/mais/page.tsx`): lista Alunos/Solicitações
+  (com badge)/Pagamentos/Relatórios/Configurações + botão "Sair"
+  (primeiro do admin no projeto inteiro — a Área do Aluno já tinha o
+  dela desde a Fase 9).
+- **`/relatorios` e `/configuracoes`, linkados pela Sidebar desktop
+  desde sempre, também nunca tiveram página** — mesmo tipo de link
+  morto, só que no desktop. `EmBreve.tsx` (novo componente
+  compartilhado) cobre as duas, mesmo padrão do `EmBreve` do demo
+  ("essa tela ainda não foi construída").
+- **`AdminLayout` (`src/app/(admin)/layout.tsx`) ainda tinha o TODO
+  original never fechado**: `userName="Hanna"` e
+  `badges={{ solicitacoes: 3 }}` **hardcoded no código**, visível em
+  TODA página admin, desde antes da migração de dados reais. Virou
+  `async`, busca o profile do admin logado (`auth.getUser()` →
+  `profiles`) e a contagem real via `getSolicitacoesReal().length`.
+  `MobileNav` ganhou o badge também (na aba "Mais", já que
+  Solicitações não é uma das 5 abas fixas do rodapé).
+
+**Verificado ao vivo** com um admin de teste com nome deliberadamente
+diferente ("Cláudia Teste", pra provar que "Hanna" não aparecia mais
+por acidente) — confirmado via `document.querySelector('aside').
+innerText` que a sidebar mostra as iniciais reais ("CT") e não mais
+nada fixo; `/mais`, `/relatorios`, `/configuracoes` renderizando sem
+404; "Sair" testado nos dois lugares (desktop Sidebar existe no DOM,
+`/mais` no mobile) — desloga e volta pro `/login` de verdade.
+
+`tsc` limpo. Nenhum commit feito ainda desta leva. Ainda por vir, nas
+próximas rodadas: avaliar upgrade do Next.js (14→15+, por causa das 2
+CVEs críticas sem patch no major atual), deploy real (Vercel) e
+escolher qual tela ainda-não-construída vira prioridade (Relatórios,
+Configurações ou Notificações).
