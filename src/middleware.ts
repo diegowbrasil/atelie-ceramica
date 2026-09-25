@@ -10,13 +10,6 @@ import { NextResponse, type NextRequest } from "next/server";
 const ADMIN_ONLY = ["/dashboard", "/turmas", "/forno", "/alunos", "/oficinas", "/relatorios", "/pagamentos", "/configuracoes"];
 
 export async function middleware(request: NextRequest) {
-  // MARCADOR-MIDDLEWARE-DIAG-0925: diagnóstico temporário (ver PROGRESS.md,
-  // 2026-09-25) — achado real: /dashboard carregava sem login na Vercel,
-  // mesmo redirecionando certo em dev local o tempo todo. Log logo no topo,
-  // antes de qualquer outra coisa rodar, pra provar sem ambiguidade se o
-  // Middleware está sendo invocado de verdade em produção.
-  console.log("MARCADOR-MIDDLEWARE-DIAG-0925", request.nextUrl.pathname);
-
   // `getAll`/`setAll` (não mais `get`/`set`/`remove`, removido em versões
   // recentes do @supabase/ssr — achado 2026-09-22/23 ao investigar o erro
   // de tipo `never` pré-existente em login/page.tsx, ver PROGRESS.md).

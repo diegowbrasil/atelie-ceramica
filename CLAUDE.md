@@ -1739,11 +1739,25 @@ decisão no início da §2).
 ## 7. Decisões técnicas e operacionais
 
 - **git**: repositório inicializado localmente em 2026-09-15 (não existia
-  antes). **Sem remoto configurado** — só local, nada foi/será enviado a
-  GitHub ou outro host sem pedido explícito. `user.name`/`user.email`
-  configurados só neste repo (não globalmente). Objetivo: poder revisar
-  diffs e reverter, já que edições no arquivo único quebraram a sintaxe
-  várias vezes no passado (§8).
+  antes). `user.name`/`user.email` configurados só neste repo (não
+  globalmente) — `Diego <denisatbrasil@gmail.com>`, mas esse e-mail está
+  numa conta GitHub separada ("denerabr"), não na conta principal do
+  Diego (`diegowbrasil`); relevante pro achado do repo público logo
+  abaixo. Objetivo original do git local: poder revisar diffs e
+  reverter, já que edições no arquivo único quebraram a sintaxe várias
+  vezes no passado (§8). **Ganhou remoto em 2026-09-25**, a caminho do
+  deploy real (Fase 11) — `origin` aponta pra
+  `https://github.com/diegowbrasil/atelie-ceramica`, branch local
+  renomeada de `master` pra `main` antes do primeiro push. Repo criado
+  manualmente pelo Diego no github.com (sem `gh` CLI instalado nesta
+  máquina) — vazio, sem README/gitignore/license, pra não colidir com o
+  histórico local já existente. **Público, não privado** — criado
+  privado a princípio, mas a Vercel bloqueou deploy automático via
+  webhook porque o autor dos commits ("denerabr") não é membro do time
+  `mtcst` nela; deixar público remove essa checagem sem precisar de
+  plano pago nem resolver a bagunça de qual conta/e-mail é "a real". Sem
+  segredo nenhum commitado (`.env.local` sempre no `.gitignore`), risco
+  aceito pelo Diego.
 - **RLS + middleware = defesa em profundidade** no Next.js — nunca confiar
   só no middleware para proteger rotas/dados de admin.
 - **Componentes de UI não devem ser reestilizados do zero** por tela — usar
@@ -1956,3 +1970,39 @@ decisão no início da §2).
   pro teste do marcador — não perder tempo cogitando cache do
   Next.js/`force-dynamic`/RSC antes de descartar processo órfão primeiro
   (mais rápido de confirmar E, nesta sessão, foi sempre a causa real).
+- **`middleware.ts` na raiz do projeto era invisível pro `next build`
+  desde sempre — só `next dev` o achava** (2026-09-25, achado no primeiro
+  deploy real de todo o projeto). Este projeto usa `src/app/` — pelo
+  convenção do Next.js, `middleware.ts` precisa morar em `src/`
+  (`src/middleware.ts`), não na raiz, quando existe uma pasta `src`. O
+  arquivo sempre viveu na raiz (ao lado do `package.json`) desde que foi
+  criado, e **nunca deu erro nenhum** — nem no `tsc`, nem no
+  `next dev` (que continuou redirecionando certo o tempo todo, sessão
+  após sessão), nem no `next build` (compilava limpo, sem aviso). A
+  única forma de perceber é abrir `.next/server/middleware-manifest.json`
+  depois de um build de produção: `"middleware": {}` vazio = arquivo
+  fantasma, não compilado; `"middleware": {"/": {...}}` populado = ok de
+  verdade. **`next dev` não é prova de que o Middleware está registrado
+  corretamente** — só prova que a lógica dentro dele está certa, não que
+  o arquivo está no lugar certo. Achado só porque este foi o PRIMEIRO
+  build de produção + deploy real do projeto inteiro (`npm run build`
+  nunca tinha rodado antes de 2026-09-25) — o bug existiu, mascarado,
+  desde a criação do middleware, sessões atrás. **Impacto real**: toda
+  rota admin (`/dashboard`, `/turmas`, `/alunos` etc.) carregava sem
+  login nenhum no primeiro deploy na Vercel — RLS no Supabase segurou o
+  vazamento de dado de verdade (a página renderizava, mas toda query
+  voltava vazia pra uma sessão anônima), exatamente o cenário que a
+  regra "RLS + middleware = defesa em profundidade" (item acima) existe
+  pra cobrir. **Diagnóstico usado**: nem `curl` limpo nem os logs de
+  request da Vercel (que não distinguem "Middleware rodou e deixou
+  passar" de "Middleware nunca rodou") resolveram sozinhos — só um
+  `console.log` temporário na primeira linha da função (mesma técnica
+  `MARCADOR-...` do item acima) BUSCADO NOS LOGS e ausente é que fechou
+  a dúvida, e mesmo assim só depois de garantir que o deploy testado
+  era o certo (ver armadilha de deploy bloqueado, `docs/§7`). Inspecionar
+  `middleware-manifest.json` direto teria sido mais rápido que o log —
+  primeira coisa a checar se isso acontecer de novo. **Regra pra
+  qualquer arquivo especial do Next.js** (`middleware.ts`,
+  `instrumentation.ts`) num projeto que usa `src/`: sempre colocar
+  dentro de `src/`, nunca na raiz, e confirmar no manifesto depois de um
+  build de produção — não confiar só no `next dev` funcionando.
