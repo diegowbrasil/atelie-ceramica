@@ -64,6 +64,17 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
+// A lista antiga excluía nomes de arquivo específicos um a um
+// (`favicon.ico`, `manifest.json`, `icons`) — "icons" nunca bateu com
+// `/icon.svg` de verdade (falta o "s", achado 2026-09-25 testando o
+// PWA em produção pela primeira vez: o ícone do manifest carregava
+// redirecionado pro /login, já que o Middleware só passou a rodar de
+// verdade nesta mesma sessão, ver armadilha em CLAUDE.md §8). Trocado
+// por uma regra geral — qualquer caminho com extensão de arquivo
+// estático (svg/jpg/png/json/js/ico/webmanifest) nunca precisa de
+// sessão, cobre `/icon.svg`, `/fundos/*.jpg`, `/manifest.json`,
+// `/sw.js`/`/workbox-*.js` (service worker do next-pwa) de uma vez só,
+// sem precisar listar cada nome à mão de novo no futuro.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.json|icons).*)"],
+  matcher: ["/((?!_next/static|_next/image|.*\\.(?:svg|jpg|jpeg|png|gif|ico|json|js|webmanifest|txt|xml)$).*)"],
 };

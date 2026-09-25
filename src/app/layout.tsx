@@ -13,11 +13,15 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "MTCST" },
   // SVG estático em vez de gerado (next/og ImageResponse quebra no Windows
-  // com espaço no caminho do projeto — ver CLAUDE.md armadilhas). Cobre
-  // favicon + apple-touch-icon com o mesmo arquivo de public/icon.svg.
+  // com espaço no caminho do projeto — ver CLAUDE.md armadilhas). Favicon
+  // continua SVG (todo navegador moderno aceita). `apple` precisa ser PNG
+  // de verdade — o Safari do iOS ignora silenciosamente um SVG em
+  // apple-touch-icon (achado 2026-09-25, testando o PWA em produção pela
+  // primeira vez) — `public/icon-180.png`, gerado a partir do mesmo SVG
+  // (180×180, tamanho recomendado pela Apple).
   icons: {
     icon: "/icon.svg",
-    apple: "/icon.svg",
+    apple: "/icon-180.png",
   },
 };
 
