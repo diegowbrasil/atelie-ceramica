@@ -3422,3 +3422,19 @@ especiais na raiz por engano.
 `tsc` limpo. Deploy publicado e funcionando:
 `https://atelie-ceramica.vercel.app`. Fase 11 do plano concluída — só
 falta a Fase 12 (confirmar instalação do PWA num Android/iPhone real).
+
+**Mesma sessão, indo pra Fase 12 — mais 2 achados só possíveis com o
+Middleware finalmente rodando de verdade**: (1) o filtro antigo do
+Middleware excluía "icons" (sem "s") tentando liberar `/icon.svg` (tem
+"s" faltando, nunca bateu) — o ícone do manifest, as fotos de fundo em
+`/fundos/*.jpg` e outros arquivos estáticos estavam sendo redirecionados
+pro `/login` por engano assim que o Middleware passou a rodar.
+Trocado por uma regra geral (qualquer caminho terminando em extensão de
+arquivo estático pula a checagem de sessão) em vez de listar nome por
+nome. (2) `apple-touch-icon` apontava pro mesmo SVG do favicon — Safari
+do iOS ignora SVG nesse campo especificamente, precisa de PNG de
+verdade. Gerado `public/icon-180.png` (tamanho recomendado pela Apple)
+a partir do `icon.svg` existente via canvas no navegador, sem precisar
+mexer no `next/og` (que já tem o bug documentado de path com espaço no
+Windows). Os dois confirmados ao vivo no site publicado antes de pedir
+pro Diego testar no celular de verdade.
