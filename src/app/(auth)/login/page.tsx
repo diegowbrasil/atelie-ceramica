@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { emailSinteticoDoTelefone } from "@/lib/telefone";
+import { FUNDOS_ARGILA } from "@/lib/fundosArgila";
 
 // Um campo só, "e-mail ou telefone" — admin loga com e-mail, aluno com
 // telefone (a leva de dado real nunca trouxe e-mail de aluno, ver
@@ -51,37 +52,42 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-cream px-4">
-      <Card className="w-full max-w-sm animate-fade-up p-6">
-        <span className="mb-1 block font-display text-2xl uppercase leading-none tracking-wide text-ink">MTCST</span>
-        <p className="mb-6 text-sm text-ink-soft">Entre para acessar sua conta.</p>
+      <Card
+        className="w-full max-w-sm animate-fade-up overflow-hidden border-carvao/40 p-2"
+        style={{ backgroundImage: `url(${FUNDOS_ARGILA.carvao})`, backgroundSize: "cover", backgroundPosition: "center" }}
+      >
+        <div className="rounded-xl bg-white p-6">
+          <span className="mb-1 block font-display text-2xl uppercase leading-none tracking-wide text-ink">MTCST</span>
+          <p className="mb-6 text-sm text-ink-soft">Entre para acessar sua conta.</p>
 
-        <form onSubmit={entrar} className="space-y-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-ink-soft">E-mail ou telefone</label>
-            <input
-              type="text"
-              required
-              value={identificador}
-              onChange={(e) => setIdentificador(e.target.value)}
-              placeholder="seu@email.com ou (14) 99999-9999"
-              className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-accent"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-ink-soft">Senha</label>
-            <input
-              type="password"
-              required
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-accent"
-            />
-          </div>
-          {erro && <p className="text-sm text-rose-500">{erro}</p>}
-          <Button type="submit" className="w-full" disabled={carregando}>
-            {carregando ? "Entrando..." : "Entrar"}
-          </Button>
-        </form>
+          <form onSubmit={entrar} className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">E-mail ou telefone</label>
+              <input
+                type="text"
+                required
+                value={identificador}
+                onChange={(e) => setIdentificador(e.target.value)}
+                placeholder="seu@email.com ou (14) 99999-9999"
+                className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-soft">Senha</label>
+              <input
+                type="password"
+                required
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+              />
+            </div>
+            {erro && <p className="text-sm text-rose-500">{erro}</p>}
+            <Button type="submit" className="w-full" disabled={carregando}>
+              {carregando ? "Entrando..." : "Entrar"}
+            </Button>
+          </form>
+        </div>
       </Card>
     </div>
   );
