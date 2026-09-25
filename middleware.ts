@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
@@ -10,18 +10,27 @@ import { NextResponse, type NextRequest } from "next/server";
 const ADMIN_ONLY = ["/dashboard", "/turmas", "/forno", "/alunos", "/oficinas", "/relatorios", "/pagamentos", "/configuracoes"];
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next();
+  // `getAll`/`setAll` (não mais `get`/`set`/`remove`, removido em versões
+  // recentes do @supabase/ssr — achado 2026-09-22/23 ao investigar o erro
+  // de tipo `never` pré-existente em login/page.tsx, ver PROGRESS.md).
+  // Recriar `response` depois de escrever nos cookies da REQUEST é o
+  // padrão oficial: os Server Components desta mesma requisição enxergam
+  // os cookies atualizados via `request`, e o navegador via `response`.
+  let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name: string) => request.cookies.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) =>
-          response.cookies.set({ name, value, ...options }),
-        remove: (name: string, options: CookieOptions) =>
-          response.cookies.set({ name, value: "", ...options }),
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        },
       },
     }
   );
@@ -32,7 +41,11 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
 
-  if (!user && path !== "/login") {
+  // /convite/[token] é a página pública de aceitar convite (2026-09-24) —
+  // por definição ninguém está logado ainda nesse fluxo.
+  const publica = path === "/login" || path.startsWith("/convite");
+
+  if (!user && !publica) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
@@ -40,7 +53,7 @@ export async function middleware(request: NextRequest) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
-      .eq("id", user.id)
+      .eq("auth_user_id", user.id)
       .single();
 
     if (profile?.role !== "admin") {

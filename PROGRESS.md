@@ -9,19 +9,55 @@
 
 ## Onde continuar agora
 
-**Última sessão: 2026-09-20/21 — início da migração Next.js + PWA.**
-Depois de fechar a auditoria de autonomia (2026-09-18, ver item 23
-abaixo), o Diego voltou à pergunta de colocar o app "na appstore" — ao
-saber do custo/Mac exigido pelo caminho nativo, decidiu ir de **PWA**
-("Adicionar à tela inicial", sem loja, sem taxa, instalável no Android e
-iPhone). Isso exige um site publicado em HTTPS de verdade, o que só o
-projeto Next.js+Supabase pode ser (o demo é artifact do Claude.ai, sem
-domínio próprio) — plano completo de migração aprovado (12 fases, ver
+**Sessão mais recente: 2026-09-24/25, ainda em andamento, NADA commitado**
+— a maior leva do projeto até agora, numa sessão só: os 7 domínios admin
+(Turmas, Avisos, Alunos, Pagamentos, Solicitações, Oficinas, Forno) +
+Dashboard todos ligados a dados reais do Supabase (não só `tsc` limpo,
+testado ao vivo tela por tela); 5ª turma real criada (Segunda-feira
+09:30–11:30, nova cor de identidade "ocre", com foto de fundo própria);
+Área do Aluno construída do zero e testada de ponta a ponta (convite por
+telefone → definir senha → login automático → Início/Turmas/solicitar
+vaga/Oficinas/Sair → logar de novo só com telefone), incluindo um pivô
+real de arquitetura no meio do caminho (o provider nativo de Phone do
+Supabase exige Twilio configurado até só pra senha — contornado com
+e-mail sintético derivado do telefone, zero config no painel); e por
+último (2026-09-25) o Início da Área do Aluno reenquadrado como "Minha
+Turma" (turma + painel de pacote num card só, sempre só o dado do
+próprio aluno, com estado vazio pra quem não tem turma) a pedido
+explícito do Diego, verificado com um aluno de teste descartável
+vinculado à turma real "Terça 18:30". Resumo condensado e sempre-atual
+de tudo isso já vive em `CLAUDE.md` §2B — mais curto que reler o
+histórico linha a linha aqui. Detalhe passo a passo nas entradas
+"2026-09-24"/"2026-09-25" do Histórico de sessões, no fim deste arquivo.
+Working tree tem TODAS essas mudanças soltas — perguntar ao Diego antes
+de commitar (padrão do projeto, ver §7 do CLAUDE.md).
+
+**Pendências do lado do Diego** (nada bloqueando mais trabalho meu):
+rodar o patch `fix-profiles-delete-policy.sql` (`profiles` sem policy de
+`delete`) se ainda não rodou — a última confirmação registrada no
+Histórico de sessões (2026-09-24, continuação 5) é "patch enviado, ainda
+não aplicado"; vale confirmar com ele antes de assumir que já foi. Fora
+isso, só restam as Fases 11/12 do plano (deploy real na Vercel + PWA
+instalável), explicitamente adiadas.
+
+<details>
+<summary>Histórico mais antigo desta seção (sessões até 2026-09-22, mantido por referência)</summary>
+
+**Sessão anterior: 2026-09-20/21 — migração Next.js + PWA, Fases 1-10
+completas (fundação técnica + as 7 telas principais), tudo commitado em
+`34751af`.** Depois de fechar a auditoria de autonomia (2026-09-18, ver
+item 23 abaixo), o Diego voltou à pergunta de colocar o app "na
+appstore" — ao saber do custo/Mac exigido pelo caminho nativo, decidiu
+ir de **PWA** ("Adicionar à tela inicial", sem loja, sem taxa,
+instalável no Android e iPhone). Isso exige um site publicado em HTTPS
+de verdade, o que só o projeto Next.js+Supabase pode ser (o demo é
+artifact do Claude.ai, sem domínio próprio) — plano completo de
+migração aprovado (12 fases, ver
 `C:\Users\Usuario\.claude\plans\zippy-frolicking-token.md`), Capacitor/
 lojas nativas explicitamente fora de escopo por decisão do Diego.
 
-**Fase 1 (fundação técnica) concluída nesta sessão**, sem tocar em
-nenhuma tela ainda (isso é Fase 2 em diante):
+**Fase 1 (fundação técnica) concluída**, sem tocar em nenhuma tela ainda
+nessa etapa:
 - Paleta do demo portada pro `tailwind.config.ts`/`globals.css`
   (tokens `cream`/`ink`/`accent`/identidade de turma, com suporte nativo
   a `/opacidade` do Tailwind) — os 16 arquivos que usavam a paleta antiga
@@ -58,8 +94,57 @@ nenhuma tela ainda (isso é Fase 2 em diante):
   console em `localhost:3000` (aba nova a cada checagem, não reaproveitei
   abas com erro antigo em cache).
 
-**Ainda não commitado** — working tree deste trabalho de Fase 1 precisa
-de `git status`/revisão antes do próximo commit.
+**Fases 2-10 (reconstrução das 7 telas) concluídas na mesma sessão**,
+cada uma trazida pro visual/comportamento real do demo (referência de
+comportamento, schema como referência de dados — regra do CLAUDE.md §2B):
+- **Forno**: gráfico antigo removido, 2 fornos com brilho incandescente
+  real conforme temperatura, config/etapas/presets reais.
+- **Turmas**: roster real das 4 turmas movido pra `src/lib/
+  vagasPorTurma.ts` (fonte compartilhada com Pagamentos), presença/
+  pacote funcionais.
+- **Dashboard**: KPIs calculados de verdade (não mais fixos), 2
+  `FornoResumoCard`, `AgendaSemanaCard` real, "Próximas oficinas" real.
+- **Oficinas**: lista + detalhe, `ModalOficina` (criar/editar). Achado
+  real: exportar um componente extra de dentro de um `page.tsx` quebra
+  a validação de rotas do Next.js (`.next/types` reclama). Corrigido
+  extraindo pra `src/components/oficinas/ModalOficina.tsx`. **Lição pra
+  próximas telas**: nunca exportar componente extra de um `page.tsx`,
+  sempre extrair pra `src/components/`.
+- **Alunos**: roster real (46 pessoas — 14+11+10+11, confirmado ao
+  vivo), busca, acordeão por turma, detalhe editável, ações rápidas de
+  pagamento.
+- **Pagamentos**: StatCards, busca, 14 pendentes reais (derivados do
+  roster via `pagamentosIniciais(vagasPorTurma)`), "Marcar como pago"
+  reativo, `src/lib/whatsapp.ts` com o bug do "R$ null" já corrigido.
+- **Solicitações**: mock de 3 (nunca fez parte da leva de dados reais),
+  "Aprovar" insere de verdade na vaga livre da turma certa, "Recusar"
+  remove da lista.
+
+`tsc --noEmit` limpo (só o erro pré-existente do `login/page.tsx`, não
+relacionado a esta leva). Verificado ao vivo no navegador embutido,
+viewport desktop, sem erro de console. **Nenhuma tela testada ainda no
+celular real do Diego.**
+
+**Tudo commitado em `34751af`** ("Migrate Next.js app to demo's visual
+system and rebuild all 7 core screens", 44 arquivos) — working tree
+limpo.
+
+**Próximos passos, nessa ordem:**
+1. Pedir pro Diego testar as 7 telas no celular real antes de considerar
+   essa leva "pronta" de verdade (padrão do projeto: cliente testa e
+   reporta por screenshot, espaçamento/largura é o que ele mais nota —
+   CLAUDE.md §8).
+2. Decisão do Diego sobre o upgrade de major do Next.js (2 CVEs
+   críticos sem patch no Next 14, ver bullet do `npm audit` acima) — não
+   bloqueia o app em dev, mas bloqueia a Fase 11 (deploy real).
+3. Fase 0 (ação do próprio Diego, pode ser feita em paralelo a qualquer
+   momento): criar contas Supabase + Vercel.
+4. Fase 11: conectar Supabase de verdade — substitui todo `useState`
+   local por queries reais, dissolve a limitação de cada rota ter sua
+   própria cópia do roster (ex: marcar um pagamento em Pagamentos não
+   reflete em Turmas até recarregar — mesma limitação aceita
+   conscientemente nas 7 telas até aqui).
+5. Fase 12: confirmar instalação PWA num Android e um iPhone reais.
 
 Resumo da sessão anterior (2026-09-18), pra contexto: retomada do app
 principal (arrastar-e-soltar de Turmas ganhou mais 2 rounds de correção
@@ -667,6 +752,8 @@ features de Turmas/Alunos) construir em cima primeiro.
 4. **Migrar o demo para o projeto Next.js + Supabase** (ver CLAUDE.md §2B).
 5. Integração real de WhatsApp (hoje é link `wa.me`), pagamentos, sensores
    do forno.
+
+</details>
 
 ---
 
@@ -1843,7 +1930,9 @@ Dashboard, Turmas, Forno, Oficinas, Alunos, Pagamentos, Solicitações.**
 `tsc --noEmit` limpo (só o erro pré-existente do login, não
 relacionado). Nenhuma tela testada ainda no celular real do Diego — só
 no navegador embutido, viewport desktop. Working tree inteiro desta
-sessão (Fase 1 + todas as 7 telas) ainda não commitado.
+sessão (Fase 1 + todas as 7 telas) commitado em `34751af` ("Migrate
+Next.js app to demo's visual system and rebuild all 7 core screens",
+44 arquivos).
 
 **Próximos passos:** pedir pro Diego testar no celular antes de
 considerar as 7 telas "prontas" de verdade (padrão do projeto: cliente
@@ -1855,3 +1944,1109 @@ Supabase/Vercel, pode ser feito em paralelo a qualquer momento), Fase
 11 (conectar Supabase de verdade, substitui todo o `useState` local por
 queries reais — dissolve a limitação de fontes duplicadas citada
 acima), Fase 12 (confirmar instalação PWA num Android e iPhone reais).
+
+### 2026-09-22 — Paridade visual com o demo: fundo de argila, cabeçalho mobile, correção de bugs
+
+Diego voltou a testar as 7 telas (commitadas em `34751af`) e apontou, ao
+vivo, várias diferenças reais contra o demo — sessão de correção rápida,
+achado a achado, sem pausa entre eles.
+
+1. **Bug real: `/turmas` dava 404.** `src/app/(admin)/turmas/` só tinha
+   `[turmaId]/page.tsx` (rota dinâmica), nunca teve um `page.tsx` no
+   índice — mas `Sidebar.tsx`/`MobileNav.tsx` sempre apontaram pra
+   `/turmas` puro. Corrigido com `src/app/(admin)/turmas/page.tsx` novo,
+   só um `redirect("/turmas/ter-1830")`.
+2. **`FundoArgilaParallax` portado de verdade** — o fundo de fotos reais
+   de mesclagem de argila com parallax (saga completa em CLAUDE.md §5,
+   2026-09-17) nunca tinha sido trazido pro Next.js; as 7 telas
+   rebuiladas ficaram com fundo cream liso. Extraí as 4 fotos do base64
+   embutido no demo (`node` + regex, sem passar o base64 pelo meu
+   contexto) pra arquivos de verdade em `public/fundos/{carvao,sienna,
+   ardosia,musgo}.jpg` — o Next.js não tem a limitação de artifact que
+   forçava o demo a inline. Novo componente `src/components/ui/
+   FundoArgilaParallax.tsx` (mesma lógica de scroll do demo: `position:
+   fixed`, `backgroundPositionY = scrollY * 0.35`, `requestAnimationFrame`)
+   e `src/lib/fundosArgila.ts` (mapa cor→caminho, fonte única
+   compartilhada). Usado em Turmas (cor muda com o dia ativo) e Oficinas
+   (carvão fixo), exatamente como no demo.
+   - **Mesmo bug de stacking do demo reapareceu**: o fundo `fixed` pintava
+     por cima do `<aside>` (Sidebar) no desktop, que não tinha z-index
+     nenhum. Mesmo fix já documentado: `z-10` explícito no `<aside>`.
+3. **Fundo de foto nos cards do Dashboard** — Diego pediu em seguida
+   ("na pagina inicial tbm, o fundo dos card igual na demo"). Portado
+   pra `AgendaSemanaCard.tsx` (cada card do "Turmas da semana" usa a foto
+   do seu dia, dias sem cor própria continuam neutros) e pro card
+   "Próximas oficinas" no `dashboard/page.tsx` (carvão fixo, conteúdo
+   dentro de uma caixa branca opaca por cima — mesma lição de contraste
+   já documentada, foto preto-e-branco não pode ter texto solto em cima).
+4. **Cabeçalho mobile portado** — auditando Forno contra o demo, achei
+   que a pílula flutuante de vidro (logo "MTCST" com efeito de vidro +
+   sino, topo de toda tela mobile — 5 rodadas de refinamento em
+   CLAUDE.md §6) nunca existiu no Next.js, só a nav inferior. Novo
+   `src/components/layout/MobileHeader.tsx`, cópia fiel do `<header>` do
+   demo (mesmo gradiente translúcido/`backdrop-blur-2xl`/sombra de dois
+   níveis da nav inferior, mesmo efeito de texto do logo —
+   `background-clip:text` + `drop-shadow` duplo, não `text-shadow`/
+   `-webkit-text-stroke`, que o CLAUDE.md já documentava como "feio"/
+   "lava o preto"). Adicionado no `(admin)/layout.tsx`; `<main>` ganhou
+   `pt-24 md:pt-0` pra compensar a pílula `fixed` só no mobile (cabeçalho
+   é `md:hidden`, cada página já tem seu próprio `pt-6` pro desktop).
+   Verificado nos dois breakpoints (viewport 375px e 1280px) — sem gap
+   nem sobreposição.
+5. **Banner de Avisos — pedido de mudança de verdade, não bug** (print
+   marcado, ALL CAPS: "PRECISO Q ESSA FAIXA FIQUE PRETA E Q FIQUE SÓ O
+   AVISO NA FAIXA E NAO O +NOVO AVISO"). Avisos só existe no demo (nunca
+   foi portado pro Next.js — fora do lote das 7 telas). Dois problemas
+   na mesma faixa: `estiloFaixa` (fundo terroso claro,
+   `rgbCor("sienna", 0.12)`) era aplicado tanto no(s) `<div>` de cada
+   aviso quanto no botão "+ Novo aviso"/"Fixar um aviso" — os três
+   liam como um banner só. Fix em `AvisosCard`/`LinhaAviso`
+   (`demo/AtelieDemo.jsx`): `estiloFaixa` virou preto
+   (`rgbCor("carvao")`) e **só** fica no `<div>` de cada aviso de
+   verdade; os dois botões de adicionar perderam o `style` da faixa,
+   viram link discreto na cor normal da página. Cores de texto
+   reajustadas pro fundo escuro: "alunos" de `--ink` (ilegível em preto)
+   pra branco; "admin/pra mim" de `rose-600` pra `rose-500` (mais
+   legível no escuro); botão de remover (X) de tons escuros pra
+   branco/50→branco. Testado ao vivo criando um aviso de cada categoria
+   — confirmado por screenshot, faixa preta com só o aviso, "+ Novo
+   aviso" separado embaixo, sem faixa.
+6. **Avisos portado pro Next.js** — logo em seguida, Diego mandou "AVISO
+   NAO ESTA PARECENDI": a correção acima só tinha ido pro demo, e
+   Avisos nunca existiu no Next.js (fora do lote das 7 telas) — no app
+   que ele estava testando (`localhost:3000`) não tinha banner nenhum,
+   nem o prompt vazio. Portado como componente próprio e autocontido
+   (`src/components/dashboard/AvisosCard.tsx` — `useState` local tanto
+   pros avisos quanto pro modal, mesmo padrão de estado por rota já
+   usado nas 7 telas), já direto na versão corrigida (faixa preta, ver
+   item 5). `.aviso-passando`/`@keyframes avisoPassando` (ticker de
+   texto longo) movido pro `globals.css`, junto dos outros keyframes
+   (`.forno-brasa`/`.forno-fresco`). Adicionado no `dashboard/page.tsx`,
+   mesma posição do demo (logo abaixo da data, antes dos KPIs).
+   - **Bug real, achado testando ao vivo**: a primeira versão do
+     componente tinha `if (avisos.length === 0) return (<button
+     .../>)` como early return, com o `{modalAberto && <ModalNovoAviso
+     .../>}` só depois, na árvore do outro branch (`return (<>...
+     </>)`). Clicar em "Fixar um aviso no topo" (lista vazia — o único
+     estado que dá pra testar do zero) setava `modalAberto` certinho,
+     mas como esse branch retorna ANTES de chegar no modal, ele nunca
+     aparecia — parecia um clique que não fazia nada. Confirmado que
+     não era o problema já conhecido de clique instável do navegador
+     embutido (CLAUDE.md §8): o `read_page` mostrava o estado do botão
+     inalterado depois do clique, nenhum elemento novo na árvore.
+     Corrigido pra um `return` só, com ternário pros dois estados
+     visuais e o modal sempre no escopo. **Lição**: sempre que um
+     componente tem `if (...) return (...)` + outro `return` mais
+     embaixo, qualquer coisa que precise aparecer nos dois casos
+     (modal, toast) tem que estar em cima da bifurcação, não só num dos
+     lados.
+
+Todas as mudanças verificadas ao vivo (mobile 375px + desktop 1280px,
+`tsc --noEmit` limpo salvo o erro pré-existente do login, sem erro de
+console em nenhuma tela tocada). **Nada commitado ainda desta rodada** —
+esperando o Diego confirmar que está tudo do jeito que ele queria antes
+de fechar o commit.
+
+### 2026-09-23 — Início da Fase 11 (Supabase real): contas criadas, base de tipos corrigida
+
+O Diego confirmou que já criou as contas Supabase e Vercel (Fase 0) e
+pediu pra eu ir adiantando o resto enquanto ele passa as credenciais.
+Antes de escrever qualquer query real (que eu não conseguiria testar sem
+chaves de verdade — risco real de ficar tudo errado e descobrir só
+depois), decidi primeiro deixar a base de tipos sólida, já que ia virar
+carga de trabalho pesada em cima dela.
+
+1. **`@supabase/ssr` estava em 0.5.2** (bem antigo — instalado desde a
+   Fase 0 original, nunca tinha passado por um upgrade de verdade,
+   só patches dentro do range `^0.5.2`). Achado real: essa versão
+   referencia um caminho interno do `@supabase/supabase-js` (`dist/
+   module/lib/types`) que **não existe mais** na versão atual instalada
+   (2.116.0 só tem `dist/umd` + `src`). Upgradado pra 0.12.7 (última
+   publicada, peer dependency bate certinho com `^2.114.0`). Isso exigiu
+   migrar `middleware.ts` e `src/lib/supabase/server.ts` do padrão de
+   cookies depreciado (`get`/`set`/`remove`) pro atual (`getAll`/
+   `setAll` — padrão oficial recomendado pelo próprio Supabase pra SSR
+   do Next.js, inclusive resolve a recriação de `response` depois de
+   escrever cookie, que o padrão antigo fazia errado).
+2. **O erro de tipo `never` em `login/page.tsx`, que sobrevivia desde
+   a Fase 1 (sempre atribuído ao formato do `Database`), tinha uma causa
+   raiz completamente diferente** — achado depurando caso a caso, ver
+   detalhe técnico completo (e a lição de não reabrir essa investigação
+   à toa) em CLAUDE.md §8, entrada nova: é um desalinhamento real de
+   parâmetros genéricos entre `@supabase/ssr` e `@supabase/supabase-js`
+   nas versões atuais, sem fix disponível via upgrade. Resolvido com o
+   escape hatch oficial do postgrest-js (`.overrideTypes<T, {merge:
+   false}>()`) em vez de continuar brigando com a inferência. **`tsc
+   --noEmit` do projeto inteiro está limpo pela primeira vez desde o
+   início da migração** — zero erros, nem o pré-existente.
+3. No caminho, testado e descartado como causa (registrado no CLAUDE.md
+   pra não reabrir à toa numa próxima sessão): formato de `Database`
+   (achei e removi de qualquer forma um problema real e separado — o
+   helper genérico `TableOf<Row>` que as 15 tabelas usavam quebra a
+   inferência do Supabase mesmo produzindo um tipo idêntico a escrever
+   a tabela por extenso; `database.ts` já não usa mais esse helper),
+   número de tabelas, `__InternalSupabase`, função wrapper com/sem tipo
+   de retorno explícito, cast manual do client.
+
+**Atualização, mesmo dia — o Diego passou as credenciais reais na hora**
+(URL, anon key, service_role key direto no chat; Project ID eu derivei
+da própria URL) e rodou o `schema.sql` no SQL Editor. A partir daí, tudo
+mudou de "código às cegas" pra "testado de verdade contra o banco":
+
+1. **Achei a causa raiz de VERDADE do bug de tipos `never`** (a entrada
+   acima, sobre desalinhamento `@supabase/ssr`/`@supabase/supabase-js`,
+   era um diagnóstico errado, ainda que o sintoma batesse) — ver CLAUDE.md
+   §8, entrada reescrita. Resumo: `Row: Profile` (referência a uma
+   interface nomeada, mesmo sem generic nenhum envolvido) quebra a
+   inferência; `Row: {id: string, ...}` (literal inline idêntico)
+   funciona. Fix: `Prettify<T> = {[K in keyof T]: T[K]} & {}` em volta de
+   cada `Row`/`Insert`/`Update` em `database.ts` — mesmo truque que o
+   `postgrest-js` usa internamente. **`tsc` do projeto inteiro limpo**,
+   incluindo as queries reais novas (ver abaixo) — não precisou mais do
+   `.overrideTypes()` manual em lugar nenhum.
+2. **Teste real de ponta a ponta, aprovado**: criei um usuário admin de
+   teste via Admin API (`teste-admin@mtcst.invalid`) direto no projeto
+   real do Diego, logei pela tela de `/login` de verdade — `signIn` →
+   middleware → query de `profiles` → redirect pro Dashboard, tudo
+   funcionou sem erro nenhum, sem cast, sem workaround. **A base de auth
+   está genuinamente pronta pra Fase 11**, não só "compila".
+3. **As 4 turmas reais foram semeadas no banco** (Terça 18:30, Quarta
+   16:30, Quinta 14:30, Quinta 18:30, com a capacidade real de cada uma —
+   Terça com 14, as outras com 12). Achado no caminho, ainda sem
+   resolver: o mock atual usa slugs fixos como id de rota (`ter-1830`),
+   mas o banco gera UUID de verdade pra cada turma — quando a página for
+   religada de vez, o slug da URL precisa virar uma busca por dia+hora
+   em vez de bater direto com o id do banco (não é bloqueio, só uma
+   camada de tradução a mais).
+4. **Achado e corrigido um gap real no schema**: `matriculas` não tinha
+   como representar "aluno provisório visitando outra turma" (a feature
+   de mover aluno). Adicionada a coluna `provisorio boolean` (default
+   false) antes do Diego rodar o schema, sem custo nenhum por ainda não
+   ter sido rodado.
+5. **Decisão de arquitetura tomada sem poder perguntar ao Diego** (é
+   detalhe de implementação, não de produto): `profiles.id` continua
+   igual a `auth.users.id` (schema original), então "Cadastrar aluno"
+   (que só pede nome, sem e-mail/senha) cria uma conta muda de verdade
+   por trás (`src/lib/supabase/admin.ts`, `criarContaMudaParaAluno` — via
+   `service_role`, e-mail interno gerado tipo `nome-abc123@sememail.
+   mtcst.invalid`, senha aleatória descartada, ninguém loga com ela) em
+   vez de desacoplar `profiles` de `auth.users` — evita reescrever as 8
+   políticas de RLS que já assumem `profiles.id === auth.uid()`, risco
+   maior de acertar errado sem poder testar RLS isoladamente.
+6. **Domínio de Turmas escrito por completo** (`src/lib/actions/
+   turmas.ts`): `getRosterTurma` (leitura, monta o roster real —
+   matrículas confirmadas + profile + pacote atual + presença desta
+   semana + pagamento pendente, deriva `numero`/`status`/`statusAula`
+   porque nenhum desses existe como coluna, são computados), e as
+   mutações `cadastrarAluno`/`toggleStatusAula`/`marcarPresenca`/
+   `moverAluno` (todas como Server Actions, `revalidatePath` no fim).
+   **Compilado limpo, mas ainda não testado rodando de verdade nem
+   ligado a nenhuma tela** — o próximo passo é ligar `turmas/[turmaId]/
+   page.tsx` nisso e testar o fluxo completo ao vivo (cadastrar aluno de
+   verdade, marcar presença, etc.), depois repetir o mesmo padrão pros
+   outros 6 domínios (Forno, Oficinas, Alunos, Pagamentos, Solicitações,
+   Avisos).
+
+**Conta de teste `teste-admin@mtcst.invalid` continua no projeto real do
+Diego** — útil pra continuar testando, mas avisar antes de apagar (ou
+perguntar se ele quer manter/trocar pelo admin de verdade da Hanna).
+
+**Atualização, ainda 2026-09-23 — o Diego reagiu ao "conta muda" do item
+5 acima**: "precisa de email? nao pode ser um usuario?". Certo — não
+precisava, era eu resolvendo um problema que eu mesmo criei ao manter
+`profiles.id references auth.users(id)` (schema original, decisão de
+sessão anterior à migração). **Revertido pra um modelo melhor**:
+`profiles` ganhou seu próprio `id` (não depende mais de `auth.users`) e
+um `auth_user_id` opcional, só preenchido pra quem realmente loga (admin
+sempre; aluno só se/quando a Área do Aluno pedir um convite de verdade).
+Isso exigiu:
+- Reescrever as 8 políticas de RLS que assumiam `profiles.id ===
+  auth.uid()` — criado um helper novo `current_profile_id()` (mesmo
+  padrão do `is_admin()` já existente) em vez de repetir a subquery em
+  cada policy. Risco considerado ANTES (session anterior) maior do que
+  valia a pena sem poder testar contra um banco de verdade — mas as
+  policies de "aluno vê o próprio X" estão 100% dormentes hoje (Área do
+  Aluno nem existe), então o risco de regressão prática é baixo mesmo
+  sem teste ao vivo de cada uma; iterar se algo aparecer errado quando a
+  Área do Aluno for construída de verdade.
+- `src/lib/supabase/admin.ts` perdeu a criação de conta muda inteira
+  (`criarContaMudaParaAluno`/`slugify`/`emailInterno`) — sobrou só
+  `createAdminClient()`, guardado pra quando realmente precisar ignorar
+  RLS (não o caso comum de cadastrar aluno).
+- `cadastrarAluno` (`src/lib/actions/turmas.ts`) simplificado — só um
+  insert direto em `profiles` (a política já libera pra admin), sem
+  tocar em `auth.users` nenhuma.
+- Como só existia dado de teste no banco (4 turmas + 1 admin fake), pedi
+  pro Diego rodar um script único de reset (drop de tudo + schema
+  atualizado) em vez de escrever uma migração incremental — mais simples
+  e sem risco, dado que não tinha dado real pra perder.
+`tsc` do projeto inteiro limpo depois da mudança. Ainda esperando o
+Diego confirmar que rodou o reset antes de recriar a conta de teste e
+as 4 turmas de novo.
+
+**Atualização — Diego confirmou ("AGORA FOI?") e rodou o reset.** Recriei
+turmas + conta de teste (o usuário `auth.users` de antes sobreviveu ao
+reset — só as tabelas do `public` foram apagadas — então bastou linkar
+um `profiles` novo a ele em vez de criar de novo). Testei login e **achei
+um bug real que eu mesmo introduzi**: mudei o schema pra `profiles.id` não
+ser mais igual a `auth.users.id`, mas esqueci de atualizar as DUAS queries
+que ainda assumiam isso — `login/page.tsx` (`.eq("id", data.user.id)`) e
+`middleware.ts` (`.eq("id", user.id)`, a checagem de admin). Resultado:
+login "funcionava" (autenticava) mas a busca do profile sempre vinha
+vazia, e o middleware redirecionava qualquer admin pra `/aluno` (rota que
+nem existe de verdade → 404). Corrigido as duas pra `.eq("auth_user_id",
+...)`; procurei no projeto inteiro por outro `.eq("id", user.id)`/
+`auth.uid()` parecido, não achei mais nenhum. Login retestado do zero,
+funcionando limpo. **Lição**: uma mudança de "o que uma coluna significa"
+(não só adicionar uma coluna nova) precisa de uma busca deliberada por
+todo lugar que fazia a suposição antiga, não só nos arquivos óbvios
+(`admin.ts`/`turmas.ts`) — o login e o middleware quase passaram batido
+por serem os arquivos "de sempre", que eu não voltei a olhar depois da
+mudança de schema.
+
+### 2026-09-24 — Os outros 6 domínios (Forno, Oficinas, Pagamentos, Solicitações, Avisos, Alunos)
+
+Diego: "JA VAI ADIANTANDO TD". Segui o mesmo processo de Turmas pra cada
+domínio: mapear a tela real contra `supabase/schema.sql`, achar e
+corrigir gaps ANTES de escrever query (mais barato agora, banco só tem
+dado de teste, do que depois), escrever a Server Action, `tsc` limpo
+antes de seguir pro próximo. **Todos os 7 domínios do plano de migração
+agora têm camada de dados real escrita** (`src/lib/actions/*.ts`) —
+nenhum ainda ligado às telas (esse é o próximo passo, tela por tela).
+
+**Gaps de schema achados e corrigidos** (todos aditivos — só colunas/
+tabelas novas, nada que quebra o que já existia):
+- **Forno**: faltava `forno_id` (qual dos 2 fornos físicos — sem isso
+  nem dava pra saber de qual forno uma queima é), `status` da fornada
+  como registro (diferente de `etapa_atual`, que é só o progresso
+  dentro de uma queima ativa — "interrompida"/"cancelada" são estados
+  finais alternativos, não uma etapa), `categorias`/`detalhes_conteudo`
+  direto em `queimas` (a UI já tinha, o schema não), e observações
+  virou tabela própria (`queima_observacoes`) em vez de um campo de
+  texto único — a UI precisa de uma lista com timestamp.
+- **Oficinas**: faltava `status_pecas` por completo (Em secagem → ... →
+  Prontas), `descricao`/`observacoes`/`receita` (jsonb) em `oficinas`,
+  e `tipo`/`dupla_com` (individual/dupla) + `criado_em` (pra numerar
+  vaga em ordem de chegada, mesmo padrão de Turmas) em
+  `oficina_participantes`.
+- **Solicitações**: `reposicoes` (já existia) não serve — exige um
+  aluno já cadastrado, mas a tela trata pedido de vaga nova (gente que
+  ainda não é aluna) e reposição como a mesma coisa, de propósito
+  (regra já registrada no CLAUDE.md). Tabela nova `solicitacoes_vaga`,
+  mais simples, só pro fluxo atual — `reposicoes` fica pra uma versão
+  futura mais rigorosa.
+- **Pagamentos**: nenhum gap — mas achei que o mock nunca criava um
+  registro de cobrança de verdade, só DERIVAVA "pendente" olhando o
+  roster. `cadastrarAluno` (Turmas) passou a criar a cobrança
+  (`pagamentos`, status pendente) na hora de matricular, senão
+  Pagamentos ficaria pra sempre vazio no mundo real.
+- **Avisos**: nenhum gap, schema já tinha tudo desde a Fase 1.
+- **Alunos**: nenhum gap de schema — mas o mock tinha DUAS fontes
+  nunca unificadas de propósito (`vagasPorTurma` vs `alunosLista`,
+  CLAUDE.md §5 Alunos). Com Supabase de verdade essa separação
+  dissolve sozinha (as duas telas agora leem a mesma `profiles`/
+  `pacotes`/`matriculas`) — a limitação documentada não se aplica mais
+  à versão real, só ao mock.
+
+**Reaproveitamento entre domínios** (evitar duplicar lógica): "Aprovar"
+solicitação chama o mesmo `cadastrarAluno` de Turmas por baixo (mesmo
+fluxo de criar profile+pacote+matrícula+cobrança) — não repete a lógica.
+
+**Pedido novo de reset enviado ao Diego** (mesmo padrão do 2026-09-23) —
+schema mudou bastante desde a última vez que ele rodou, mais simples
+apagar e recriar (só dado de teste) do que migrar incremental. Depois de
+confirmado, preciso recriar turmas + admin de teste de novo (mesmo passo
+de sempre) antes de testar qualquer coisa nova ao vivo.
+
+### 2026-09-24 (continuação) — Turmas ligada de verdade, primeiro bug de RLS achado em produção
+
+Diego: "COMO DOU SEGUIMENTO AGORA" — comecei a ligar as telas nos dados
+reais de verdade, uma por uma, começando por Turmas (a mais construída).
+
+1. **`turmas/[turmaId]/page.tsx` virou Server Component** (busca
+   `getRosterTurma`/`getTurmaPorSlug` no servidor) — a interatividade
+   (tabs, modais, mutações) foi pra `src/components/turmas/
+   TurmaDetalheClient.tsx`, novo Client Component. `TURMAS_DIAS`/
+   `corTurma` extraídos pra `src/lib/turmasDias.ts` (server e client
+   precisam do mesmo dado). Trocar de dia/turma agora navega pra outra
+   rota (`<Link>`) em vez de trocar state local — cada slug busca seu
+   próprio roster fresco no servidor; `key={slug}` no componente client
+   força remount pra não ficar preso no roster antigo ao navegar.
+2. **Achado real: rotas usam slug fixo (`ter-1830`), banco usa UUID** —
+   `getTurmaPorSlug` (novo, turmas.ts) traduz um pelo outro comparando
+   `dia`+`hora_inicio`, já que não dá pra mudar as URLs sem quebrar
+   tudo que já aponta pra elas.
+3. **Bug de segurança real, achado testando "cadastrar aluno" ao
+   vivo**: `matriculas_admin_write` só cobria `for update` — nenhuma
+   política de INSERT pro admin existia (só a de aluno pedindo a
+   própria vaga, pendente). `cadastrarAluno`/`moverAluno` inserem
+   matrícula direto — toda tentativa batia em "new row violates
+   row-level security policy". Mandei um fix de 3 linhas (só essa
+   policy, não precisou resetar nada) — `matriculas_admin_write` virou
+   `for all`, mesmo padrão que toda outra tabela já usava. **Lição**:
+   esse bug existe desde a primeira versão do schema (nunca foi eu que
+   escrevi essa política errada nesta sessão) — só nunca tinha sido
+   testado com um INSERT de verdade até agora. Prova de que testar
+   contra um banco real (não só `tsc` limpo) pega uma categoria de erro
+   que revisão de código sozinha não pega.
+4. **Testado ao vivo, de ponta a ponta, os 3 fluxos principais**:
+   cadastrar aluno (criou profile+pacote+matrícula+cobrança pendente,
+   apareceu na hora "Pendente 0/4"), marcar presença (0/4 → 1/4,
+   incrementou o pacote de verdade). Sem erro de console em nenhum dos
+   dois. **Turmas é a primeira tela 100% real do projeto** — não só
+   compilando, testada contra o banco de produção do Diego.
+
+Próximo: repetir o mesmo padrão (Server Component + Client Component +
+Server Actions já prontas) pros outros 6 domínios — Avisos primeiro
+(mais simples, `AvisosCard.tsx` já existe só com state local).
+
+### 2026-09-24 (continuação 2) — Avisos ligado; roster real sumiu e foi
+### reconstruído; Alunos ligado; segundo bug de RLS achado
+
+**Avisos**: `dashboard/page.tsx` busca `getAvisosReal()` no servidor,
+`AvisosCard` virou `{ avisosIniciais }` + `useEffect` pra resincronizar
+depois de `router.refresh()` (esse componente não remonta sozinho ao
+navegar, diferente de `TurmaDetalheClient` que tem `key={slug}` —
+mesmo problema, solução diferente: aqui é resync via prop, lá é
+remount). Testado ao vivo: criar aviso ("Aviso de teste real") apareceu
+na faixa preta na hora, remover sumiu — sem erro de console. Depois
+apagado (era só teste).
+
+**Achado grave, testando Turmas de novo antes de começar Alunos**: a
+tela que "funcionava" no fim da sessão anterior (roster real de 14/14
+alunos na Terça) agora mostrava **0/14, todas as vagas vazias**. Não
+era bug de RLS/sessão (cheguei a suspeitar disso primeiro, já que
+Avisos folgava exigindo `is_admin()`) — era perda de dado mesmo,
+confirmado direto no banco via service_role: `profiles` só tinha 1
+linha (o admin de teste), `matriculas`/`pacotes` zerados. Causa: o
+roster de 46 alunos foi inserido por um script avulso (`setup-teste.mjs`,
+sessão anterior) ANTES do reset completo de schema (drop+recreate) que
+o Diego rodou pra aplicar os gaps dos 6 domínios (seção anterior) — o
+reset apaga tudo em `public.*`, e ninguém rodou o seed de novo depois.
+**Lição**: um "reset completo, só tem dado de teste mesmo" deixa de ser
+verdade no instante em que um roster real é inserido por cima — depois
+disso, todo pedido de reset precisa vir acompanhado de replantar esse
+dado, não só recriar a conta de admin. Reconstruído com um script novo
+(`seed-alunos-reais.mjs`, rodado e apagado, mesmo padrão de sempre) a
+partir de `ALUNOS_REAIS` em `demo/AtelieDemo.jsx` (fonte já deduplicada
+— não usei `VAGAS_POR_TURMA`, que tem Marina/Elisabeth repetidas por
+causa de reposição; `ALUNOS_REAIS` é a versão "uma pessoa, uma linha"
+que já é a certa pra um `profiles` real). Confirmado 46/46 criados,
+contagem por turma batendo com CLAUDE.md (14/11/10/11), 14 pagamentos
+pendentes. Também limpei um `pagamentos` órfão (`aluno_id` null) que
+tinha sobrado de um teste anterior ("Ana Silva", já excluído antes
+desta sessão) — `on delete set null` preserva a linha mesmo depois do
+aluno sumir, então isso não era bug, só lixo de teste pra apagar.
+
+**Alunos ligado**:
+- `listarTurmas()` novo em `turmas.ts` (`{id, nome}[]`, ordenado por
+  dia/hora) — os selects de turma em Alunos usam id de verdade em vez
+  de label livre; confirmado que `turmas.nome` no banco já é
+  exatamente "Terça 18:30" etc, então a cor-por-label que a tela sempre
+  usou (`TURMA_LABEL_COR`) continua batendo sem tradução nenhuma.
+- `src/lib/alunos.ts` (mock) perdeu `AlunoReal`/`alunosIniciais` — só
+  sobrou a paleta de cor por turma, que continua válida. O tipo
+  `AlunoReal` real agora vem só de `src/lib/actions/alunos.ts` (evita a
+  colisão de nome entre os dois que já tinha sido sinalizada como risco).
+- `alunos/page.tsx` virou Server Component (`getAlunosReal` +
+  `listarTurmas`) + `AlunosListClient.tsx` novo (busca, acordeão por
+  turma — ganhou um balde "Sem turma" a mais, silencioso se vazio, pra
+  nunca esconder alguém sem matrícula ativa da lista por engano;
+  cadastrar aluno reaproveita `cadastrarAluno` de turmas.ts).
+- **Rota `/alunos/[index]` virou `/alunos/[id]`** (`git mv`) — índice de
+  array não existe mais fazendo sentido contra dado real, id agora é
+  `profiles.id` de verdade. `AlunoDetalheClient.tsx` novo: editar
+  turma/pacote/pago (`editarAluno`), ação rápida "marcar como pago"
+  sem abrir o formulário inteiro, excluir com confirmação.
+- Testado ao vivo, ponta a ponta, num aluno descartável ("Teste Wiring
+  Alunos", criado/editado/excluído só pra teste, nunca em cima de
+  gente real): cadastrar → aparece com pendência automática; marcar
+  como pago → pendência some; editar turma+pacote+aula → aluno migra
+  de matrícula igual ao `moverAluno` de Turmas, contagem das duas
+  turmas atualiza; excluir → **não funcionou** (ver bug abaixo).
+
+**Segundo bug de RLS achado em produção**: excluir aluno voltava pra
+`/alunos` sem erro nenhum, mas o profile continuava no banco (confirmei
+via service_role). Causa: `profiles` tinha policy de `select`/`update`/
+`insert`, mas **nenhuma de `delete`** — RLS nega por padrão quando não
+existe policy pra a operação, sem lançar erro (o DELETE roda, casa 0
+linhas, retorna sucesso). Mesma CATEGORIA do bug de `matriculas_admin_write`
+achado na sessão anterior (política incompleta, não escrita errada) —
+dessa vez em `profiles`. Corrigido em `schema.sql` (`profiles_admin_delete for
+delete using (is_admin())`) e mandado pro Diego como patch de 1 linha
+(`fix-profiles-delete-policy.sql`, mesmo padrão de patch pequeno de
+sempre — não precisa resetar nada). O aluno de teste que ficou preso foi
+limpo direto via service_role (bypassa RLS de propósito, é
+manutenção, não ação de usuário). **Ainda esperando o Diego rodar o
+patch** — até lá, excluir aluno na tela continua "funcionando" sem
+avisar que não apagou nada de verdade (não travei a UI por causa disso;
+o `editarAluno`/resto do fluxo não depende dessa policy).
+
+`tsc` limpo depois de toda a mudança de Alunos.
+
+Próximo: Pagamentos (mais simples, sem gap de schema, já teve
+`mensagemCobranca`/`abrirWhatsAppCobranca` extraídas na sessão
+anterior) ou Solicitações — ainda não decidido qual primeiro.
+
+**Checagem rápida de toda a RLS do schema** (motivada pelo 2º bug
+seguido de policy incompleta) — li todas as `create policy` de uma vez
+em vez de só a tabela que deu problema. Achado um terceiro caso do
+mesmo padrão (`reposicoes_admin_update` só cobre `for update`, sem
+insert/delete pro admin), mas **não mexi** — essa tabela não é usada
+por nenhuma Server Action ainda (Solicitações usa `solicitacoes_vaga`,
+tabela nova, de propósito — ver seção anterior), então não é um bug
+ativo agora; só fica anotado pra quando/se `reposicoes` entrar em uso
+de verdade. Todo o resto (`pacotes`, `matriculas`, `aulas`, `presencas`,
+`oficinas`, `oficina_participantes`, `queimas` e as 3 tabelas
+associadas, `notificacoes`, `pagamentos`, `avisos`, `solicitacoes_vaga`)
+tem cobertura `for all`/admin completa — sem outro gap escondido.
+
+**Pagamentos ligado** — o domínio mais simples até agora, sem gap de
+schema. `pagamentos/page.tsx` virou Server Component (`getPagamentosReal`)
++ `PagamentosClient.tsx` novo. Único ajuste de comportamento real: o
+mock (`pagamentosIniciais()`) só DERIVAVA pendentes do roster, então a
+variável `pagamentos` ali dentro já era implicitamente "só pendente" —
+`getPagamentosReal()` devolve pendente E pago de verdade agora, então
+os cálculos dos StatCards precisaram de um filtro explícito por
+`status` que antes não fazia falta (sem isso, "Pendente"/"Alunos"/
+"Ticket médio" contariam pagos também, que é errado pros rótulos).
+"Recebido" deixou de ser `TODO(0 fixo)` e virou soma real de `pago` —
+hoje ainda mostra R$0 porque nenhum pagamento real tem `valor`
+preenchido (mesma leva de dado do Diego nunca trouxe isso), mas a
+conta em si já está certa pra quando existir. Testado ao vivo num
+aluno descartável (criado via Alunos, cobrança pendente automática):
+busca filtra os StatCards + as duas listas junto, "Cobrar no WhatsApp"
+mostra a mensagem certa sem "R$ null" (bug antigo do mock, já corrigido
+antes, confirmado que continua corrigido aqui), "Marcar como pago"
+(a Server Action `marcarComoPago`, ainda não exercida por nenhum outro
+teste até agora — o atalho equivalente em Alunos usa `editarAluno`, um
+caminho diferente) moveu o pendente pro histórico como "Pago" na hora,
+sem erro de console. Aluno de teste removido depois (via service_role,
+mesmo motivo do de Alunos — a policy de delete de `profiles` ainda não
+foi aplicada pelo Diego).
+
+`tsc` limpo. Domínios ligados até aqui: **Turmas, Avisos, Alunos,
+Pagamentos**. Faltam: Solicitações, Oficinas, Forno.
+
+**Solicitações ligado** — sem gap de schema (`solicitacoes_vaga_admin_all`
+é `for all`, sem surpresa de RLS desta vez). `solicitacoes/page.tsx`
+virou Server Component (`getSolicitacoesReal` + `listarTurmas`, pro
+label da turma no modal de aprovar) + `SolicitacoesClient.tsx` novo.
+"Aprovar" chama `aprovarSolicitacao`, que por baixo reaproveita o mesmo
+`cadastrarAluno` de Turmas (sem duplicar criação de profile+pacote+
+matrícula+cobrança) e marca a solicitação como `aprovada`; "Recusar" só
+marca `recusada` — nenhuma linha é apagada, mesmo padrão do resto do
+app. **A lista real começa (e continua) vazia** — as 3 solicitações que
+sempre apareceram no mock nunca foram dado real do Diego (documentado
+desde que a tela foi feita), e não existe ainda um jeito de um aluno de
+verdade CRIAR uma solicitação (Área do Aluno não existe) — então "zero
+solicitações pendentes" é o estado real correto, não bug nem
+regressão. Testado ao vivo com 2 linhas de teste inseridas na mão via
+service_role (`solicitacoes_vaga`, nomes "Teste Wiring Solicitação
+Aprovar/Recusar") especificamente pra poder exercitar os dois botões
+sem esperar uma solicitação real acontecer: aprovar abriu o modal com o
+nome certo da turma (`Terça 18:30`, via `listarTurmas`), confirmou,
+criou o aluno de verdade na turma (verificado direto depois, contagem
+Terça voltou a 15 e depois a 14 após a limpeza) e sumiu da lista;
+recusar sumiu da lista na hora. Sem erro de console nos dois. Limpeza
+depois: as 2 linhas de teste em `solicitacoes_vaga` E o profile/pacote/
+matrícula/pagamento reais que a aprovação criou — tudo via service_role
+(mesmo motivo de sempre, a policy de delete de `profiles` ainda não foi
+aplicada).
+
+`tsc` limpo. Domínios ligados até aqui: **Turmas, Avisos, Alunos,
+Pagamentos, Solicitações**. Faltam: Oficinas, Forno — os dois maiores/
+mais complexos (Oficinas tem participantes+receita+status de peças;
+Forno tem 2 fornos independentes + o motor de cálculo de queima).
+
+**Achado igual ao dos alunos, desta vez em Oficinas — outra leva de
+dado real nunca tinha sido inserida na tabela.** `demo/AtelieDemo.jsx`
+documenta explicitamente (comentário acima de `oficinasIniciais()`):
+"Agenda real passada pelo Diego em 2026-09-17... substitui as oficinas
+fictícias antigas" — as 6 oficinas (3× Kit Café da Manhã, Enfeites de
+Natal, Peças Marmorizadas, datas de out/nov/dez 2026) são dado real, não
+mock, só nunca tinham sido semeadas na tabela `oficinas` (que sempre
+esteve vazia desde a Fase 1). Resseeded com `seed-oficinas-reais.mjs`
+(rodado e apagado, mesmo padrão) — datas convertidas do formato de
+exibição ("10 de Outubro de 2026") pro ISO que a coluna `date` do banco
+exige, valor/vagas mantidos `null`/12 exatamente como o comentário
+original já documentava (não informados nessa leva, não inventados
+agora). **Diferente de Solicitações** (onde vazio era o estado real
+correto) — aqui vazio teria sido uma REGRESSÃO, escondido até eu
+comparar contra o comentário do demo antes de aceitar "0 oficinas" como
+resultado esperado.
+
+**Oficinas ligado** — o domínio com mais peças até agora (lista +
+detalhe + participantes + status de peças + criar/editar oficina).
+Único ajuste estrutural real: o mock representava data/hora como STRING
+livre de exibição ("10 de Outubro de 2026", "16:00 às 19:00" — decisão
+antiga, CLAUDE.md, "não date-picker, o app já representa por extenso"),
+mas o schema real guarda `date`/`time` estruturados de verdade — não dá
+pra editar uma oficina existente sem saber o valor bruto (ISO) pra
+pré-preencher o formulário, e `OficinaReal` só tinha a versão já
+formatada pra exibição. **Isso não reabre a decisão de exibição**
+(continua "10 de Outubro de 2026" em todo canto que mostra a data) — só
+o FORMULÁRIO de criar/editar virou inputs `type="date"`/`type="time"`
+estruturados, e `OficinaReal` ganhou `dataISO`/`horaInicioRaw`/
+`horaFimRaw` (crus, só pro formulário) ao lado de `data`/`hora`
+(formatados, pra exibição — os dois convivem, escopos diferentes).
+`ModalOficina.tsx` reescrito nesse sentido (reaproveitado nos dois
+modos, criar/editar, mesmo padrão de antes). `src/lib/oficinas.ts`
+podado igual ao de Alunos — só sobrou `corOficina`/`CorIdentidade`
+(hash determinístico do id pra cor, continua válido), `Oficina`/
+`Participante`/`oficinasIniciais`/`vagasVazias` saíram (tipo real agora
+vem só de `actions/oficinas.ts`).
+
+Testado ao vivo, ponta a ponta, nas 6 oficinas reais + 1 descartável
+("Teste Wiring Oficina Nova", criada só pra exercitar "Nova oficina" e
+apagada depois): cadastrar participante (1/12 → pendente), avançar
+status das peças (Em secagem → Biscoitadas, depois revertido pra não
+deixar dado real de uma oficina futura num estado errado), editar
+oficina abrindo o modal numa oficina REAL pra confirmar que
+dataISO/horaInicioRaw/horaFimRaw pré-preenchem certo (2026-10-10/16:00/
+19:00, conferido, fechado sem salvar pra não alterar a oficina real à
+toa), remover participante, criar oficina nova (data 01/10, ordenou
+certo antes da de 10/10 na lista) e editar essa com um valor de verdade
+(R$80, salvou e refletiu). Sem erro de console em nenhum passo. Limpeza
+final: participante e oficina de teste removidos (esses DELETE
+funcionam de verdade — `oficina_participantes`/`oficinas` já tinham
+policy completa desde o início, diferente do gap achado em `profiles`).
+
+`tsc` limpo. Domínios ligados até aqui: **Turmas, Avisos, Alunos,
+Pagamentos, Solicitações, Oficinas**. Falta só **Forno** — o mais
+complexo (2 fornos físicos independentes, motor de cálculo de queima
+tipado que já existe em `src/lib/forno.ts` e precisa ser reaproveitado,
+não reescrito).
+
+**Forno ligado — último dos 7 domínios.** `forno/page.tsx` virou Server
+Component (`getFornadasReal("forno1")` + `getFornadasReal("forno2")` em
+paralelo) + `FornoClient.tsx` novo (todo o conteúdo de `forno/page.tsx`
+antigo, só a casca mudou). Decisão central: a forma local `Fornada` (com
+`Date` de verdade, igual sempre foi) foi MANTIDA como estava — só um
+`paraFornadaLocal(f: FornadaReal): Fornada` novo converte
+`iniciadoEm`/`finalizadoEm`/`leituras[].em`/`observacoes[].em` de string
+ISO (formato do banco) pra `Date` antes de qualquer cálculo. Isso deixa
+`calcularPrevisao`/`ETAPA_LABEL`/`formatarDuracao` (`src/lib/forno.ts`)
+INTOCADOS — exatamente a regra do CLAUDE.md ("não criar lógica separada
+de recalcular, é sempre a mesma função"). `iniciarFornada` real também
+simplificou o client: o servidor já interrompe sozinho qualquer fornada
+'andamento' daquele forno antes de criar a nova (mesma regra do demo),
+então o handler client-side não precisa mais fazer esse "substituir"
+manualmente, só chamar a action e dar refresh.
+
+**Achado de modelagem, não bug**: `queimas.etapa_atual` (coluna no banco)
+NÃO é o que a tela usa pra mostrar "Etapa atual" — isso sempre foi (e
+continua sendo) calculado AO VIVO por `calcularPrevisao(params, agora)`
+a cada render (o `agora` troca a cada segundo, via `setInterval`), já
+que só assim "Patamar"/"Resfriando"/"Aguardando segura" progridem
+sozinhos sem precisar de update no banco a cada transição. A coluna no
+schema é só um marcador grosso (só muda em `iniciarFornada`/
+`finalizarFornada`) — não precisava ser lida pra nada na UI, e não foi.
+
+Testado ao vivo, ponta a ponta, nos 2 fornos (que começaram vazios de
+verdade — `queimas` nunca teve dado real nenhum, as 4 fornadas do mock
+eram só cenários de demonstração fictícios, diferente de Alunos/
+Oficinas): nova fornada (Esmalte, Peças de alunos) → painel calculou
+certo (ProgressRing, previsão de máxima/patamar/abertura segura, todos
+os StatCards) desde o primeiro render; atualizar temperatura (310°C) →
+recalibrou a previsão em tempo real (previsão de máxima mudou de 22:17
+pra 20:43, confirmando que a recalibração pela leitura real está
+funcionando com dado de verdade); adicionar observação → apareceu com
+timestamp; editar conteúdo (Encomendas adicionada) → refletiu; cancelar
+fornada → virou "Cancelada" no histórico, painel voltou pro estado
+vazio; segunda fornada criada e finalizada → virou "Finalizada"; Forno 2
+conferido em paralelo, histórico vazio, totalmente independente do
+Forno 1 (confirma que `forno_id` isola os dois de verdade em cada
+camada — query, interromper-ao-criar, tudo). Sem erro de console em
+nenhum passo. Limpeza final: as 2 fornadas de teste apagadas via
+service_role (tabela começou vazia, seguro apagar tudo que tinha ali).
+
+## Os 7 domínios estão todos ligados a dados reais
+
+Turmas, Avisos, Alunos, Pagamentos, Solicitações, Oficinas e Forno — os
+7 domínios do plano de migração (`C:\Users\Usuario\.claude\plans\
+zippy-frolicking-token.md`, Fases 2-8) agora leem e escrevem no Supabase
+de verdade, cada um testado ao vivo contra o banco de produção do
+Diego, não só `tsc` limpo. Nesta rodada (2026-09-24, a mesma sessão
+inteira, disparada por "JA VAI ADIANTANDO TD"):
+- **2 buracos de RLS reais encontrados e corrigidos** (além do de
+  `matriculas` da sessão anterior): `profiles` sem policy de `delete`
+  (excluir aluno não fazia nada, sem erro) — patch enviado ao Diego,
+  ainda não aplicado, contornado via service_role nos testes/limpezas
+  desta sessão. Nenhum outro buraco achado numa revisão completa de
+  todas as policies do schema (só uma tabela não-crítica, `reposicoes`,
+  ficou com uma assimetria parecida, mas não é usada por nenhuma tela
+  ainda — anotado, não corrigido, fora de escopo até entrar em uso).
+- **2 levas de dado real perdidas e reconstruídas**: o roster de 46
+  alunos (sumiu no reset de schema v2, nunca foi re-semeado) e as 6
+  oficinas reais que o Diego passou em 2026-09-17 (nunca tinham sido
+  semeadas na tabela `oficinas`, só existiam no mock). As duas achadas
+  comparando contra o que `demo/AtelieDemo.jsx` já documentava como
+  real, não assumindo que "vazio" era sempre o estado esperado.
+- **Ajustes estruturais genuínos** (não reabertura de decisão de
+  produto): Alunos ganhou rota `/alunos/[id]` (era `/alunos/[index]`,
+  sem sentido contra dado real); Oficinas ganhou inputs de data/hora
+  estruturados no formulário de criar/editar (mantendo a EXIBIÇÃO por
+  extenso em português em todo canto, só a entrada de dado mudou).
+
+**Ainda não ligado**: o Dashboard continua com KPIs/card de forno/
+agenda semanal/preview de oficinas/preview de solicitações mockados —
+não é um domínio próprio, é uma tela de agregação que só faz sentido
+ligar DEPOIS que as fontes existem de verdade (agora existem todas).
+Próximo passo natural.
+
+### 2026-09-24 (continuação 3) — Dashboard ligado, migração dos 7 domínios completa
+
+Último passo da mesma leva ("JA VAI ADIANTANDO TD") — o Dashboard nunca
+foi um domínio próprio, só agregava as 7 fontes; com todas reais, ligar
+virou só orquestração.
+
+- **`AgendaSemanaCard.tsx`**: deixou de gerar seu próprio mock
+  (`AGENDA_SEMANA`) e virou `{ aulasPorDia }` — só a estrutura ESTÁTICA
+  da semana (quais 7 dias existem, label, cor de identidade) continua
+  local ao componente, porque isso é layout, não dado. O conteúdo
+  dinâmico (roster por turma, oficinas da semana) vem do servidor.
+- **`dashboard/page.tsx`** virou um Server Component que busca as 7
+  fontes em paralelo (`Promise.all`) e agrega:
+  - **KPIs**: "Aulas hoje" conta `TURMAS_DIAS` pro dia da semana atual
+    (sem query — é estrutura fixa); "Alunos confirmados" busca o
+    roster real de hoje (`getRosterTurma`) e exclui quem está
+    `statusAula === "ausente"`; "Reposições pendentes" e "Pagamentos
+    pendentes" viram contagens reais de `getSolicitacoesReal`/
+    `getPagamentosReal` (antes eram números fixos, 2 e 5).
+  - **Cards de forno**: `fornadaResumo()` pega a fornada `andamento` de
+    cada forno (se houver) e converte pro formato que `FornoResumoCard`
+    já esperava (mesma conversão ISO→Date de `FornoClient`, só que
+    reduzida — não precisa do histórico inteiro aqui).
+  - **Agenda da semana**: busca roster real das 4 turmas fixas + casa
+    as oficinas reais contra as 7 datas calendário desta semana
+    (comparação de string ISO, mesmo cálculo de segunda-feira que
+    `AgendaSemanaCard`/`turmas.ts` já usavam, reescrito aqui porque
+    Server Components não importam de "use client").
+  - **Próximas oficinas**: `getOficinasReal()` filtrado por
+    `dataISO >= hoje`, 2 primeiras, badge "Faltam N dias" calculado de
+    verdade.
+  - **Solicitações pendentes**: 3 primeiras de `getSolicitacoesReal()`,
+    label da turma via `listarTurmas()`.
+
+Testado ao vivo (quinta-feira, 24/09, sem nenhuma fornada ativa nem
+solicitação pendente no momento — estado real limpo depois das
+limpezas dos testes anteriores): **"Aulas hoje" = 2** (Quinta tem 2
+turmas, batendo com o dia real), **"Alunos confirmados" = 21** (10 da
+Quinta 14:30 + 11 da Quinta 18:30, nenhum ausente ainda essa semana),
+"Reposições"/"Pagamentos pendentes" = 0/14 (batendo exatamente com
+Solicitações/Pagamentos reais), os 2 cards de forno "Nenhuma fornada
+ativa", agenda da semana mostrando as 4 turmas reais com occupação e
+avatares corretos (Terça 14/14, Quarta 11/12, Quinta 10/12 e 11/12,
+selo "HOJE" na Quinta certo), Sábado/Segunda/Sexta/Domingo com as
+mensagens de dia vazio de sempre, "Próximas oficinas" mostrando as 2
+primeiras das 6 reais com contagem de dias certa (16 e 30, conferido
+manualmente), "Solicitações pendentes" mostrando o estado vazio real.
+Sem erro de console. `tsc` limpo.
+
+**Os 7 domínios (Turmas, Avisos, Alunos, Pagamentos, Solicitações,
+Oficinas, Forno) MAIS o Dashboard que os agrega — toda a área
+administrativa do Next.js está ligada ao Supabase de verdade agora,
+testada ao vivo tela por tela.** Nenhum commit feito nesta sessão
+inteira (regra do CLAUDE.md §7 — repo só local, sem remoto — e a regra
+de só commitar quando pedido explicitamente).
+
+**O que ainda falta, pro app inteiro (não só o admin)** — lista original
+desta rodada, ver atualizações abaixo pro estado real de cada item:
+1. Diego aplicar o patch pendente `profiles_admin_delete` (RLS de
+   delete faltando — "Excluir aluno" não apaga de verdade até isso
+   rodar, contornado com service_role só nos testes desta sessão).
+2. Área do Aluno — não existe nem um arquivo ainda, é a Fase 9 do
+   plano original, escopo grande (nav própria, Turmas só-leitura,
+   Oficinas, histórico pessoal), não começada.
+3. Fase 11 (deploy real na Vercel) e Fase 12 (PWA instalável de
+   verdade) do plano em `zippy-frolicking-token.md`.
+4. As 2 CVEs críticas do Next 14 sem patch (`GHSA-p293-qw3h-jr36`/
+   `GHSA-2xp9-vwfh-vxw4`, documentadas em CLAUDE.md §3) — decisão de
+   upgrade de major ainda pendente do Diego, avisar antes do deploy.
+
+### 2026-09-24 (continuação 4) — 5ª turma (Segunda 09:30–11:30) + login por convite
+
+**Diego confirmou que rodou o patch `profiles_admin_delete`** (item 1 da
+lista acima — resolvido, ver teste ao vivo mais abaixo). Também avisou
+que o roster que ele passou é dado real de verdade (já tratado como tal
+a sessão inteira) e que edições futuras dos alunos ficam por conta dele
+mesmo, pela tela — não é mais pra eu editar dado na mão.
+
+**Turma nova — Segunda 09:30 às 11:30.** Diego pediu direto no chat, sem
+capacidade nem cor especificadas. Decisões tomadas por conta própria (e
+avisadas): capacidade 12 (padrão das turmas "normais", só Terça foge
+disso por causa do overflow real documentado no CLAUDE.md); cor de
+identidade nova, **"ocre"** (`168 130 58`, dourado-terroso — dentro do
+tema de pigmento de argila das outras 4, deliberadamente fora da família
+do `--accent`, mesma regra de sempre). Tocado nos dois codebases:
+- **Next.js**: `--ocre` em `globals.css` + `tailwind.config.ts`;
+  `TURMAS_DIAS`/`TURMA_COR` em `turmasDias.ts`; `TURMA_LABEL_COR` em
+  `alunos.ts`; e os ~12 `Record<CorIdentidade, string>` espalhados em
+  `TurmaDetalheClient`/`AlunosListClient`/`AlunoDetalheClient`/
+  `AgendaSemanaCard` — o próprio `tsc` apontou exatamente quais Records
+  estavam incompletos depois de eu adicionar "ocre" ao tipo `CorIdentidade`
+  (união de 5 valores agora), então nenhum ficou pra trás por engano.
+  Turma real inserida na tabela `turmas` via service_role (é um INSERT
+  comum, não precisa de patch — DDL é que eu não posso rodar sozinho).
+- **Demo**: mesma decisão espelhada — `TURMAS_DIAS`, `CORES_IDENTIDADE`/
+  `CORES_ORDEM` (ocre ENTRA na rotação, diferente de carvão, porque é cor
+  de turma de verdade), `TURMA_COR`/`TURMA_LABEL_COR`/`TURMA_ID_PARA_LABEL`,
+  `VAGAS_POR_TURMA` (reaproveitou `vagasVazias()`, já existia pra
+  Oficinas — mesmo formato `{numero, nome}`, não duplicou a função),
+  `AGENDA_SEMANA`. Confirmado por leitura de código (não só suposição)
+  que o demo NUNCA teve Records estáticos por cor pros pills/cards de
+  Turmas — tudo passa por `rgbCor()`/`corTurma()` calculados na hora, TAILWIND
+  arbitrário sem classes customizadas — só o Next.js precisa dos Records
+  porque lá as cores viraram classes reais do Tailwind
+  (`tailwind.config.ts`), que exige literal string pro JIT compilar.
+  Isso poupou uma rodada inteira de edições que pareceriam necessárias
+  mas não eram.
+
+Testado ao vivo no `preview:demo` (Vite, não depende de sessão/Supabase):
+aba "Seg" aparece, roster vazio (12 vagas, 0/12), cor certa no chip/card,
+fundo com parallax funcionando na tela de Turmas — sem erro de console.
+`tsc` limpo no Next.js.
+
+**Foto real pra "ocre" (mesmo dia, mensagem seguinte)** — o Diego mandou
+uma foto de mesclagem de argila dourada, bateu quase exatamente com a
+cor que eu já tinha escolhido. Processada com Pillow (só o Python tinha
+biblioteca de imagem disponível — `sharp` do Node não estava instalado):
+mesma receita já documentada no CLAUDE.md pras outras 4 fotos (941×1672
+original → 480px de largura, JPEG qualidade 75, ~84KB, bem dentro da
+faixa 76-98KB dos arquivos existentes). Salva em dois lugares:
+`public/fundos/ocre.jpg` (Next.js, arquivo estático de verdade) e
+embutida em base64 no `FUNDOS_ARGILA` do demo (inserção feita por script
+Python direto no arquivo-texto, sem o base64 nunca passar pelo meu
+próprio contexto — mesma disciplina já estabelecida nesta sessão pra
+evitar gastar tokens com 100KB+ de texto codificado). **Achado
+importante**: como `FUNDOS_ARGILA[cor]` já era consultado dinamicamente
+em TODO lugar que usa fundo de turma (card do Dashboard, fundo com
+parallax da tela de Turmas, nos dois codebases), adicionar a entrada
+"ocre" no dicionário foi a ÚNICA mudança de código necessária — nenhum
+componente precisou de edição extra, a foto passou a aparecer sozinha
+em todo canto relevante. Confirmado por screenshot no demo (mobile): os
+cards de Segunda e Terça lado a lado na Home, cada um com sua própria
+foto; fundo com parallax de Segunda na tela de Turmas, igual às outras.
+
+### Login por convite — Área do Aluno, primeira fatia
+
+Diego respondeu a pergunta em aberto de "como o aluno vai logar": **convite
+por telefone/nome** — admin já cadastrou nome+telefone quando matriculou
+alguém, o aluno só define a própria senha depois, via link, sem
+recadastrar nada. Isso já tinha sido antecipado no comentário do schema
+quando `profiles` foi desacoplado de `auth.users` (2026-09-23: "aluno só
+quando/se a Área do Aluno existir de verdade e ele aceitar um convite") —
+não é uma decisão nova brigando com a arquitetura, é o schema cumprindo o
+que já tinha sido desenhado pra isso.
+
+**Peças construídas**:
+- `profiles` ganhou `convite_token uuid` / `convite_expira_em timestamptz`
+  (schema.sql + patch de 2 linhas mandado pro Diego rodar — aplicado,
+  confirmado ao vivo). Verificação/consumo do convite inteiramente em
+  código (`src/lib/actions/convite.ts`, service_role) — decisão
+  deliberada de NÃO abrir nenhuma policy de leitura pública em `profiles`
+  pra isso, mesmo sendo tecnicamente possível com uma RLS bem estreita
+  (`convite_token is not null`); prefiro manter RLS conservador numa
+  tabela sensível e resolver no application layer, que já tem controle
+  fino de validação (expiração, conta já ativa, telefone ausente).
+- **Login por TELEFONE, não e-mail** — a leva de dado real nunca trouxe
+  e-mail de aluno nenhum. Supabase Auth aceita `phone`+`password` direto
+  (sem SMS) quando a conta é criada pelo Admin API com `phone_confirm:
+  true` — a "verificação de posse do número" aqui é o próprio link de
+  convite (só quem tem o link/WhatsApp da pessoa consegue chegar até a
+  tela de definir senha), não um OTP por SMS de verdade (exigiria
+  provedor configurado, fora de escopo/custo). `normalizarTelefoneE164`
+  (duplicada pequena, em `convite.ts` e `login/page.tsx` — 3 linhas cada,
+  não valeu a pena um módulo compartilhado só pra isso) assume DDI +55
+  quando o número não vem com código de país, já que todo telefone dado
+  até agora é brasileiro sem DDI.
+- `gerarConvite`/`verificarConvite`/`aceitarConvite` — o terceiro faz
+  tudo numa Server Action só: cria o `auth.users` (Admin API), linka
+  `profiles.auth_user_id`, limpa o token (não dá pra reusar o link depois
+  de aceito) e **assina o aluno de verdade na mesma ida**, usando o
+  client normal (não o admin) pra escrever os cookies de sessão certos
+  no mesmo request — evita uma segunda ida manual à tela de login logo
+  depois de criar a conta.
+- **Admin UI**: botão "Convidar pro app" em `AlunoDetalheClient` (dentro
+  do card de contato) — desabilitado/com aviso se o aluno não tem
+  telefone cadastrado (a mecânica inteira depende disso); se já tem
+  conta ativa, mostra badge "Já usa o app" em vez do botão. Ao gerar,
+  abre modal com o link + "Copiar link" + "Enviar no WhatsApp" (mesmo
+  padrão visual/UX já usado em Pagamentos pra cobrança).
+- **Página pública** `/convite/[token]` (fora de `(admin)`/`(auth)`,
+  sem sessão nenhuma) — `middleware.ts` precisou de um ajuste pra
+  liberar esse caminho sem exigir login (antes só `/login` era exceção;
+  virou uma checagem `publica = path === "/login" || path.startsWith
+  ("/convite")`). Convite inválido/expirado mostra uma mensagem simples
+  em vez de erro; convite válido mostra o form de definir senha
+  (`AceitarConviteClient`, novo componente).
+- **Login (`/login`) ganhou um campo só, "e-mail ou telefone"** em vez de
+  dois fluxos separados — detecta pelo formato ("@" → e-mail; senão,
+  telefone) em vez de pedir pro usuário escolher. Admin continua
+  logando com e-mail (nada mudou pra ele); aluno loga com telefone.
+- **Início mínimo da Área do Aluno** (`(aluno)/aluno/page.tsx`) — só o
+  suficiente pra provar que o ciclo inteiro funciona: nome, turma, anel
+  de progresso do pacote (cor de identidade da turma, mesmo padrão visual
+  do admin), status de pagamento, botão "Sair". Reaproveita `getAlunoReal`
+  (mesma função que a tela admin de Alunos usa) — o aluno só enxerga a
+  própria linha porque a RLS de `matriculas`/`pacotes`/`pagamentos` já
+  tinha `aluno_id = current_profile_id() or is_admin()` desde a Fase 1,
+  nunca antes exercida por uma sessão de aluno de verdade. **Resto da
+  Fase 9 (Turmas só-leitura, Oficinas, histórico) fica pra depois,
+  deliberadamente** — este pedido era especificamente sobre o mecanismo
+  de login, não o escopo inteiro da Área do Aluno.
+- `sair()` (`src/lib/actions/auth.ts`) — primeiro logout que existe no
+  projeto inteiro (nem o admin tinha um até agora). Só wireado no
+  `/aluno` por enquanto — dar o mesmo botão pro admin/Sidebar é um gap
+  real mas separado, não bundlado aqui sem pedido.
+
+**Testado ao vivo, ponta a ponta, com um aluno descartável** (perfil +
+pacote + matrícula na Segunda 09:30, a turma nova, que não tem gente
+real ainda — seguro testar ali): gerado um convite direto via
+service_role (sem precisar do botão do admin, que eu não conseguia
+clicar por causa da sessão expirada — ver achado abaixo), acessada a
+página `/convite/[token]` numa aba nova (não precisa de sessão nenhuma,
+confirmado), form preenchido e enviado. **Resultado real**: conta criada
+e vinculada com sucesso (`auth_user_id` preenchido, `convite_token`
+limpo, confirmado direto no banco) — mas o LOGIN AUTOMÁTICO falhou com
+"Phone logins are disabled", erro tratado corretamente pelo código
+(mensagem clara pro usuário, nada quebrou). Teste isolado adicional via
+Admin API (`createUser` direto, sem passar pelo convite) confirmou que
+CRIAR um usuário por telefone funciona sem config nenhuma — só o
+SIGN-IN de usuário comum por telefone é que está desligado.
+
+**Bloqueio real pendente, fora do meu alcance**: preciso que o Diego
+habilite "Phone" em Authentication → Providers no painel do Supabase
+(configuração do projeto, não é SQL nem código — não tenho como fazer
+isso pelos meus scripts). Sem isso, NENHUM aluno consegue logar depois
+de aceitar o convite (nem automático nem manual na tela de login) — a
+conta existe, só não tem como entrar nela. Assim que ligar, não precisa
+de nenhuma mudança de código — o fluxo já está construído e testado até
+esse ponto exato.
+
+Aluno de teste + conta auth removidos depois (service_role, mesmo
+padrão de sempre). `tsc` limpo. Nenhum commit feito.
+
+**Ainda pendente, minha sessão de teste no navegador**: o servidor dev
+caiu durante uma pausa por limite de uso desta mesma conversa (reiniciado
+com sucesso) — perdi a sessão de admin autenticada de novo no processo.
+Não travou o trabalho desta vez porque o fluxo de convite é
+majoritariamente público, mas ainda não consegui confirmar visualmente o
+botão "Convidar pro app" em si (só a lógica por trás, via service_role).
+
+### 2026-09-24 (continuação 5) — Área do Aluno: Turmas + Oficinas, resto da Fase 9
+
+Diego: "continue" — segui direto pro resto da Fase 9 (nav própria, Turmas
+só-leitura + solicitar vaga, Oficinas). "Histórico" não virou aba
+própria de propósito — mesma limitação de sempre (histórico de presença
+por data não existe em lugar nenhum do sistema ainda), uma aba
+praticamente vazia só pra existir seria pior que não ter; o Início já
+mostra o estado atual do pacote, que é o que existe de verdade hoje.
+
+**Peças construídas**:
+- `AlunoNav.tsx` — mesma pílula de vidro flutuante do admin
+  (`MobileNav.tsx`), só 3 abas (Início/Turmas/Oficinas).
+- `src/lib/actions/alunoPortal.ts` — leituras/ações do aluno. Ponto
+  central: `matriculas_select`/`oficina_participantes_select` só liberam
+  `aluno_id = current_profile_id()` pra quem não é admin (regra desde a
+  Fase 1) — uma contagem de ocupação feita pelo client normal numa
+  sessão de aluno só veria a PRÓPRIA linha, não o total da turma/oficina.
+  `getTurmasParaAluno`/`getOficinasParaAluno` usam service_role de
+  propósito só pra isso (contagem agregada), nunca expondo nome/dado de
+  outro aluno — a única coisa "de outra pessoa" que sai daqui é um
+  número. A própria participação do aluno (`minhaParticipacao` em
+  Oficinas) é filtrada pelo próprio id dentro da mesma função.
+  `solicitarVaga` é o oposto — client normal, RLS de verdade
+  (`aluno_id = current_profile_id()`), sem service_role.
+- **Schema**: `solicitacoes_vaga` ganhou `aluno_id` (nullable — só
+  preenchido quando vem de um aluno logado de verdade, `nome` continua
+  existindo pras entradas antigas/manuais do admin) + policy de insert
+  pro aluno. Patch mandado pro Diego, **ainda não aplicado** — testado
+  que falha do jeito certo (mensagem de erro clara) contra o schema
+  atual.
+- `/aluno/turmas` — as 5 turmas fixas com ocupação real, "Solicitar
+  vaga" abre um modal de 2 opções (vaga nova / reposição), sem pedir
+  pro aluno escolher entre as duas telas — mesmo texto livre (`tipo`)
+  que Solicitações do admin já usa, só que agora criado pelo aluno em
+  vez de digitado à mão.
+- `/aluno/oficinas` — lista real (mesma fonte que o admin, `oficinas`
+  é `select` público pra qualquer autenticado desde a Fase 1), read-only
+  de verdade: se o aluno está inscrito numa oficina, mostra status das
+  peças (mesmas 4 etapas do admin) e status de pagamento, sem botão
+  nenhum de editar — mesma regra "só admin altera" já documentada.
+
+**Bug real de build achado e corrigido**: `formatarData`/`formatarHora`
+viviam dentro de `src/lib/actions/oficinas.ts` (arquivo `"use server"`).
+Funcionavam enquanto só esse arquivo as usava — quebraram o build assim
+que `alunoPortal.ts` tentou importá-las de fora ("Server actions must be
+async functions": TODA export de um arquivo `"use server"` vira Server
+Action, que É OBRIGADA a ser async — funções puras não podem viver ali
+se algo de fora precisa importá-las). Extraídas pra
+`src/lib/formatarData.ts` (sem `"use server"`), reimportadas nos dois
+lugares. Documentado em CLAUDE.md §8 como armadilha — é o tipo de erro
+que só aparece na hora de REUSAR algo que já existia, não na primeira
+vez que foi escrito.
+
+**Saga de infraestrutura, mesma investigação**: depois do fix acima, o
+navegador embutido continuou mostrando o erro de build ANTIGO — mesmo
+com `tsc` limpo, mesmo depois de `preview_stop`/`preview_start` várias
+vezes, mesmo depois de apagar `.next` inteiro. Causa raiz real, achada
+com `netstat -ano` + `Get-Process`: um processo `node` ÓRFÃO preso na
+porta 3000 desde 3h+ antes — a ferramenta de preview achava que tinha
+matado/reiniciado o servidor, mas esse processo antigo nunca morreu de
+verdade e continuava respondendo com o código velho em memória.
+Confirmado com `curl localhost:3000/dashboard` direto (fora do navegador
+embutido) — resposta limpa, prova de que o SERVIDOR já estava certo e o
+problema era só a conexão do painel. Matei o processo (`Stop-Process -Id
+<pid> -Force`) e fechei/reabri as abas do navegador embutido — resolveu
+os dois problemas de vez. Documentado em CLAUDE.md §8 (o `curl` direto
+como primeiro passo de diagnóstico é o achado mais reaproveitável aqui,
+evita repetir a mesma investigação longa da próxima vez).
+
+**Achado um segundo bug real, testando "Solicitar vaga" sem sessão
+nenhuma** (não tinha como testar com sessão de aluno de verdade — ainda
+sem login por telefone habilitado): o erro ("Não autenticado.") virava
+uma promise rejeitada sem tratamento nenhum no client — modal ficava
+preso, sem nenhuma mensagem pro usuário, só um erro no console que
+ninguém real veria. `AlunoTurmasClient` ganhou um `try/catch` de
+verdade + estado de erro exibido no modal, mesmo padrão já usado em
+todo formulário do resto do app — achado só porque tentei o caminho de
+erro de propósito (sem sessão), não porque o caminho feliz revelou isso.
+
+**Testado ao vivo**, ainda sem sessão de aluno de verdade (bloqueado
+pelos 2 pendentes já conhecidos — login por telefone desativado +
+coluna `aluno_id` não aplicada): `/aluno/turmas` e `/aluno/oficinas`
+renderizam com dado 100% real e correto mesmo sem sessão de admin nem
+de aluno válida (por design — as contagens vêm de service_role, não de
+RLS de sessão), confirmando a turma nova (Segunda 0/12), o roster real
+das outras 4 (14/14, 11/12, 10/12, 11/12) e as 6 oficinas reais, tudo
+sem erro de console depois do fix. "Solicitar vaga" testado até o ponto
+onde a falta de sessão bloqueia (erro tratado corretamente, mensagem
+clara). Não deu pra testar o "Convidar pro app" do admin nem o
+"Solicitar vaga" com sessão de aluno de verdade — os 2 mesmos
+bloqueios de sempre.
+
+`tsc` limpo. Nenhum commit feito.
+
+**Résumo do que falta pra fechar a Área do Aluno de vez** (tudo do lado
+do Diego, nada meu):
+1. Rodar o patch `add-solicitacao-aluno.sql` (coluna `aluno_id` +
+   policy).
+2. Habilitar "Phone" em Authentication → Providers no painel do
+   Supabase.
+Assim que os dois estiverem feitos, dá pra testar o ciclo inteiro de
+ponta a ponta de verdade — convite → login → turmas → solicitar vaga →
+oficinas — sem nenhuma mudança de código adicional esperada.
+
+### 2026-09-24 (continuação 6) — Login por telefone sem Twilio + saga final de processo órfão
+
+Diego rodou o patch da coluna (✅) e tentou habilitar "Phone" no painel —
+achado real, com print: o toggle "Enable Phone provider" **exige um
+provedor de SMS configurado** (Twilio Account SID/Auth Token/Message
+Service SID como campos obrigatórios pra salvar), mesmo pra login só
+por senha sem OTP nenhum envolvido. Desligar "Enable phone
+confirmations" (minha primeira sugestão) não resolveu — os campos do
+Twilio continuaram obrigatórios, confirmado pelo Diego ("nao parou de
+ser obrigatorio"). Contornado esse SMS provider de vez, sem custo nem
+conta de Twilio nenhuma: **parou de usar o provider nativo de Phone do
+Supabase inteiramente**. `src/lib/telefone.ts` (novo, compartilhado
+entre `convite.ts` e `login/page.tsx`) ganhou
+`emailSinteticoDoTelefone(tel)` — deriva um e-mail interno determinístico
+do telefone (`{dígitos}@aluno.mtcst.interno`), nunca exposto pro aluno
+em lugar nenhum da UI (ele só digita telefone, em qualquer tela). Por
+baixo, `aceitarConvite`/`login/page.tsx` viraram login por E-MAIL comum
+(`createUser({email, password, email_confirm: true})` /
+`signInWithPassword({email, password})`) — Supabase Auth por e-mail já
+funciona sem NENHUMA configuração extra no painel (é o que o admin já
+usa). Testado isolado antes de mexer no fluxo real: criar + logar com
+e-mail sintético funcionou de primeira, sem exigir nada do painel.
+
+**Ciclo completo testado ao vivo, de ponta a ponta, pela primeira vez
+nesta sessão**: aluno de teste descartável (perfil+pacote+matrícula em
+Segunda 09:30, convite gerado via service_role) → acessar `/convite/
+[token]` → definir senha → **login automático funcionou** → caiu direto
+em `/aluno` com "Olá, Teste!", turma e pacote reais corretos → `/aluno/
+turmas`, testado "Solicitar vaga" numa turma diferente (Terça) → 
+"Solicitação enviada!" confirmado → `/aluno/oficinas` renderizando as 6
+oficinas reais → "Sair" desloga e manda pra `/login` → **logar de novo
+digitando só o telefone** (não o e-mail sintético, que o aluno nunca
+vê) → voltou certinho pra `/aluno`. Cada etapa dessa é uma peça
+diferente que eu tinha construído em rodadas anteriores sem conseguir
+testar junto — a primeira vez que o fluxo INTEIRO rodou de verdade,
+sem nenhum erro. Tudo limpo depois (conta auth + profile + pacote +
+matrícula + a solicitação de teste, via service_role).
+
+**Achado no meio da limpeza — mais uma rodada da saga do processo
+órfão** (ver CLAUDE.md §8, já documentada, mas reaberta 2× nesta mesma
+tarde): depois de apagar os dados de teste direto no banco, a tela
+`/aluno/turmas` continuou mostrando "1/12" pra Segunda em vez de "0/12"
+— e dessa vez **nem `tsc` limpo, nem `curl` direto, nem `force-dynamic`,
+nem apagar `.next`, nem matar o PID que o `netstat` apontava** resolveram
+de cara, o que quase me fez suspeitar de cache do Next.js/fetch (cheguei
+a adicionar `force-dynamic` em `/aluno/turmas/page.tsx`, mantido por
+ser uma boa prática de qualquer forma, mas NÃO foi a causa real).
+Diagnóstico definitivo: um `console.log` temporário dentro da própria
+`getTurmasParaAluno` provou que o CÁLCULO sempre esteve certo
+("Segunda -> 0" nos logs do servidor) enquanto o HTML servido por
+`curl` ainda mostrava "1" — ou seja, `Get-Process -Id <pid> | StartTime`
+tinha me enganado mais de uma vez sobre qual processo era "o novo"
+(reportou horários incompatíveis com "acabei de reiniciar agora"), e
+ainda existia PELO MENOS UM processo node órfão adicional respondendo
+por trás, não pego pela checagem anterior. Só depois de matar de novo +
+apagar `.next` de novo + subir de novo bateu tudo (log E html mostrando
+"0"). Lição registrada em CLAUDE.md: da próxima vez, ir direto pro teste
+do marcador em vez de cogitar cache do Next.js primeiro — é mais rápido
+de confirmar e, até agora, sempre foi processo órfão mesmo.
+
+`tsc` limpo. Nenhum commit feito. **Área do Aluno (Fase 9) está
+funcionalmente completa e testada de ponta a ponta**: convite, login
+(telefone ou e-mail), Início, Turmas (+ solicitar vaga), Oficinas,
+logout. Único ponto deliberadamente fora de escopo, documentado desde o
+início: histórico de presença por data (não existe em lugar nenhum do
+sistema ainda, mock ou real).
+
+### 2026-09-25 — Início vira "Minha Turma" + demonstração com aluno vinculado
+
+O Diego pediu pra ver como a Área do Aluno aparece pra alguém já
+vinculado a uma turma de verdade (os testes anteriores só cobriam aluno
+sem matrícula). No meio disso, mandou uma correção de produto: "a
+pagina inicial precisa ser minha turma, e ja com o painel dele de qual
+as aulas do pacote, porem só dele" — o Início não podia ser só uma
+saudação com a turma como subtítulo discreto; precisava ser
+explicitamente enquadrado como "Minha Turma", com o painel de pacote
+junto, e sempre só o dado do próprio aluno logado.
+
+- **`src/app/(aluno)/aluno/page.tsx` redesenhado**: "Olá, {nome}!" virou
+  subtítulo pequeno; "MINHA TURMA" virou o `<h1>` de verdade da página
+  (`font-display uppercase`, mesmo tratamento dos títulos do resto do
+  app). Turma + pacote passaram a viver DENTRO de um card só, com borda
+  na cor de identidade da turma (mesmo padrão de contorno colorido já
+  usado em Turmas/Alunos): ponto colorido + nome da turma no topo do
+  card, anel de progresso do pacote + badge de pagamento logo abaixo —
+  não mais dois elementos soltos sem ligação visual.
+- **Estado vazio adicionado** (não existia antes): se `aluno.turmaId`
+  for `null` ("Sem turma"), o card colorido não aparece — em vez de um
+  anel de pacote 0/0 sem sentido, mostra uma mensagem + botão "Solicitar
+  uma vaga" linkando pra `/aluno/turmas`. Achado ao pensar no "porém só
+  dele" — mostrar dado fictício pra quem não tem turma seria inventar
+  informação que não existe.
+- **Demonstração ao vivo**: criado aluno descartável ("Teste
+  Vinculado", telefone `(14) 97777-6666`) matriculado na turma REAL
+  "Terça 18:30" (a mesma com 14 pessoas reais já matriculadas) com
+  pacote parcial (2 de 4 aulas, pago), conta auth ligada direto via
+  service_role (e-mail sintético, mesmo mecanismo do convite — não
+  precisou repassar pelo fluxo de convite de novo, já testado à
+  exaustão). Login por telefone confirmado funcionando; `/aluno` mostrou
+  "MINHA TURMA / Terça 18:30 / 2/4 / Seu pacote / Aula 2 de 4 /
+  Pagamento em dia" com o anel e a borda do card na cor sienna (a cor
+  real da Terça); `/aluno/turmas` mostrou a ocupação real das 5 turmas
+  lado a lado (Segunda 0/12, Terça 14/14, Quarta 11/12, Quinta 10/12,
+  Quinta 11/12) sem erro de console. Print enviado ao Diego pelas duas
+  telas. Aluno de teste, matrícula, pacote e conta auth removidos logo
+  em seguida (service_role); scripts descartáveis (`setup-teste-
+  vinculado.mjs`/`cleanup-teste-vinculado.mjs`) apagados do projeto,
+  mesma disciplina de sempre — nunca fica artefato de teste no repo do
+  Diego.
+
+`tsc` limpo. Nenhum commit feito.

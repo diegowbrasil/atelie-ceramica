@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database";
 
@@ -6,25 +6,24 @@ import type { Database } from "@/types/database";
 export function createClient() {
   const cookieStore = cookies();
 
+  // `getAll`/`setAll` (não mais `get`/`set`/`remove`, ver middleware.ts).
+  // `setAll` pode ser chamado de dentro de um Server Component, onde
+  // `cookieStore.set` lança — ignorado de propósito, o middleware cuida
+  // do refresh de sessão nesse caso.
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll();
         },
-        set(name: string, value: string, options: CookieOptions) {
+        setAll(cookiesToSet) {
           try {
-            cookieStore.set({ name, value, ...options });
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
           } catch {
             // chamado de um Server Component — middleware cuida do refresh
           }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value: "", ...options });
-          } catch {}
         },
       },
     }

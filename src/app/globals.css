@@ -23,6 +23,7 @@
     --musgo: 95 107 58;
     --cafe: 74 52 42;
     --carvao: 38 38 36;
+    --ocre: 168 130 58;
 
     /* Tokens de fonte — cada next/font/google expõe sua própria variável
        (ver layout.tsx); aqui elas se combinam nos 3 papéis semânticos que
@@ -99,4 +100,15 @@
 }
 .forno-fresco {
   animation: brasaFornoFrio 3.6s ease-in-out infinite;
+}
+
+/* Ticker do banner de Avisos (AvisosCard) — só liga quando o texto não
+   cabe no container (ver componente). Texto duplicado no DOM, desloca
+   exatamente -50% (a largura de UMA cópia) pra fechar o loop sem pulo. */
+@keyframes avisoPassando {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.aviso-passando {
+  animation: avisoPassando 12s linear infinite;
 }

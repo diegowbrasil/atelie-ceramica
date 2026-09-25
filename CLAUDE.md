@@ -71,11 +71,49 @@ este lado do projeto pode ser; Capacitor/lojas nativas ficaram fora de
 escopo). Plano completo de 12 fases em
 `C:\Users\Usuario\.claude\plans\zippy-frolicking-token.md`. **Fase 1
 (paleta/fontes/componentes base/schema/manifest do PWA) concluída** — ver
-PROGRESS.md, sessão 2026-09-20/21, pro detalhe técnico completo. **Ainda
-desatualizado em conteúdo/comportamento** — Oficinas, Pagamentos, status
-de peças, presença nos cards etc. só existem de verdade no demo; cada
-tela será reconstruída tela por tela nas fases seguintes, demo como
-referência de comportamento.
+PROGRESS.md, sessão 2026-09-20/21, pro detalhe técnico completo.
+
+**Fases 2-8 (os 7 domínios) concluídas em 2026-09-24** (Diego: "JA VAI
+ADIANTANDO TD") — **Turmas, Avisos, Alunos, Pagamentos, Solicitações,
+Oficinas e Forno leem/escrevem no Supabase de verdade**, cada um Server
+Component (leitura) + Client Component (interatividade) + Server
+Actions (`src/lib/actions/*.ts`), testado ao vivo contra o banco de
+produção do Diego (não só `tsc` limpo) — ver PROGRESS.md sessão
+2026-09-24 pro detalhe de cada domínio, os 2 bugs de RLS reais achados
+(`matriculas`/`profiles`, política incompleta pra uma operação — admin
+sem `insert`/`delete` conforme o caso) e as 2 levas de dado real que
+tinham sido perdidas num reset de schema e precisaram ser re-semeadas
+(roster de 46 alunos, as 6 oficinas reais). **O Dashboard também foi
+ligado na mesma leva** (KPIs, os 2 cards de forno, agenda semanal,
+preview de oficinas/solicitações — tudo real agora, sem número fixo
+sobrando) — não era um domínio próprio, só uma tela de agregação por
+cima dos 7. **Toda a área administrativa do Next.js está ligada ao
+Supabase de verdade, testada ao vivo tela por tela.**
+
+**Área do Aluno também construída e testada de ponta a ponta na mesma
+sessão (2026-09-24)** — login por convite (admin já cadastrou nome+
+telefone, aluno só define senha via link; login por telefone é um
+e-mail sintético por baixo, não o provider nativo de Phone do Supabase,
+que exige Twilio até só pra senha — ver PROGRESS.md), Início, Turmas
+(+ solicitar vaga/reposição), Oficinas (read-only com status das
+peças). Ciclo inteiro confirmado ao vivo: convite → login automático →
+navegar → solicitar vaga → sair → logar de novo por telefone. Fora de
+escopo, deliberado: histórico de presença por data (não existe em
+lugar nenhum do sistema ainda). **Início reenquadrado como "Minha
+Turma" (2026-09-25)**, pedido explícito do Diego: turma + painel de
+pacote (aula X de Y, pagamento) vivem num card só, com a cor de
+identidade da turma, sob um `<h1>` "MINHA TURMA" — não mais saudação +
+subtítulo solto. Sempre e só a matrícula do próprio aluno logado; sem
+turma vinculada mostra estado vazio com CTA "Solicitar uma vaga" em vez
+de um anel de pacote 0/0 sem sentido. Verificado ao vivo com um aluno de
+teste descartável matriculado na turma real "Terça 18:30".
+
+Ainda falta: Diego rodar o patch de RLS pendente (`profiles` sem
+policy de delete) e as Fases 11/12 do plano (deploy real + PWA
+instalável). Fora isso, demo deixou de estar "à frente" do Next.js em
+comportamento — os dois lados agora fazem a mesma coisa, o demo é só
+mais rápido de iterar visualmente (artifact do Claude.ai, sem precisar
+de banco).
 
 `supabase/schema.sql` é a peça mais valiosa: schema completo, inclusive das
 telas que ainda não têm UI. **Fonte de verdade do modelo de dados.**
@@ -1626,6 +1664,46 @@ decisão no início da §2).
 
 ## 8. Armadilhas conhecidas — cuidado ao editar
 
+- **Um `Row`/`Insert`/`Update` do `Database` que referencia uma interface
+  NOMEADA (`Row: Profile`) quebra a inferência de tipos do Supabase —
+  toda query vira `never`, mesmo o tipo sendo estruturalmente idêntico a
+  escrever o objeto na mão.** (Causa raiz de verdade do erro antigo
+  `Property 'role' does not exist on type 'never'` em `login/page.tsx`,
+  que sobreviveu a várias sessões de tentativa de fix — 2026-09-21 achou
+  e corrigiu um problema real mas insuficiente, ver item do `Relationships`
+  logo abaixo; 2026-09-23 achou a causa completa.) Confirmado isolando
+  lado a lado, mesmo conteúdo dos dois lados: `Row: Profile` (interface
+  declarada à parte) falha; `Row: { id: string; role: ...}` (literal
+  inline) funciona. Um helper genérico tipo `TableOf<Row> = {Row: Row,
+  ...}` instanciado como `TableOf<Profile>` sofre do mesmo jeito — é o
+  mesmo problema, só chegando por outro caminho (o `Row` resolvido no
+  final ainda é a referência nomeada `Profile`). A cadeia de tipos
+  condicionais aninhados do Supabase (`GenericSchema` → `PostgrestClient`
+  → `PostgrestQueryBuilder`, várias camadas de `extends X ? Y : never`)
+  não resolve a referência nomeada a tempo e cai no branch `never`.
+  **Fix**: `Prettify<T> = { [K in keyof T]: T[K] } & {}` (mesmo truque que
+  o próprio `postgrest-js` usa internamente, ver `node_modules/@supabase/
+  postgrest-js/src/types/types.ts`) em volta de cada `Row`/`Insert`/
+  `Update` no `Database` (`src/types/database.ts`) — força o tipo a
+  "achatar" numa forma anônima antes de entrar no schema, sem precisar
+  duplicar cada interface por extenso. Runtime não é afetado em nada —
+  100% um problema de tipos. **Se esse erro reaparecer em código novo**:
+  verificar primeiro se algum `Row`/`Insert`/`Update` no `Database`
+  passou a referenciar um tipo nomeado sem `Prettify<>` — bem mais
+  provável que qualquer outra causa (schema, versão das libs, RLS).
+  Descartado como causa nesta investigação, não reabrir à toa: número de
+  tabelas no `Database`, presença de `__InternalSupabase`, função wrapper
+  com/sem tipo de retorno explícito, e um desalinhamento real (mas que
+  não é a causa deste bug) entre os parâmetros genéricos que `@supabase/
+  ssr@0.12.7` passa pro `SupabaseClient` e os 5 que a classe atual do
+  `@supabase/supabase-js@2.116.0` espera (achado no caminho, inofensivo
+  aqui porque o `Prettify` resolve antes disso importar). `@supabase/ssr`
+  também foi upgradado de 0.5.2 (bem desatualizado, referenciava um
+  caminho interno do `supabase-js` que nem existe mais na versão
+  instalada) pra 0.12.7 nesta mesma sessão — corrigiu o padrão de cookies
+  depreciado (`get`/`set`/`remove` → `getAll`/`setAll`, ver
+  `middleware.ts`/`src/lib/supabase/server.ts`), fix separado e válido
+  por conta própria, mantido mesmo não sendo a causa deste bug.
 - **`Image.quantize()` do Pillow chamado direto numa imagem RGBA perde o
   canal alpha de um jeito que nem sempre aparece nos seus próprios testes**
   (2026-09-17, durante o processamento do logo antigo — hoje já não é mais
@@ -1713,3 +1791,74 @@ decisão no início da §2).
   `read_console_messages` e `javascript_tool`
   (`getBoundingClientRect`/`getComputedStyle`) antes de concluir que há um
   bug real — só then vale insistir em screenshot.
+- **Um `Server Action` (`"use server"` no topo do arquivo) só pode
+  exportar funções ASYNC** — Next.js trata TODA export desse arquivo como
+  uma Server Action chamável do client, e recusa compilar (`"Server
+  actions must be async functions"`) se alguma for síncrona. Achado
+  2026-09-24: `formatarData`/`formatarHora` (utilitário puro, sem nada de
+  servidor) viviam dentro de `src/lib/actions/oficinas.ts` — funcionava
+  enquanto só esse arquivo as usava (nunca precisou ser importado de
+  fora), quebrou o build assim que outro módulo (`alunoPortal.ts`) tentou
+  importá-las. **Fix**: função pura que precisa ser reusada por mais de
+  um arquivo de Server Actions não pode morar dentro de um deles —
+  extrair pra um módulo à parte sem `"use server"` (`src/lib/
+  formatarData.ts`), mesmo que a função em si não tenha nada a ver com
+  servidor/cliente. Antes de exportar qualquer coisa nova de um arquivo
+  `"use server"`, perguntar: "isso é realmente uma Server Action, ou só
+  uma função auxiliar que mora aqui por acaso?" — se for a segunda,
+  já nasce no lugar errado.
+- **O navegador embutido pode ficar preso servindo uma versão antiga do
+  app mesmo depois de matar e reiniciar o servidor pela ferramenta de
+  preview** — achado 2026-09-24, mesma investigação do bug acima: depois
+  de corrigir o código (confirmado certo por `tsc` E por `curl` direto no
+  servidor, os dois limpos), o navegador embutido continuava mostrando o
+  erro de build ANTIGO, palavra por palavra, mesmo depois de várias
+  chamadas de `preview_stop`/`preview_start` e de apagar `.next` inteiro.
+  Causa raiz real: um processo `node` órfão preso na porta 3000 desde
+  MUITO antes (`netstat -ano` + `Get-Process -Id` confirmaram um processo
+  rodando havia 3h+) — a ferramenta de preview não estava matando esse
+  processo de verdade, só perdendo o rastro dele; `preview_start`
+  "reiniciava" um servidor novo que nunca conseguia assumir a porta 3000
+  de fato (`neverBecameReady: true` nos logs, sinal que passou batido
+  antes). **Fix**: `netstat -ano | grep :3000` pra achar o PID de
+  verdade, matar com `Stop-Process -Id <pid> -Force` (PowerShell) direto,
+  SÓ DEPOIS chamar `preview_start` de novo. **Diagnóstico que evita
+  perder tempo nesse buraco de novo**: se o servidor parece "preso" num
+  erro que o código já não tem mais, testar com `curl localhost:3000/...`
+  direto (fora do navegador embutido) ANTES de suspeitar de cache do
+  navegador/service worker/`.next` — se o `curl` já vier limpo, o
+  problema nunca foi o servidor, é a conexão do painel do navegador (que
+  nesse caso resolveu fechando e reabrindo as abas, sem precisar mexer
+  no servidor de novo).
+  **Reaberto no mesmo dia, mais duas vezes** — não foi um incidente
+  isolado: `preview_stop`/`preview_start` continuaram deixando processos
+  `node` órfãos pra trás repetidamente durante a mesma sessão (cada
+  chamada nova de `preview_start`, mesmo depois de matar o PID antigo,
+  às vezes subia mais um processo que TAMBÉM não conseguia assumir a
+  porta de verdade, deixando o `node` anterior — não o mais recente —
+  respondendo). **`Get-Process -Id <pid> | StartTime` não é confiável
+  pra decidir se um processo é "o novo" ou "o velho"** aqui — em mais de
+  uma checagem ele reportou um horário de início claramente incompatível
+  com "acabei de rodar `preview_start` agora", possivelmente por causa
+  de como o Windows lida com o processo pai/filho de `npm run dev`.
+  **Diagnóstico definitivo, sem ambiguidade**: colocar um
+  `console.log("MARCADOR-<algo-único>")` temporário bem no início da
+  função que a rota chama, fazer uma requisição (`curl` mesmo, não
+  precisa do navegador), e checar `preview_logs` com `search:
+  "MARCADOR-..."` — se o marcador aparece, o processo respondendo AGORA
+  roda o código atual, ponto final, sem depender de interpretar PID/
+  horário nenhum. Foi assim que ficou provado, na 3ª rodada desse mesmo
+  bug, que a computação em si (`getTurmasParaAluno`) sempre esteve
+  CERTA (log mostrando "Segunda -> 0" corretamente) enquanto o HTML que
+  chegava por `curl` ainda mostrava "1" — ou seja, nem sempre "o server
+  já roda o código certo" resolve a dúvida sozinho, o teste real é
+  comparar o log de DENTRO da função com a resposta HTTP de FORA; se
+  divergem, ainda tem processo velho respondendo em algum lugar. Depois
+  de matar o processo certo (confirmado por esse método) + apagar
+  `.next` + `preview_start` de novo, o log e o HTTP finalmente bateram.
+  **Regra prática pra não repetir a investigação inteira de novo**: se
+  alguma página continuar mostrando um valor claramente errado mesmo
+  depois de `tsc` limpo E o código no disco confirmado certo, ir direto
+  pro teste do marcador — não perder tempo cogitando cache do
+  Next.js/`force-dynamic`/RSC antes de descartar processo órfão primeiro
+  (mais rápido de confirmar E, nesta sessão, foi sempre a causa real).

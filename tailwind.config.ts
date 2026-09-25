@@ -32,6 +32,7 @@ const cores: any = {
   musgo: withOpacity("--musgo"),
   cafe: withOpacity("--cafe"),
   carvao: withOpacity("--carvao"),
+  ocre: withOpacity("--ocre"),
 };
 
 const config: Config = {

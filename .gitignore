@@ -3,6 +3,7 @@ node_modules/
 .env.local
 *.log
 tsconfig.tsbuildinfo
+supabase/.temp/
 
 # Personal Claude Code tooling (skills/agents/local settings) — not app source,
 # specific to whoever's machine is driving the session, not the ateliê project.

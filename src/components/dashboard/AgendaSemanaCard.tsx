@@ -4,18 +4,27 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
+import { FUNDOS_ARGILA } from "@/lib/fundosArgila";
 import { Coffee, ChevronRight } from "lucide-react";
 
 // "Turmas da semana" — lista vertical, um card por dia (sem scroll lateral),
 // data real calculada a partir de hoje. Referência de comportamento: demo,
-// AgendaSemanaCard. Fundo de foto por dia (FUNDOS_ARGILA) não portado ainda
-// — decoração, fora do escopo desta rodada; cor de identidade some no selo
-// do dia continua igual.
+// AgendaSemanaCard. Cada card usa a foto de mesclagem de argila do seu dia
+// (FUNDOS_ARGILA, mesma cor de identidade já usada no selo/Turmas) — dias
+// sem cor própria (Seg/Sex/Dom) ou sem foto correspondente (falta "café")
+// ficam no tom neutro de sempre.
+//
+// Ligado aos dados reais (2026-09-24) — `aulasPorDia` vem do Server
+// Component (dashboard/page.tsx), que busca roster real (getRosterTurma,
+// mesma fonte de Turmas) pras 4 turmas fixas e casa oficinas reais
+// (getOficinasReal) contra as 7 datas desta semana. Só a estrutura
+// ESTÁTICA da semana (quais dias existem, label, cor de identidade) fica
+// aqui — isso nunca muda, não é "dado", é layout.
 
-type DiaId = "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom";
-type CorIdentidade = "sienna" | "ardosia" | "musgo" | "cafe" | "carvao";
+export type DiaId = "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom";
+type CorIdentidade = "sienna" | "ardosia" | "musgo" | "cafe" | "carvao" | "ocre";
 
-interface AulaAgenda {
+export interface AulaAgenda {
   hora: string;
   oficina?: string;
   inscritos?: number;
@@ -23,35 +32,15 @@ interface AulaAgenda {
   total?: number;
   nomes?: string[];
 }
-interface DiaAgenda {
-  diaId: DiaId;
-  label: string;
-  aulas: AulaAgenda[];
-  cor?: CorIdentidade;
-}
 
-// TODO(conectar dados reais): substituir por queries de `aulas`/`oficinas`
-// da semana atual. Mesmo roster real já usado em Turmas/turmas.
-const AGENDA_SEMANA: DiaAgenda[] = [
-  { diaId: "seg", label: "SEG", aulas: [] },
-  {
-    diaId: "ter", label: "TER", cor: "sienna",
-    aulas: [{ hora: "18:30 - 20:30", ocupados: 12, total: 12, nomes: ["Isadora", "Cristiane", "Maria Clara", "Cintya", "Moises", "Fabiola", "Maria Helena", "Mayara", "Karol", "Ananda", "Marina", "Dani"] }],
-  },
-  {
-    diaId: "qua", label: "QUA", cor: "ardosia",
-    aulas: [{ hora: "16:30 - 18:30", ocupados: 12, total: 12, nomes: ["Ju Pita", "Natalia", "Paula", "Bianca", "Amanda", "Silvia", "Ana Carolina", "Fer", "Santina", "Camila", "Marina", "Elisabeth"] }],
-  },
-  {
-    diaId: "qui", label: "QUI", cor: "musgo",
-    aulas: [
-      { hora: "14:30 - 16:30", ocupados: 11, total: 12, nomes: ["Bia", "Isa", "Roxanne", "Piti", "Celina", "Helo", "Isabele", "Luciane", "Vitoria", "Elisabeth", "Ana Lara"] },
-      { hora: "18:30 - 20:30", ocupados: 11, total: 12, nomes: ["Lu", "Nayane", "Yasmin", "Vivi", "Barbara", "Tais", "Camila", "Ju Oba", "Amanda R", "Paola", "Olga"] },
-    ],
-  },
-  { diaId: "sex", label: "SEX", aulas: [] },
-  { diaId: "sab", label: "SÁB", cor: "carvao", aulas: [] },
-  { diaId: "dom", label: "DOM", aulas: [] },
+const DIAS_SEMANA: { diaId: DiaId; label: string; cor?: CorIdentidade }[] = [
+  { diaId: "seg", label: "SEG", cor: "ocre" },
+  { diaId: "ter", label: "TER", cor: "sienna" },
+  { diaId: "qua", label: "QUA", cor: "ardosia" },
+  { diaId: "qui", label: "QUI", cor: "musgo" },
+  { diaId: "sex", label: "SEX" },
+  { diaId: "sab", label: "SÁB", cor: "carvao" },
+  { diaId: "dom", label: "DOM" },
 ];
 
 const MENSAGEM_DIA_VAZIO: Partial<Record<DiaId, string>> = {
@@ -62,10 +51,10 @@ const MENSAGEM_DIA_VAZIO: Partial<Record<DiaId, string>> = {
 };
 
 const SELO_COR: Record<CorIdentidade, string> = {
-  sienna: "bg-sienna text-white", ardosia: "bg-ardosia text-white", musgo: "bg-musgo text-white", cafe: "bg-cafe text-white", carvao: "bg-carvao text-white",
+  sienna: "bg-sienna text-white", ardosia: "bg-ardosia text-white", musgo: "bg-musgo text-white", cafe: "bg-cafe text-white", carvao: "bg-carvao text-white", ocre: "bg-ocre text-white",
 };
 const BORDA_COR: Record<CorIdentidade, string> = {
-  sienna: "border-sienna/40", ardosia: "border-ardosia/40", musgo: "border-musgo/40", cafe: "border-cafe/40", carvao: "border-carvao/40",
+  sienna: "border-sienna/40", ardosia: "border-ardosia/40", musgo: "border-musgo/40", cafe: "border-cafe/40", carvao: "border-carvao/40", ocre: "border-ocre/40",
 };
 
 const ORDEM_DIAS: DiaId[] = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"];
@@ -91,7 +80,7 @@ const TURMA_ABERTURA: Partial<Record<DiaId, string>> = {
   ter: "ter-1830", qua: "qua-1630", qui: "qui-1430",
 };
 
-export function AgendaSemanaCard() {
+export function AgendaSemanaCard({ aulasPorDia }: { aulasPorDia: Partial<Record<DiaId, AulaAgenda[]>> }) {
   const router = useRouter();
   const datas = useMemo(() => datasDaSemanaAtual(), []);
   const hojeFmt = formatarDiaMes(new Date());
@@ -102,7 +91,8 @@ export function AgendaSemanaCard() {
         <h3 className="text-base font-semibold text-ink">Turmas da semana</h3>
       </div>
       <div className="space-y-3">
-        {AGENDA_SEMANA.map((d) => {
+        {DIAS_SEMANA.map((dMeta) => {
+          const d = { ...dMeta, aulas: aulasPorDia[dMeta.diaId] ?? [] };
           const dataFmt = formatarDiaMes(datas[d.diaId]);
           const isHoje = dataFmt === hojeFmt;
           const vazio = d.aulas.length === 0;
@@ -112,10 +102,16 @@ export function AgendaSemanaCard() {
             if (temOficina) router.push("/oficinas");
             else router.push(`/turmas/${TURMA_ABERTURA[d.diaId] ?? "ter-1830"}`);
           }
+          const fotoDia = d.cor ? (FUNDOS_ARGILA as Record<string, string | undefined>)[d.cor] : undefined;
           return (
             <div
               key={d.diaId}
-              className={"flex w-full min-w-0 items-start gap-3 rounded-2xl border bg-cream-soft/40 p-3.5 " + (d.cor ? BORDA_COR[d.cor] : "border-line")}
+              className={
+                "flex w-full min-w-0 items-start gap-3 rounded-2xl border p-3.5 " +
+                (d.cor ? BORDA_COR[d.cor] : "border-line") +
+                (fotoDia ? "" : " bg-cream-soft/40")
+              }
+              style={fotoDia ? { backgroundImage: `url(${fotoDia})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
             >
               <div className={"flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl py-2.5 " + (d.cor ? SELO_COR[d.cor] : "border border-line bg-white text-ink-soft")}>
                 <span className="text-[10px] font-bold uppercase tracking-wide">{d.label}</span>
