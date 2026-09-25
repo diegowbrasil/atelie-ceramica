@@ -158,20 +158,22 @@ export function TurmaDetalheClient({ slugAtual, diaAtivo, turmaRealId, capacidad
             {vagas.map((v) =>
               v.nome ? (
                 <div key={v.numero} className="flex w-full min-w-0 items-center gap-2 p-3">
-                  <Avatar nome={v.nome} size={40} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <button
-                        onClick={() => handleToggleStatusAula(v)}
-                        title={v.statusAula === "confirmado" ? "Confirmado p/ próxima aula — toque p/ marcar ausente" : "Ausente na próxima aula — toque p/ confirmar"}
-                        className={"h-2.5 w-2.5 shrink-0 rounded-full " + (v.statusAula === "confirmado" ? "bg-emerald-500" : "bg-rose-500")}
-                      />
-                      <span className="truncate text-sm font-medium text-ink">{v.nome}</span>
-                      {v.status !== "confirmado" && (
-                        <Badge tone={v.status === "ultima" ? "danger" : "warning"}>{v.status === "ultima" ? "Renovar" : "Pendente"}</Badge>
-                      )}
+                  <Link href={`/alunos/${v.alunoId}`} className="flex min-w-0 flex-1 items-center gap-2">
+                    <Avatar nome={v.nome} size={40} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleStatusAula(v); }}
+                          title={v.statusAula === "confirmado" ? "Confirmado p/ próxima aula — toque p/ marcar ausente" : "Ausente na próxima aula — toque p/ confirmar"}
+                          className={"h-2.5 w-2.5 shrink-0 rounded-full " + (v.statusAula === "confirmado" ? "bg-emerald-500" : "bg-rose-500")}
+                        />
+                        <span className="truncate text-sm font-medium text-ink">{v.nome}</span>
+                        {v.status !== "confirmado" && (
+                          <Badge tone={v.status === "ultima" ? "danger" : "warning"}>{v.status === "ultima" ? "Renovar" : "Pendente"}</Badge>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                   <button
                     onClick={() => setModalMover(v)}
                     title={`Mover ${v.nome} para outra turma`}
