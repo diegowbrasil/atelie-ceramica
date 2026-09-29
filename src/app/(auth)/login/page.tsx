@@ -53,10 +53,10 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-cream px-4">
       <Card
-        className="w-full max-w-sm animate-fade-up overflow-hidden border-carvao/40 p-2"
+        className="w-full max-w-sm animate-fade-up overflow-hidden border-2 border-carvao/40"
         style={{ backgroundImage: `url(${FUNDOS_ARGILA.carvao})`, backgroundSize: "cover", backgroundPosition: "center" }}
       >
-        <div className="rounded-xl bg-white p-6">
+        <div className="bg-white/70 p-6 backdrop-blur-[2px]">
           <span className="mb-1 block font-display text-2xl uppercase leading-none tracking-wide text-ink">MTCST</span>
           <p className="mb-6 text-sm text-ink-soft">Entre para acessar sua conta.</p>
 

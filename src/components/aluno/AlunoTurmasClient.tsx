@@ -91,10 +91,10 @@ export function AlunoTurmasClient({ turmas }: { turmas: TurmaParaAluno[] }) {
           return (
             <Card
               key={t.id}
-              className={"overflow-hidden p-2 " + BORDA_COR[cor]}
+              className={"overflow-hidden border-2 " + BORDA_COR[cor]}
               style={{ backgroundImage: `url(${fotoDaTurma(cor)})`, backgroundSize: "cover", backgroundPosition: "center" }}
             >
-              <div className="rounded-xl bg-white p-3">
+              <div className="bg-white/65 p-3 backdrop-blur-[2px]">
                 <div className="mb-2 flex items-center gap-2">
                   <span className={"h-2.5 w-2.5 shrink-0 rounded-full " + PONTO_COR[cor]} />
                   <span className="text-sm font-semibold text-ink">{t.dia}</span>
