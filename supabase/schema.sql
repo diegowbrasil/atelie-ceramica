@@ -404,8 +404,19 @@ $$ language sql security definer stable;
 -- profiles: usuário vê o próprio perfil; admin vê todos
 create policy "profiles_select" on profiles for select
   using (auth_user_id = auth.uid() or is_admin());
-create policy "profiles_update_self" on profiles for update
-  using (auth_user_id = auth.uid() or is_admin());
+-- Só admin escreve em profiles (2026-09-29, achado num pentest de RLS
+-- pedido pelo Diego) — a versão anterior ("profiles_update_self") tinha
+-- `using (auth_user_id = auth.uid() or is_admin())` SEM `with check`,
+-- que em Postgres reaproveita o `using` como check — ou seja, restringia
+-- QUAL linha (a própria), mas não QUAL CAMPO. Um aluno autenticado
+-- conseguia UPDATE profiles SET role='admin' na própria linha, direto
+-- pela chave anon (sem passar pelo app/UI), virando admin de verdade.
+-- Confirmado com a chave anon + login real de um aluno de teste, revertido
+-- na hora. Nenhuma tela de aluno depende de auto-edição de profiles (as
+-- duas únicas escritas reais em profiles — editarAluno/gerarConvite — são
+-- sempre o ADMIN editando o aluno, is_admin() já cobre as duas).
+create policy "profiles_admin_update" on profiles for update
+  using (is_admin()) with check (is_admin());
 create policy "profiles_admin_insert" on profiles for insert
   with check (is_admin() or auth_user_id = auth.uid());
 create policy "profiles_admin_delete" on profiles for delete using (is_admin());
