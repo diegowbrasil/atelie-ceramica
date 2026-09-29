@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { emailSinteticoDoTelefone } from "@/lib/telefone";
-import { FUNDOS_ARGILA } from "@/lib/fundosArgila";
+import { FundoArgilaParallax } from "@/components/ui/FundoArgilaParallax";
 
 // Um campo só, "e-mail ou telefone" — admin loga com e-mail, aluno com
 // telefone (a leva de dado real nunca trouxe e-mail de aluno, ver
@@ -51,12 +51,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-cream px-4">
-      <Card
-        className="w-full max-w-sm animate-fade-up overflow-hidden border-2 border-carvao/40"
-        style={{ backgroundImage: `url(${FUNDOS_ARGILA.carvao})`, backgroundSize: "cover", backgroundPosition: "center" }}
-      >
-        <div className="bg-white/70 p-6 backdrop-blur-[2px]">
+    <div className="relative flex min-h-screen items-center justify-center px-4">
+      <FundoArgilaParallax cor="carvao" />
+      <Card className="relative w-full max-w-sm animate-fade-up overflow-hidden border-2 border-carvao/40 bg-white/55 p-6 backdrop-blur-md">
           <span className="mb-1 block font-display text-2xl uppercase leading-none tracking-wide text-ink">MTCST</span>
           <p className="mb-6 text-sm text-ink-soft">Entre para acessar sua conta.</p>
 
@@ -87,7 +84,6 @@ export default function LoginPage() {
               {carregando ? "Entrando..." : "Entrar"}
             </Button>
           </form>
-        </div>
       </Card>
     </div>
   );

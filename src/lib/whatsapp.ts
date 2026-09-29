@@ -13,15 +13,29 @@ export function abrirWhatsAppCobranca(telefone: string | null | undefined, nome:
   window.open(`https://wa.me/${telefone || ""}?text=${encodeURIComponent(mensagemCobranca(nome, valor))}`, "_blank");
 }
 
+// Número real do ateliê (2026-09-29, informado pelo Diego: "+55 14
+// 99725-7052") — dígitos só, formato que o wa.me exige (código do país +
+// DDD + número, sem símbolo nenhum).
+export const ATELIE_WHATSAPP = "5514997257052";
+
 /** Direção oposta de mensagemCobranca — aluno avisando o ateliê que já
- *  pagou (2026-09-29, pedido do Diego). `wa.me/?text=...` sem número:
- *  o ateliê ainda não tem um WhatsApp cadastrado no app, então abre o
- *  WhatsApp com a mensagem pronta e deixa a PESSOA escolher o contato
- *  (mesmo comportamento de um botão de compartilhar). */
+ *  pagou. Manda pro número FIXO do ateliê (2026-09-29: "na verdade já
+ *  vai mandar para o whatsapp predeterminado"), não mais um wa.me
+ *  genérico sem número.
+ *
+ *  Limitação real da plataforma, sem contorno possível: um link wa.me só
+ *  consegue pré-preencher TEXTO — não existe parâmetro de URL (nem API de
+ *  navegador nenhuma) que anexe um ARQUIVO a uma conversa de um número
+ *  específico. `navigator.share({files})` até anexa arquivo de verdade,
+ *  mas só abrindo a folha de compartilhar do sistema, sem escolher o
+ *  destinatário por código — as duas coisas (número fixo + anexo
+ *  automático) não dão pra ter juntas a partir da web. Prioriza o número
+ *  certo (pedido explícito do Diego); a pessoa anexa a foto na conversa
+ *  que abre, um toque a mais dentro do próprio WhatsApp. */
 export function mensagemComprovante(descricao: string | null, valor: number | null) {
   return `Olá! Fiz o pagamento${descricao ? ` — ${descricao}` : ""}${valor != null ? `, no valor de R$ ${valor}` : ""}. Segue o comprovante!`;
 }
 
 export function abrirWhatsAppComprovante(descricao: string | null, valor: number | null) {
-  window.open(`https://wa.me/?text=${encodeURIComponent(mensagemComprovante(descricao, valor))}`, "_blank");
+  window.open(`https://wa.me/${ATELIE_WHATSAPP}?text=${encodeURIComponent(mensagemComprovante(descricao, valor))}`, "_blank");
 }

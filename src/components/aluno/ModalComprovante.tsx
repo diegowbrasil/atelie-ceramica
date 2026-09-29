@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
-import { enviarComprovantePagamento } from "@/lib/actions/alunoPortal";
 import { PIX_CHAVE, abrirWhatsAppComprovante } from "@/lib/whatsapp";
-import { Copy, Check, Upload, MessageCircle } from "lucide-react";
+import { Copy, Check, MessageCircle } from "lucide-react";
 
-// Fluxo pedido pelo Diego (2026-09-25): clicar no "Pendente" mostra o
-// valor + chave Pix, aluno paga por fora do app (não processamos
-// pagamento nenhum aqui) e sobe o comprovante — vira signed URL privada
-// que só o admin consegue abrir (ver getUrlComprovante em
-// actions/pagamentos.ts).
+// Fluxo pedido pelo Diego (2026-09-25, refeito 2026-09-29): clicar no
+// "Pendente" mostra o valor + chave Pix; aluno paga por fora do app (não
+// processamos pagamento nenhum aqui) e manda o comprovante direto pelo
+// WhatsApp do ateliê (número fixo, ver ATELIE_WHATSAPP em
+// lib/whatsapp.ts) — sem seletor de arquivo aqui dentro: não existe forma
+// de anexar automaticamente a uma conversa de um número específico a
+// partir de uma página web (limitação real da plataforma), então o
+// upload só criava um passo que não levava a nada — a pessoa anexa a
+// foto direto no WhatsApp, que já abre com a mensagem pronta.
 
 interface Props {
   pagamento: { id: string; descricao: string | null; valor: number | null };
@@ -19,11 +21,6 @@ interface Props {
 }
 
 export function ModalComprovante({ pagamento, onClose }: Props) {
-  const router = useRouter();
-  const [arquivo, setArquivo] = useState<File | null>(null);
-  const [enviando, setEnviando] = useState(false);
-  const [enviado, setEnviado] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
 
   async function copiarChave() {
@@ -37,85 +34,44 @@ export function ModalComprovante({ pagamento, onClose }: Props) {
     }
   }
 
-  async function enviar() {
-    if (!arquivo) return;
-    setEnviando(true);
-    setErro(null);
-    try {
-      const formData = new FormData();
-      formData.set("arquivo", arquivo);
-      formData.set("pagamentoId", pagamento.id);
-      await enviarComprovantePagamento(formData);
-      setEnviado(true);
-      router.refresh();
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : "Não deu pra enviar o comprovante. Tenta de novo.");
-    } finally {
-      setEnviando(false);
-    }
+  function enviar() {
+    abrirWhatsAppComprovante(pagamento.descricao, pagamento.valor);
+    onClose();
   }
 
   return (
     <Modal onClose={onClose}>
-      {enviado ? (
-        <>
-          <h3 className="mb-1 text-base font-semibold text-ink">Comprovante enviado!</h3>
-          <p className="mb-4 text-sm text-ink-soft">O ateliê vai conferir e confirmar seu pagamento em breve.</p>
+      <h3 className="mb-1 text-base font-semibold text-ink">{pagamento.descricao ?? "Pagamento pendente"}</h3>
+      {pagamento.valor != null && <p className="mb-4 text-2xl font-semibold text-ink">R$ {pagamento.valor}</p>}
+
+      <div className="mb-4 rounded-xl border border-line bg-cream p-3">
+        <p className="mb-1 text-xs font-medium text-ink-soft">Chave Pix do ateliê</p>
+        <div className="flex items-center justify-between gap-2">
+          <span className="truncate text-sm font-medium text-ink">{PIX_CHAVE}</span>
           <button
-            onClick={() => abrirWhatsAppComprovante(pagamento.descricao, pagamento.valor)}
-            className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700"
+            onClick={copiarChave}
+            className="flex shrink-0 items-center gap-1 rounded-lg border border-line bg-white px-2 py-1 text-xs font-medium text-ink hover:bg-cream"
           >
-            <MessageCircle size={15} />
-            Avisar no WhatsApp
+            {copiado ? <Check size={13} /> : <Copy size={13} />}
+            {copiado ? "Copiado" : "Copiar"}
           </button>
-          <button onClick={onClose} className="w-full rounded-xl border border-line py-2.5 text-sm font-medium text-ink">
-            Fechar
-          </button>
-        </>
-      ) : (
-        <>
-          <h3 className="mb-1 text-base font-semibold text-ink">{pagamento.descricao ?? "Pagamento pendente"}</h3>
-          {pagamento.valor != null && <p className="mb-4 text-2xl font-semibold text-ink">R$ {pagamento.valor}</p>}
+        </div>
+      </div>
 
-          <div className="mb-4 rounded-xl border border-line bg-cream p-3">
-            <p className="mb-1 text-xs font-medium text-ink-soft">Chave Pix do ateliê</p>
-            <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-sm font-medium text-ink">{PIX_CHAVE}</span>
-              <button
-                onClick={copiarChave}
-                className="flex shrink-0 items-center gap-1 rounded-lg border border-line bg-white px-2 py-1 text-xs font-medium text-ink hover:bg-cream"
-              >
-                {copiado ? <Check size={13} /> : <Copy size={13} />}
-                {copiado ? "Copiado" : "Copiar"}
-              </button>
-            </div>
-          </div>
+      <p className="mb-4 text-sm text-ink-soft">Depois de pagar, envie o comprovante para:</p>
 
-          <p className="mb-2 text-xs font-medium text-ink-soft">Depois de pagar, envie o comprovante</p>
-          <input
-            type="file"
-            accept="image/*,.pdf"
-            onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
-            className="mb-3 w-full text-xs text-ink-soft file:mr-3 file:rounded-lg file:border file:border-line file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-ink"
-          />
-
-          {erro && <p className="mb-3 text-sm text-rose-500">{erro}</p>}
-
-          <div className="flex gap-2">
-            <button onClick={onClose} className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink">
-              Cancelar
-            </button>
-            <button
-              disabled={!arquivo || enviando}
-              onClick={enviar}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
-            >
-              <Upload size={14} />
-              {enviando ? "Enviando…" : "Enviar comprovante"}
-            </button>
-          </div>
-        </>
-      )}
+      <div className="flex gap-2">
+        <button onClick={onClose} className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink">
+          Cancelar
+        </button>
+        <button
+          onClick={enviar}
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700"
+        >
+          <MessageCircle size={14} />
+          WhatsApp do ateliê
+        </button>
+      </div>
     </Modal>
   );
 }
