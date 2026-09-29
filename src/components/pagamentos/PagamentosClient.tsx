@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
 import { Avatar } from "@/components/ui/Avatar";
 import { mensagemCobranca, abrirWhatsAppCobranca } from "@/lib/whatsapp";
-import { marcarComoPago, getUrlComprovante, type PagamentoReal } from "@/lib/actions/pagamentos";
-import { CreditCard, Check, Users, Clock, Search, X, Receipt } from "lucide-react";
+import { marcarComoPago, type PagamentoReal } from "@/lib/actions/pagamentos";
+import { CreditCard, Check, Users, Clock, Search, X } from "lucide-react";
 
 // Referência de comportamento: demo/AtelieDemo.jsx (Pagamentos). Ligado
 // aos dados reais (2026-09-24) — `getPagamentosReal()` devolve TODOS os
@@ -29,8 +29,6 @@ export function PagamentosClient({ pagamentosIniciais }: Props) {
   const [pagamentos, setPagamentos] = useState<PagamentoReal[]>(pagamentosIniciais);
   const [busca, setBusca] = useState("");
   const [modalCobranca, setModalCobranca] = useState<PagamentoReal | null>(null);
-  const [abrindoComprovante, setAbrindoComprovante] = useState<string | null>(null);
-  const [erroComprovante, setErroComprovante] = useState<string | null>(null);
 
   // Esta tela não remonta sozinha ao navegar (sem param dinâmico na rota)
   // — mesmo padrão de resync de AvisosCard/AlunosListClient.
@@ -40,19 +38,6 @@ export function PagamentosClient({ pagamentosIniciais }: Props) {
     setPagamentos((ps) => ps.map((p) => (p.id === id ? { ...p, status: "pago" } : p)));
     await marcarComoPago(id);
     router.refresh();
-  }
-
-  async function verComprovante(id: string) {
-    setAbrindoComprovante(id);
-    setErroComprovante(null);
-    try {
-      const url = await getUrlComprovante(id);
-      window.open(url, "_blank", "noopener,noreferrer");
-    } catch (e) {
-      setErroComprovante(e instanceof Error ? e.message : "Não deu pra abrir o comprovante.");
-    } finally {
-      setAbrindoComprovante(null);
-    }
   }
 
   const buscando = busca.trim().length > 0;
@@ -106,16 +91,6 @@ export function PagamentosClient({ pagamentosIniciais }: Props) {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="warning">Pendente</Badge>
-                  {p.temComprovante && (
-                    <button
-                      onClick={() => verComprovante(p.id)}
-                      disabled={abrindoComprovante === p.id}
-                      className="flex items-center gap-1 rounded-lg border border-accent/40 bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent-soft/70 disabled:opacity-60"
-                    >
-                      <Receipt size={13} />
-                      {abrindoComprovante === p.id ? "Abrindo…" : "Ver comprovante"}
-                    </button>
-                  )}
                   <button onClick={() => setModalCobranca(p)} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">
                     Cobrar no WhatsApp
                   </button>
@@ -127,7 +102,6 @@ export function PagamentosClient({ pagamentosIniciais }: Props) {
             ))}
           </ul>
         )}
-        {erroComprovante && <p className="mt-3 text-xs text-rose-500">{erroComprovante}</p>}
       </div>
 
       <div className="rounded-2xl border border-line bg-white p-4">
