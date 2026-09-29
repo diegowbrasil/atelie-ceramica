@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { FUNDOS_ARGILA } from "@/lib/fundosArgila";
+import { FundoArgilaParallax } from "@/components/ui/FundoArgilaParallax";
 import type { OficinaParaAluno } from "@/lib/actions/alunoPortal";
 import type { StatusPecas } from "@/types/database";
 import { CalendarDays, Clock, Check } from "lucide-react";
@@ -16,23 +16,20 @@ const ETAPAS_PECAS: { id: StatusPecas; label: string }[] = [
 
 export function AlunoOficinasClient({ oficinas }: { oficinas: OficinaParaAluno[] }) {
   return (
-    <div className="mx-auto max-w-md px-4 pb-24 pt-8">
-      <h1 className="mb-5 text-center font-display text-2xl uppercase tracking-wide text-ink">Oficinas</h1>
+    <div className="relative">
+      <FundoArgilaParallax cor="carvao" />
+      <div className="relative mx-auto max-w-md px-4 pb-24 pt-8">
+        <h1 className="mb-5 text-center font-display text-2xl uppercase tracking-wide text-ink">Oficinas</h1>
 
-      {oficinas.length === 0 ? (
-        <p className="text-center text-sm text-ink-soft">Nenhuma oficina agendada ainda.</p>
-      ) : (
-        <div className="space-y-3">
-          {oficinas.map((o) => {
-            const cheia = o.ocupadas >= o.vagas;
-            const idxAtual = ETAPAS_PECAS.findIndex((e) => e.id === o.statusPecas);
-            return (
-              <Card
-                key={o.id}
-                className="overflow-hidden border-2 border-carvao/40"
-                style={{ backgroundImage: `url(${FUNDOS_ARGILA.carvao})`, backgroundSize: "cover", backgroundPosition: "center" }}
-              >
-                <div className="bg-white/70 p-4 backdrop-blur-[2px]">
+        {oficinas.length === 0 ? (
+          <p className="text-center text-sm text-ink-soft">Nenhuma oficina agendada ainda.</p>
+        ) : (
+          <div className="space-y-3">
+            {oficinas.map((o) => {
+              const cheia = o.ocupadas >= o.vagas;
+              const idxAtual = ETAPAS_PECAS.findIndex((e) => e.id === o.statusPecas);
+              return (
+                <Card key={o.id} className="overflow-hidden border-2 border-carvao/40 bg-white/55 p-4 backdrop-blur-md">
                   <h3 className="mb-1 text-sm font-semibold text-ink">{o.nome}</h3>
                   <div className="mb-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-soft">
                     <span className="flex items-center gap-1"><CalendarDays size={12} />{o.data}</span>
@@ -72,12 +69,12 @@ export function AlunoOficinasClient({ oficinas }: { oficinas: OficinaParaAluno[]
                       </div>
                     </div>
                   )}
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { BadgePagamentoPendente } from "@/components/aluno/BadgePagamentoPendente";
+import { FundoArgilaParallax } from "@/components/ui/FundoArgilaParallax";
 import { TURMA_LABEL_COR, type CorIdentidade } from "@/lib/alunos";
-import { FUNDOS_ARGILA, type CorFundoArgila } from "@/lib/fundosArgila";
 
 const COR_HEX: Record<CorIdentidade, string> = {
   sienna: "rgb(var(--sienna))", ardosia: "rgb(var(--ardosia))", musgo: "rgb(var(--musgo))", cafe: "rgb(var(--cafe))", ocre: "rgb(var(--ocre))",
@@ -18,11 +18,6 @@ const COR_HEX: Record<CorIdentidade, string> = {
 const COR_TRACK: Record<CorIdentidade, string> = {
   sienna: "rgb(var(--sienna) / 0.18)", ardosia: "rgb(var(--ardosia) / 0.18)", musgo: "rgb(var(--musgo) / 0.18)", cafe: "rgb(var(--cafe) / 0.18)", ocre: "rgb(var(--ocre) / 0.18)",
 };
-// "cafe" (Quinta 18:30) não tem foto própria ainda — mesma solução usada
-// em AlunoTurmasClient/Dashboard, usa a foto de "musgo" por enquanto.
-function fotoDaTurma(cor: CorIdentidade): string {
-  return FUNDOS_ARGILA[(cor === "cafe" ? "musgo" : cor) as CorFundoArgila];
-}
 
 // Primeira fatia real da Área do Aluno (2026-09-24) — só o Início, lendo
 // os próprios dados via RLS (aluno_id = current_profile_id() nas tabelas
@@ -53,11 +48,17 @@ export default async function AlunoHomePage() {
   if (!aluno) redirect("/login");
 
   const temTurma = !!aluno.turmaId;
-  const cor = TURMA_LABEL_COR[aluno.turma] ?? "sienna";
+  const corBruta = TURMA_LABEL_COR[aluno.turma] ?? "sienna";
+  // "cafe" (Quinta 18:30) não tem foto própria ainda — mesma solução já
+  // usada em outros lugares do app, cai no musgo (Quinta 14:30).
+  const corFundo = corBruta === "cafe" ? "musgo" : corBruta;
+  const cor = corBruta;
   const pct = aluno.total ? (aluno.aula / aluno.total) * 100 : 0;
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-24 pt-8">
+    <div className="relative">
+      <FundoArgilaParallax cor={temTurma ? corFundo : null} />
+      <div className="relative mx-auto max-w-md px-4 pb-24 pt-8">
       <div className="mb-6 flex items-center justify-between">
         <span className="font-display text-xl uppercase leading-none tracking-wide text-ink">MTCST</span>
         <form action={sair}>
@@ -70,10 +71,9 @@ export default async function AlunoHomePage() {
 
       {temTurma ? (
         <Card
-          className="mb-4 overflow-hidden border-2"
-          style={{ borderColor: COR_HEX[cor], backgroundImage: `url(${fotoDaTurma(cor)})`, backgroundSize: "cover", backgroundPosition: "center" }}
+          className="mb-4 overflow-hidden border-2 bg-white/55 p-5 backdrop-blur-md"
+          style={{ borderColor: COR_HEX[cor] }}
         >
-          <div className="bg-white/65 p-5 backdrop-blur-[2px]">
             <div className="mb-3 flex items-center gap-2">
               <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: COR_HEX[cor] }} />
               <span className="text-sm font-semibold text-ink">{aluno.turma}</span>
@@ -101,7 +101,6 @@ export default async function AlunoHomePage() {
                 </div>
               </div>
             </div>
-          </div>
         </Card>
       ) : (
         <Card className="mb-4 p-5 text-center">
@@ -118,6 +117,7 @@ export default async function AlunoHomePage() {
       <p className="text-center text-xs text-ink-soft">
         Mais novidades chegando por aqui em breve.
       </p>
+      </div>
     </div>
   );
 }

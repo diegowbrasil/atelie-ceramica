@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { enviarComprovantePagamento } from "@/lib/actions/alunoPortal";
-import { PIX_CHAVE } from "@/lib/whatsapp";
-import { Copy, Check, Upload } from "lucide-react";
+import { PIX_CHAVE, abrirWhatsAppComprovante } from "@/lib/whatsapp";
+import { Copy, Check, Upload, MessageCircle } from "lucide-react";
 
 // Fluxo pedido pelo Diego (2026-09-25): clicar no "Pendente" mostra o
 // valor + chave Pix, aluno paga por fora do app (não processamos
@@ -61,7 +61,14 @@ export function ModalComprovante({ pagamento, onClose }: Props) {
         <>
           <h3 className="mb-1 text-base font-semibold text-ink">Comprovante enviado!</h3>
           <p className="mb-4 text-sm text-ink-soft">O ateliê vai conferir e confirmar seu pagamento em breve.</p>
-          <button onClick={onClose} className="w-full rounded-xl bg-accent py-2.5 text-sm font-medium text-white hover:bg-accent-hover">
+          <button
+            onClick={() => abrirWhatsAppComprovante(pagamento.descricao, pagamento.valor)}
+            className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700"
+          >
+            <MessageCircle size={15} />
+            Avisar no WhatsApp
+          </button>
+          <button onClick={onClose} className="w-full rounded-xl border border-line py-2.5 text-sm font-medium text-ink">
             Fechar
           </button>
         </>

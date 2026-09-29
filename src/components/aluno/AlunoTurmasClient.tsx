@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { TURMA_LABEL_COR, type CorIdentidade } from "@/lib/alunos";
 import { solicitarVaga, cancelarSolicitacao, type TurmaParaAluno } from "@/lib/actions/alunoPortal";
-import { FUNDOS_ARGILA, type CorFundoArgila } from "@/lib/fundosArgila";
+import { FundoArgilaParallax } from "@/components/ui/FundoArgilaParallax";
 import { Clock, Send } from "lucide-react";
 
 const PONTO_COR: Record<CorIdentidade, string> = {
@@ -16,12 +16,6 @@ const PONTO_COR: Record<CorIdentidade, string> = {
 const BORDA_COR: Record<CorIdentidade, string> = {
   sienna: "border-sienna/40", ardosia: "border-ardosia/40", musgo: "border-musgo/40", cafe: "border-cafe/40", ocre: "border-ocre/40",
 };
-// "cafe" (Quinta 18:30) não tem foto própria ainda — mesma solução já
-// usada no Dashboard/demo, usa a foto de "musgo" (Quinta 14:30) por
-// enquanto, ver CLAUDE.md.
-function fotoDaTurma(cor: CorIdentidade): string {
-  return FUNDOS_ARGILA[(cor === "cafe" ? "musgo" : cor) as CorFundoArgila];
-}
 
 // Texto EXATO de "Quer trocar para essa turma" é o que aprovarSolicitacao
 // (src/lib/actions/solicitacoes.ts) usa pra decidir fixa vs. provisória —
@@ -75,26 +69,36 @@ export function AlunoTurmasClient({ turmas }: { turmas: TurmaParaAluno[] }) {
     }
   }
 
+  // Fundo mesclado da PÁGINA inteira (não mais por card) na cor da
+  // própria turma fixa do aluno — pedido do Diego (2026-09-29): "ao inves
+  // de serem cada card mesclado, deixe o fundo atras, correspondente a
+  // turma q a pessoa esta". "cafe" (Quinta 18:30) ainda não tem foto
+  // própria, cai no musgo (Quinta 14:30) por enquanto, mesma solução já
+  // usada em outros lugares do app.
+  const minhaTurma = turmas.find((t) => t.souEuFixo);
+  const corPropriaBruta = minhaTurma ? TURMA_LABEL_COR[minhaTurma.nome] ?? "sienna" : null;
+  const corPropria = corPropriaBruta === "cafe" ? "musgo" : corPropriaBruta;
+
   return (
-    <div className="mx-auto max-w-md px-4 pb-24 pt-8">
-      <h1 className="mb-5 text-center font-display text-2xl uppercase tracking-wide text-ink">Turmas</h1>
-      {erro && !modalTurma && <p className="mb-3 text-center text-sm text-rose-500">{erro}</p>}
+    <div className="relative">
+      <FundoArgilaParallax cor={corPropria} />
+      <div className="relative mx-auto max-w-md px-4 pb-24 pt-8">
+        <h1 className="mb-5 text-center font-display text-2xl uppercase tracking-wide text-ink">Turmas</h1>
+        {erro && !modalTurma && <p className="mb-3 text-center text-sm text-rose-500">{erro}</p>}
 
-      <div className="space-y-3">
-        {turmas.map((t) => {
-          const cor = TURMA_LABEL_COR[t.nome] ?? "sienna";
-          const cheia = t.ocupadas >= t.capacidade;
-          const sol = t.minhaSolicitacao;
-          const ehTroca = sol?.tipo.startsWith(TIPO_TROCA) ?? false;
-          const rotuloTipo = ehTroca ? "troca de turma" : "visita avulsa";
+        <div className="space-y-3">
+          {turmas.map((t) => {
+            const cor = TURMA_LABEL_COR[t.nome] ?? "sienna";
+            const cheia = t.ocupadas >= t.capacidade;
+            const sol = t.minhaSolicitacao;
+            const ehTroca = sol?.tipo.startsWith(TIPO_TROCA) ?? false;
+            const rotuloTipo = ehTroca ? "troca de turma" : "visita avulsa";
 
-          return (
-            <Card
-              key={t.id}
-              className={"overflow-hidden border-2 " + BORDA_COR[cor]}
-              style={{ backgroundImage: `url(${fotoDaTurma(cor)})`, backgroundSize: "cover", backgroundPosition: "center" }}
-            >
-              <div className="bg-white/65 p-3 backdrop-blur-[2px]">
+            return (
+              <Card
+                key={t.id}
+                className={"overflow-hidden border-2 bg-white/55 p-3 backdrop-blur-md " + BORDA_COR[cor]}
+              >
                 <div className="mb-2 flex items-center gap-2">
                   <span className={"h-2.5 w-2.5 shrink-0 rounded-full " + PONTO_COR[cor]} />
                   <span className="text-sm font-semibold text-ink">{t.dia}</span>
@@ -120,7 +124,7 @@ export function AlunoTurmasClient({ turmas }: { turmas: TurmaParaAluno[] }) {
                   ) : (
                     <button
                       onClick={() => abrirModal(t)}
-                      className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-xs font-medium text-ink hover:bg-cream"
+                      className="flex items-center gap-1.5 rounded-lg border border-line bg-white/70 px-3 py-1.5 text-xs font-medium text-ink hover:bg-cream"
                     >
                       <Send size={13} />
                       Solicitar vaga
@@ -130,11 +134,10 @@ export function AlunoTurmasClient({ turmas }: { turmas: TurmaParaAluno[] }) {
                 {!t.souEuFixo && sol?.status === "pendente" && <p className="mt-2 text-xs text-ink-soft">Aguarde a confirmação do ateliê antes de ir.</p>}
                 {!t.souEuFixo && sol?.status === "aprovada" && <p className="mt-2 text-xs text-ink-soft">Pode ir pra aula!</p>}
                 {!t.souEuFixo && sol?.status === "recusada" && <p className="mt-2 text-xs text-rose-500">Sua última solicitação foi recusada. Pode tentar de novo.</p>}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+              </Card>
+            );
+          })}
+        </div>
 
       {modalTurma && (
         <Modal onClose={fecharModal}>
@@ -190,6 +193,7 @@ export function AlunoTurmasClient({ turmas }: { turmas: TurmaParaAluno[] }) {
           )}
         </Modal>
       )}
+      </div>
     </div>
   );
 }

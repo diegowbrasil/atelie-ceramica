@@ -12,3 +12,16 @@ export function mensagemCobranca(nome: string, valor: number | null) {
 export function abrirWhatsAppCobranca(telefone: string | null | undefined, nome: string, valor: number | null) {
   window.open(`https://wa.me/${telefone || ""}?text=${encodeURIComponent(mensagemCobranca(nome, valor))}`, "_blank");
 }
+
+/** Direção oposta de mensagemCobranca — aluno avisando o ateliê que já
+ *  pagou (2026-09-29, pedido do Diego). `wa.me/?text=...` sem número:
+ *  o ateliê ainda não tem um WhatsApp cadastrado no app, então abre o
+ *  WhatsApp com a mensagem pronta e deixa a PESSOA escolher o contato
+ *  (mesmo comportamento de um botão de compartilhar). */
+export function mensagemComprovante(descricao: string | null, valor: number | null) {
+  return `Olá! Fiz o pagamento${descricao ? ` — ${descricao}` : ""}${valor != null ? `, no valor de R$ ${valor}` : ""}. Segue o comprovante!`;
+}
+
+export function abrirWhatsAppComprovante(descricao: string | null, valor: number | null) {
+  window.open(`https://wa.me/?text=${encodeURIComponent(mensagemComprovante(descricao, valor))}`, "_blank");
+}
