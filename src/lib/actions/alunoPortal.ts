@@ -18,9 +18,19 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatarData, formatarHora } from "@/lib/formatarData";
 import { revalidatePath } from "next/cache";
+import { cache } from "react";
 import type { StatusPecas } from "@/types/database";
 
-async function meuProfileId(): Promise<string | null> {
+// cache() dedupe por-request (não é o mesmo cache de dado entre requests)
+// — várias funções deste arquivo chamam meuProfileId(), e mais de uma às
+// vezes roda junto num Promise.all (ex: getHistoricoAulas +
+// getHistoricoPagamentos) — sem isso cada uma resolvia auth.getUser() +
+// profiles de novo, sequencialmente, pro MESMO resultado (achado no
+// pente-fino de performance, 2026-09-25). Seguro com "use server" no
+// topo do arquivo porque `meuProfileId` nunca foi exportado — a regra
+// "toda export vira Server Action" (CLAUDE.md armadilhas) não se aplica
+// a helpers internos.
+const meuProfileId = cache(async (): Promise<string | null> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -28,7 +38,7 @@ async function meuProfileId(): Promise<string | null> {
   if (!user) return null;
   const { data } = await supabase.from("profiles").select("id, nome").eq("auth_user_id", user.id).maybeSingle();
   return data?.id ?? null;
-}
+});
 
 export interface TurmaParaAluno {
   id: string;
@@ -54,50 +64,51 @@ export interface TurmaParaAluno {
 }
 
 export async function getTurmasParaAluno(): Promise<TurmaParaAluno[]> {
-  const meuId = await meuProfileId();
   const admin = createAdminClient();
-  const { data: turmas, error } = await admin.from("turmas").select("id, nome, dia, hora_inicio, hora_fim, capacidade").order("dia").order("hora_inicio");
+  // meuId e turmas não dependem um do outro; solicitacoes/matriculaFixa
+  // (mais abaixo) só dependem de meuId, não uma da outra; a contagem de
+  // ocupadas virou 1 query em lote em vez de 1 por turma (achado no
+  // pente-fino de performance, 2026-09-25).
+  const [meuId, { data: turmas, error }] = await Promise.all([
+    meuProfileId(),
+    admin.from("turmas").select("id, nome, dia, hora_inicio, hora_fim, capacidade").order("dia").order("hora_inicio"),
+  ]);
   if (error) throw new Error(`Falha ao buscar turmas: ${error.message}`);
 
   const DIA_LABEL: Record<string, string> = { seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta", sab: "Sábado", dom: "Domingo" };
+  const turmaIds = (turmas ?? []).map((t) => t.id);
 
   const minhasPorTurma = new Map<string, { id: string; status: "pendente" | "aprovada" | "recusada"; tipo: string }>();
   let minhaTurmaFixaId: string | null = null;
   if (meuId) {
-    const { data: solicitacoes } = await admin
-      .from("solicitacoes_vaga")
-      .select("id, turma_id, status, tipo")
-      .eq("aluno_id", meuId)
-      .order("solicitado_em", { ascending: false });
+    const [{ data: solicitacoes }, { data: matriculaFixa }] = await Promise.all([
+      admin.from("solicitacoes_vaga").select("id, turma_id, status, tipo").eq("aluno_id", meuId).order("solicitado_em", { ascending: false }),
+      admin.from("matriculas").select("turma_id").eq("aluno_id", meuId).eq("status", "confirmado").eq("provisorio", false).maybeSingle(),
+    ]);
     for (const s of solicitacoes ?? []) {
       if (!minhasPorTurma.has(s.turma_id)) minhasPorTurma.set(s.turma_id, { id: s.id, status: s.status, tipo: s.tipo });
     }
-
-    const { data: matriculaFixa } = await admin
-      .from("matriculas")
-      .select("turma_id")
-      .eq("aluno_id", meuId)
-      .eq("status", "confirmado")
-      .eq("provisorio", false)
-      .maybeSingle();
     minhaTurmaFixaId = matriculaFixa?.turma_id ?? null;
   }
 
-  return Promise.all(
-    (turmas ?? []).map(async (t): Promise<TurmaParaAluno> => {
-      const { count } = await admin.from("matriculas").select("id", { count: "exact", head: true }).eq("turma_id", t.id).eq("status", "confirmado");
-      return {
-        id: t.id,
-        nome: t.nome,
-        dia: DIA_LABEL[t.dia] ?? t.dia,
-        hora: `${t.hora_inicio.slice(0, 5)} às ${t.hora_fim.slice(0, 5)}`,
-        ocupadas: count ?? 0,
-        capacidade: t.capacidade,
-        souEuFixo: t.id === minhaTurmaFixaId,
-        minhaSolicitacao: minhasPorTurma.get(t.id) ?? null,
-      };
-    })
-  );
+  const ocupadasPorTurma = new Map<string, number>();
+  if (turmaIds.length > 0) {
+    const { data: matriculasConfirmadas } = await admin.from("matriculas").select("turma_id").in("turma_id", turmaIds).eq("status", "confirmado");
+    for (const m of matriculasConfirmadas ?? []) {
+      ocupadasPorTurma.set(m.turma_id, (ocupadasPorTurma.get(m.turma_id) ?? 0) + 1);
+    }
+  }
+
+  return (turmas ?? []).map((t): TurmaParaAluno => ({
+    id: t.id,
+    nome: t.nome,
+    dia: DIA_LABEL[t.dia] ?? t.dia,
+    hora: `${t.hora_inicio.slice(0, 5)} às ${t.hora_fim.slice(0, 5)}`,
+    ocupadas: ocupadasPorTurma.get(t.id) ?? 0,
+    capacidade: t.capacidade,
+    souEuFixo: t.id === minhaTurmaFixaId,
+    minhaSolicitacao: minhasPorTurma.get(t.id) ?? null,
+  }));
 }
 
 /** Pedido de vaga nova ou reposição — mesma tela/tabela que o admin já
@@ -250,4 +261,61 @@ export async function getHistoricoPagamentos(): Promise<PagamentoHistorico[]> {
     status: p.status,
     dataFormatada: formatarData(p.criado_em.slice(0, 10)),
   }));
+}
+
+/** Pagamento pendente mais recente do próprio aluno, pro card "Minha
+ *  Turma" do Início — reaproveita a mesma leitura de getHistoricoPagamentos
+ *  (RLS já cobre) em vez de criar uma query paralela quase igual. */
+export async function getPagamentoPendente(): Promise<PagamentoHistorico | null> {
+  const historico = await getHistoricoPagamentos();
+  return historico.find((p) => p.status === "pendente") ?? null;
+}
+
+/** Aluno anexa o comprovante do PRÓPRIO pagamento pendente (2026-09-25,
+ *  "consiga pagar por pix e enviar o comprovante para o admin"). Confere
+ *  posse/status ANTES de subir o arquivo (evita gastar upload num arquivo
+ *  que o update ia rejeitar de qualquer forma) — o bucket é privado
+ *  (`comprovantes`, ver schema.sql), e as policies de storage.objects só
+ *  liberam o aluno gravar/ler dentro da própria pasta
+ *  (`{aluno_id}/...`), então o caminho abaixo é o que faz a policy
+ *  bater, não é só organização.
+ *
+ *  Sem notificação em `notificacoes` de propósito — a tabela existe no
+ *  schema mas nenhuma tela (admin ou aluno) lê dela ainda, seria escrever
+ *  num vazio que ninguém veria. O admin vê o comprovante direto na tela
+ *  de Pagamentos (getPagamentosReal/PagamentosClient), que já é onde ele
+ *  confirma o pagamento. */
+export async function enviarComprovantePagamento(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado.");
+
+  const { data: perfil } = await supabase.from("profiles").select("id").eq("auth_user_id", user.id).maybeSingle();
+  if (!perfil) throw new Error("Perfil não encontrado.");
+
+  const pagamentoId = formData.get("pagamentoId");
+  const arquivo = formData.get("arquivo");
+  if (typeof pagamentoId !== "string" || !pagamentoId) throw new Error("Pagamento inválido.");
+  if (!(arquivo instanceof File) || arquivo.size === 0) throw new Error("Selecione um arquivo antes de enviar.");
+
+  const { data: pagamento } = await supabase.from("pagamentos").select("id, aluno_id, status").eq("id", pagamentoId).maybeSingle();
+  if (!pagamento || pagamento.aluno_id !== perfil.id) throw new Error("Pagamento não encontrado.");
+  if (pagamento.status !== "pendente") throw new Error("Esse pagamento já foi confirmado.");
+
+  const extensao = arquivo.name.includes(".") ? arquivo.name.split(".").pop() : "jpg";
+  const caminho = `${perfil.id}/${Date.now()}.${extensao}`;
+  const { error: uploadError } = await supabase.storage.from("comprovantes").upload(caminho, arquivo, { contentType: arquivo.type || undefined });
+  if (uploadError) throw new Error(`Falha ao enviar o comprovante: ${uploadError.message}`);
+
+  const { error: updateError } = await supabase
+    .from("pagamentos")
+    .update({ comprovante_url: caminho, comprovante_enviado_em: new Date().toISOString() })
+    .eq("id", pagamentoId);
+  if (updateError) throw new Error(`Falha ao registrar o comprovante: ${updateError.message}`);
+
+  revalidatePath("/aluno");
+  revalidatePath("/aluno/historico");
+  revalidatePath("/pagamentos");
 }

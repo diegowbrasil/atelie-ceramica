@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { BadgePagamentoPendente } from "@/components/aluno/BadgePagamentoPendente";
 import type { AulaHistorico, PagamentoHistorico } from "@/lib/actions/alunoPortal";
 import { CalendarCheck, Receipt } from "lucide-react";
 
@@ -62,7 +63,7 @@ export function AlunoHistoricoClient({ aulas, pagamentos }: Props) {
                   {p.valor != null ? ` · R$ ${p.valor}` : ""}
                 </div>
               </div>
-              <Badge tone={p.status === "pago" ? "success" : "warning"}>{p.status === "pago" ? "Pago" : "Pendente"}</Badge>
+              {p.status === "pendente" ? <BadgePagamentoPendente pagamento={p} /> : <Badge tone="success">Pago</Badge>}
             </Card>
           ))}
         </div>

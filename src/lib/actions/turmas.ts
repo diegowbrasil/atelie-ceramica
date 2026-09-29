@@ -98,43 +98,47 @@ export interface VagaReal extends Vaga {
  *  (`await getRosterTurma(turmaId)`). */
 export async function getRosterTurma(turmaId: string, diaId: string, capacidade: number): Promise<VagaReal[]> {
   const supabase = await createClient();
+  const dataAula = dataDestaSemana(diaId);
 
-  const { data: matriculas, error } = await supabase
-    .from("matriculas")
-    .select("id, aluno_id, solicitado_em, profiles(nome, telefone), pacotes(id, aulas_usadas, total_aulas, status)")
-    .eq("turma_id", turmaId)
-    .eq("status", "confirmado")
-    .order("solicitado_em", { ascending: true })
-    .overrideTypes<MatriculaComJoins[], { merge: false }>();
+  // 2 ondas em paralelo em vez de 4 round-trips sequenciais (achado no
+  // pente-fino de performance, 2026-09-25): matriculas/aula não dependem
+  // uma da outra; presencas/pagamentos-pendentes só dependem do que a
+  // onda 1 resolve (aula.id + alunoIds), não uma da outra.
+  const [{ data: matriculas, error }, { data: aula }] = await Promise.all([
+    supabase
+      .from("matriculas")
+      .select("id, aluno_id, solicitado_em, profiles(nome, telefone), pacotes(id, aulas_usadas, total_aulas, status)")
+      .eq("turma_id", turmaId)
+      .eq("status", "confirmado")
+      .order("solicitado_em", { ascending: true })
+      .overrideTypes<MatriculaComJoins[], { merge: false }>(),
+    supabase.from("aulas").select("id").eq("turma_id", turmaId).eq("data", dataAula).maybeSingle(),
+  ]);
   if (error) throw new Error(`Falha ao buscar roster da turma ${turmaId}: ${error.message}`);
 
   const alunoIds = (matriculas ?? []).map((m) => m.aluno_id);
 
-  // Presença desta semana (se a aula ainda não foi criada, ninguém tem
-  // presença marcada — todo mundo fica no default "confirmado").
-  const dataAula = dataDestaSemana(diaId);
-  const { data: aula } = await supabase.from("aulas").select("id").eq("turma_id", turmaId).eq("data", dataAula).maybeSingle();
+  const [presencas, pagamentosPendentes] = await Promise.all([
+    // Presença desta semana (se a aula ainda não foi criada, ninguém tem
+    // presença marcada — todo mundo fica no default "confirmado").
+    aula && alunoIds.length > 0
+      ? supabase.from("presencas").select("aluno_id, status").eq("aula_id", aula.id).in("aluno_id", alunoIds).then((r) => r.data ?? [])
+      : Promise.resolve([]),
+    // Pagamento pendente por aluno nesta turma (qualquer um, não só o mais
+    // recente — se existir algum pendente, o aluno conta como "pendente").
+    alunoIds.length > 0
+      ? supabase.from("pagamentos").select("aluno_id").eq("turma_id", turmaId).eq("status", "pendente").in("aluno_id", alunoIds).then((r) => r.data ?? [])
+      : Promise.resolve([]),
+  ]);
+
   const presencaPorAluno = new Map<string, { status: string; presente: boolean }>();
-  if (aula && alunoIds.length > 0) {
-    const { data: presencas } = await supabase.from("presencas").select("aluno_id, status").eq("aula_id", aula.id).in("aluno_id", alunoIds);
-    for (const p of presencas ?? []) {
-      presencaPorAluno.set(p.aluno_id, { status: p.status, presente: p.status === "presente" });
-    }
+  for (const p of presencas) {
+    presencaPorAluno.set(p.aluno_id, { status: p.status, presente: p.status === "presente" });
   }
 
-  // Pagamento pendente por aluno nesta turma (qualquer um, não só o mais
-  // recente — se existir algum pendente, o aluno conta como "pendente").
   const pendentesPorAluno = new Set<string>();
-  if (alunoIds.length > 0) {
-    const { data: pagamentosPendentes } = await supabase
-      .from("pagamentos")
-      .select("aluno_id")
-      .eq("turma_id", turmaId)
-      .eq("status", "pendente")
-      .in("aluno_id", alunoIds);
-    for (const p of pagamentosPendentes ?? []) {
-      if (p.aluno_id) pendentesPorAluno.add(p.aluno_id);
-    }
+  for (const p of pagamentosPendentes) {
+    if (p.aluno_id) pendentesPorAluno.add(p.aluno_id);
   }
 
   const ocupadas: VagaReal[] = (matriculas ?? []).map((m, i) => {

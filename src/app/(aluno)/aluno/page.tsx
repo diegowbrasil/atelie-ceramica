@@ -2,12 +2,15 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getAlunoReal } from "@/lib/actions/alunos";
+import { getPagamentoPendente } from "@/lib/actions/alunoPortal";
 import { sair } from "@/lib/actions/auth";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ProgressRing } from "@/components/ui/ProgressRing";
+import { BadgePagamentoPendente } from "@/components/aluno/BadgePagamentoPendente";
 import { TURMA_LABEL_COR, type CorIdentidade } from "@/lib/alunos";
+import { FUNDOS_ARGILA, type CorFundoArgila } from "@/lib/fundosArgila";
 
 const COR_HEX: Record<CorIdentidade, string> = {
   sienna: "rgb(var(--sienna))", ardosia: "rgb(var(--ardosia))", musgo: "rgb(var(--musgo))", cafe: "rgb(var(--cafe))", ocre: "rgb(var(--ocre))",
@@ -15,6 +18,11 @@ const COR_HEX: Record<CorIdentidade, string> = {
 const COR_TRACK: Record<CorIdentidade, string> = {
   sienna: "rgb(var(--sienna) / 0.18)", ardosia: "rgb(var(--ardosia) / 0.18)", musgo: "rgb(var(--musgo) / 0.18)", cafe: "rgb(var(--cafe) / 0.18)", ocre: "rgb(var(--ocre) / 0.18)",
 };
+// "cafe" (Quinta 18:30) não tem foto própria ainda — mesma solução usada
+// em AlunoTurmasClient/Dashboard, usa a foto de "musgo" por enquanto.
+function fotoDaTurma(cor: CorIdentidade): string {
+  return FUNDOS_ARGILA[(cor === "cafe" ? "musgo" : cor) as CorFundoArgila];
+}
 
 // Primeira fatia real da Área do Aluno (2026-09-24) — só o Início, lendo
 // os próprios dados via RLS (aluno_id = current_profile_id() nas tabelas
@@ -41,7 +49,7 @@ export default async function AlunoHomePage() {
   const { data: perfil } = await supabase.from("profiles").select("id").eq("auth_user_id", user.id).maybeSingle();
   if (!perfil) redirect("/login");
 
-  const aluno = await getAlunoReal(perfil.id);
+  const [aluno, pagamentoPendente] = await Promise.all([getAlunoReal(perfil.id), getPagamentoPendente()]);
   if (!aluno) redirect("/login");
 
   const temTurma = !!aluno.turmaId;
@@ -61,29 +69,36 @@ export default async function AlunoHomePage() {
       <h1 className="mb-5 text-center font-display text-2xl uppercase tracking-wide text-ink">Minha Turma</h1>
 
       {temTurma ? (
-        <Card className="mb-4 overflow-hidden p-0" style={{ borderColor: COR_HEX[cor], borderWidth: 2 }}>
-          <div className="flex items-center gap-2 px-5 pt-4">
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: COR_HEX[cor] }} />
-            <span className="text-sm font-semibold text-ink">{aluno.turma}</span>
-          </div>
-          <div className="flex items-center gap-4 p-5 pt-3">
-            <div className="relative shrink-0">
-              <ProgressRing percentual={pct} size={72} stroke={7} color={COR_HEX[cor]} trackColor={COR_TRACK[cor]} />
-              <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold" style={{ color: COR_HEX[cor] }}>
-                {aluno.aula}/{aluno.total}
-              </span>
+        <Card
+          className="mb-4 overflow-hidden border-2"
+          style={{ borderColor: COR_HEX[cor], backgroundImage: `url(${fotoDaTurma(cor)})`, backgroundSize: "cover", backgroundPosition: "center" }}
+        >
+          <div className="bg-white/65 p-5 backdrop-blur-[2px]">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: COR_HEX[cor] }} />
+              <span className="text-sm font-semibold text-ink">{aluno.turma}</span>
             </div>
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-ink">Seu pacote</div>
-              <div className="text-sm text-ink-soft">Aula {aluno.aula} de {aluno.total}</div>
-              <div className="mt-1.5">
-                {aluno.status === "pendente" ? (
-                  <Badge tone="warning">Pagamento pendente</Badge>
-                ) : aluno.status === "ultima" ? (
-                  <Badge tone="danger">Hora de renovar</Badge>
-                ) : (
-                  <Badge tone="success">Pagamento em dia</Badge>
-                )}
+            <div className="flex items-center gap-4">
+              <div className="relative shrink-0">
+                <ProgressRing percentual={pct} size={72} stroke={7} color={COR_HEX[cor]} trackColor={COR_TRACK[cor]} />
+                <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold" style={{ color: COR_HEX[cor] }}>
+                  {aluno.aula}/{aluno.total}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-ink">Seu pacote</div>
+                <div className="text-sm text-ink-soft">Aula {aluno.aula} de {aluno.total}</div>
+                <div className="mt-1.5">
+                  {aluno.status === "pendente" && pagamentoPendente ? (
+                    <BadgePagamentoPendente pagamento={pagamentoPendente} />
+                  ) : aluno.status === "pendente" ? (
+                    <Badge tone="warning">Pagamento pendente</Badge>
+                  ) : aluno.status === "ultima" ? (
+                    <Badge tone="danger">Hora de renovar</Badge>
+                  ) : (
+                    <Badge tone="success">Pagamento em dia</Badge>
+                  )}
+                </div>
               </div>
             </div>
           </div>

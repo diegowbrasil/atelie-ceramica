@@ -223,7 +223,12 @@ create table pagamentos (
   status pagamento_status not null default 'pendente',
   vencimento date,
   pago_em timestamptz,
-  criado_em timestamptz not null default now()
+  criado_em timestamptz not null default now(),
+  -- Comprovante de Pix enviado pelo próprio aluno (2026-09-25) — caminho
+  -- do arquivo no bucket privado `comprovantes` (storage.objects.name),
+  -- não uma URL pública; a UI sempre gera signed URL na hora de exibir.
+  comprovante_url text,
+  comprovante_enviado_em timestamptz
 );
 
 -- ---------------------------------------------------------
@@ -316,7 +321,7 @@ create table queima_leituras (
 create type notificacao_tipo as enum (
   'ultima_aula','pacote_encerrado','solicitacao_vaga','solicitacao_reposicao',
   'confirmacao_presenca','oficina_amanha','queima_iniciada','queima_finalizada',
-  'pecas_prontas'
+  'pecas_prontas','comprovante_enviado'
 );
 
 create table notificacoes (
@@ -490,6 +495,14 @@ create policy "pagamentos_select" on pagamentos for select
   using (aluno_id = current_profile_id() or is_admin());
 create policy "pagamentos_admin_write" on pagamentos for all
   using (is_admin()) with check (is_admin());
+-- Aluno pode anexar o comprovante do PRÓPRIO pagamento pendente — o
+-- GRANT de coluna (não só a policy) é o que garante que ele não consegue
+-- se auto-marcar como "pago" nem mudar valor/descrição por essa mesma
+-- via, mesmo tendo permissão de UPDATE na linha.
+grant update (comprovante_url, comprovante_enviado_em) on pagamentos to authenticated;
+create policy "pagamentos_aluno_envia_comprovante" on pagamentos for update
+  using (aluno_id = current_profile_id() and status = 'pendente')
+  with check (aluno_id = current_profile_id());
 
 -- avisos: "para alunos" é visível a qualquer autenticado; "para admin" só admin.
 -- Escrita sempre admin (é quem cria o aviso, pros dois destinatários).
@@ -497,3 +510,21 @@ create policy "avisos_select" on avisos for select
   using ((destinatario = 'alunos' and auth.uid() is not null) or (destinatario = 'admin' and is_admin()));
 create policy "avisos_admin_write" on avisos for all
   using (is_admin()) with check (is_admin());
+
+-- ---------------------------------------------------------
+-- STORAGE — comprovantes de pagamento (2026-09-25)
+-- ---------------------------------------------------------
+-- Bucket PRIVADO de propósito (é recibo/print de pagamento, dado
+-- pessoal) — a UI nunca usa a URL pública, sempre createSignedUrl() na
+-- hora de exibir pro admin. Caminho de cada arquivo: `{aluno_id}/...`,
+-- é isso que as policies abaixo checam via storage.foldername.
+insert into storage.buckets (id, name, public)
+  values ('comprovantes', 'comprovantes', false)
+  on conflict (id) do nothing;
+
+create policy "comprovantes_aluno_upload" on storage.objects for insert
+  with check (bucket_id = 'comprovantes' and (storage.foldername(name))[1] = current_profile_id()::text);
+create policy "comprovantes_aluno_le_proprio" on storage.objects for select
+  using (bucket_id = 'comprovantes' and (storage.foldername(name))[1] = current_profile_id()::text);
+create policy "comprovantes_admin_le_tudo" on storage.objects for select
+  using (bucket_id = 'comprovantes' and is_admin());

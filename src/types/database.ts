@@ -22,7 +22,7 @@ export type ConteudoCategoria = "alunos" | "oficinas" | "encomendas" | "fora" | 
 export type NotificacaoTipo =
   | "ultima_aula" | "pacote_encerrado" | "solicitacao_vaga" | "solicitacao_reposicao"
   | "confirmacao_presenca" | "oficina_amanha" | "queima_iniciada" | "queima_finalizada"
-  | "pecas_prontas";
+  | "pecas_prontas" | "comprovante_enviado";
 export type AvisoDestinatario = "admin" | "alunos";
 
 export interface Profile {
@@ -210,6 +210,8 @@ export interface Pagamento {
   vencimento: string | null;
   pago_em: string | null;
   criado_em: string;
+  comprovante_url: string | null;
+  comprovante_enviado_em: string | null;
 }
 
 export interface Aviso {

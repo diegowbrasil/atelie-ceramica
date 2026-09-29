@@ -12,17 +12,10 @@ export default async function TurmaPage({ params }: { params: Promise<{ turmaId:
   const diaValido = TURMAS_DIAS.find((d) => d.turmas.some((t) => t.id === turmaId) && d.disponivel) ?? TURMAS_DIAS.find((d) => d.id === "ter")!;
   const turmaInfo = diaValido.turmas.find((t) => t.id === turmaId) ?? diaValido.turmas[0];
 
-  const turmaReal = await getTurmaPorSlug(turmaInfo.id);
-  if (!turmaReal) {
-    // Turma ainda não existe no banco (ex: schema acabou de ser resetado
-    // e ninguém rodou o seed) — manda pro dashboard em vez de quebrar.
-    redirect("/dashboard");
-  }
-
-  const vagas = await getRosterTurma(turmaReal.id, diaValido.id as DiaId, turmaReal.capacidade);
-
-  // Mapa slug→UUID de TODAS as turmas, pro modal de "mover aluno" poder
-  // listar destinos com id real — busca as 4 de uma vez.
+  // As 4 turmas de uma vez (não 3 ondas sequenciais) — a atual e as
+  // outras 3 (pro modal de "mover aluno") vêm do mesmo lote, sem buscar
+  // turmaInfo.id duas vezes (achado no pente-fino de performance,
+  // 2026-09-25: essa 2ª busca sempre incluía a própria turma atual).
   const todosSlugs = TURMAS_DIAS.flatMap((d) => d.turmas.map((t) => t.id));
   const todasReais = await Promise.all(todosSlugs.map((slug) => getTurmaPorSlug(slug)));
   const turmasReais: Record<string, string> = {};
@@ -30,6 +23,15 @@ export default async function TurmaPage({ params }: { params: Promise<{ turmaId:
     const real = todasReais[i];
     if (real) turmasReais[slug] = real.id;
   });
+
+  const turmaReal = todasReais[todosSlugs.indexOf(turmaInfo.id)];
+  if (!turmaReal) {
+    // Turma ainda não existe no banco (ex: schema acabou de ser resetado
+    // e ninguém rodou o seed) — manda pro dashboard em vez de quebrar.
+    redirect("/dashboard");
+  }
+
+  const vagas = await getRosterTurma(turmaReal.id, diaValido.id as DiaId, turmaReal.capacidade);
 
   return (
     <TurmaDetalheClient

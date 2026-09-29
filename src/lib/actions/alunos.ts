@@ -32,11 +32,22 @@ export interface AlunoReal {
 }
 
 async function montarAlunoReal(supabase: Awaited<ReturnType<typeof createClient>>, alunoId: string) {
+  // `provisorio: false` — sem esse filtro, um aluno com uma visita
+  // avulsa ativa (moverAluno modo "provisoria", que NUNCA encerra a
+  // matrícula fixa, de propósito — é assim que "visitar outra turma um
+  // dia" funciona) tem 2 linhas confirmado ao mesmo tempo. `.maybeSingle()`
+  // com 2+ linhas devolve `data: null` + um `error` que esta função
+  // sempre ignorou silenciosamente — a pessoa passava a aparecer como
+  // "sem turma" (Início cai pro estado de "Solicitar vaga") mesmo tendo
+  // uma matrícula fixa perfeitamente normal. Achado ao vivo 2026-09-25
+  // testando o fluxo fixo/provisório do admin. "Minha turma"/pacote
+  // sempre devem refletir a matrícula FIXA, nunca uma visita avulsa.
   const { data: matricula } = await supabase
     .from("matriculas")
     .select("id, pacote_id, turma_id, turmas(nome)")
     .eq("aluno_id", alunoId)
     .eq("status", "confirmado")
+    .eq("provisorio", false)
     .maybeSingle()
     .overrideTypes<{ id: string; pacote_id: string | null; turma_id: string; turmas: { nome: string } | null } | null, { merge: false }>();
 
@@ -66,29 +77,72 @@ async function montarAlunoReal(supabase: Awaited<ReturnType<typeof createClient>
   return { matricula, aula, total, status };
 }
 
+/** Versão em lote de montarAlunoReal — usada pela lista inteira (hoje 46
+ *  alunos reais). A versão por-aluno faz até 3 queries cada; rodada 46x em
+ *  paralelo isso ainda é ~138 queries por carregamento da tela (achado no
+ *  pente-fino de performance, 2026-09-25). Batch com `.in(...)` + Maps em
+ *  vez de Promise.all(map(montarAlunoReal)) — mesmo padrão já usado em
+ *  getPagamentosReal (pagamentos.ts). `getAlunoReal` (1 aluno só, página de
+ *  detalhe) continua usando montarAlunoReal — 3 queries pra 1 pessoa nunca
+ *  foi o problema. */
 export async function getAlunosReal(): Promise<AlunoReal[]> {
   const supabase = await createClient();
   const { data: perfis, error } = await supabase.from("profiles").select("id, nome, telefone, auth_user_id").eq("role", "aluno").order("nome", { ascending: true });
   if (error) throw new Error(`Falha ao buscar alunos: ${error.message}`);
+  const alunos = perfis ?? [];
+  const alunoIds = alunos.map((p) => p.id);
+  if (alunoIds.length === 0) return [];
 
-  return Promise.all(
-    (perfis ?? []).map(async (p): Promise<AlunoReal> => {
-      const { matricula, aula, total, status } = await montarAlunoReal(supabase, p.id);
-      return {
-        id: p.id,
-        nome: p.nome,
-        tel: p.telefone,
-        turma: matricula?.turmas?.nome ?? "Sem turma",
-        turmaId: matricula?.turma_id ?? null,
-        matriculaId: matricula?.id ?? null,
-        pacoteId: matricula?.pacote_id ?? null,
-        aula,
-        total,
-        status,
-        temContaAtiva: !!p.auth_user_id,
-      };
-    })
-  );
+  // `provisorio: false` — mesmo motivo de montarAlunoReal acima: sem
+  // isso, um aluno com uma visita avulsa ativa tem 2 linhas confirmado,
+  // e o Map abaixo escolheria uma das duas meio ao acaso (a ordem da
+  // query, não necessariamente a fixa) em vez de sempre mostrar a turma
+  // de casa da pessoa.
+  const { data: matriculas, error: matriculasError } = await supabase
+    .from("matriculas")
+    .select("aluno_id, id, pacote_id, turma_id, turmas(nome)")
+    .in("aluno_id", alunoIds)
+    .eq("status", "confirmado")
+    .eq("provisorio", false)
+    .overrideTypes<Array<{ aluno_id: string; id: string; pacote_id: string | null; turma_id: string; turmas: { nome: string } | null }>, { merge: false }>();
+  if (matriculasError) throw new Error(`Falha ao buscar matrículas: ${matriculasError.message}`);
+  const matriculaPorAluno = new Map((matriculas ?? []).map((m) => [m.aluno_id, m]));
+
+  const pacoteIds = [...new Set((matriculas ?? []).map((m) => m.pacote_id).filter((id): id is string => !!id))];
+  const pacotesPorId = new Map<string, { aulas_usadas: number; total_aulas: number; status: string }>();
+  if (pacoteIds.length > 0) {
+    const { data: pacotes } = await supabase.from("pacotes").select("id, aulas_usadas, total_aulas, status").in("id", pacoteIds);
+    for (const pac of pacotes ?? []) pacotesPorId.set(pac.id, pac);
+  }
+
+  const pendentesPorAluno = new Set<string>();
+  const { data: pendentes } = await supabase.from("pagamentos").select("aluno_id").in("aluno_id", alunoIds).eq("status", "pendente");
+  for (const pg of pendentes ?? []) {
+    if (pg.aluno_id) pendentesPorAluno.add(pg.aluno_id);
+  }
+
+  return alunos.map((p): AlunoReal => {
+    const matricula = matriculaPorAluno.get(p.id) ?? null;
+    const pacote = matricula?.pacote_id ? pacotesPorId.get(matricula.pacote_id) : undefined;
+    let status: AlunoReal["status"] = "confirmado";
+    if (matricula) {
+      if (pendentesPorAluno.has(p.id)) status = "pendente";
+      else if (pacote?.status === "ultima_aula") status = "ultima";
+    }
+    return {
+      id: p.id,
+      nome: p.nome,
+      tel: p.telefone,
+      turma: matricula?.turmas?.nome ?? "Sem turma",
+      turmaId: matricula?.turma_id ?? null,
+      matriculaId: matricula?.id ?? null,
+      pacoteId: matricula?.pacote_id ?? null,
+      aula: pacote?.aulas_usadas ?? 0,
+      total: pacote?.total_aulas ?? 4,
+      status,
+      temContaAtiva: !!p.auth_user_id,
+    };
+  });
 }
 
 export async function getAlunoReal(id: string): Promise<AlunoReal | null> {
@@ -130,11 +184,17 @@ export async function editarAluno(
     if (error) throw new Error(`Falha ao atualizar telefone: ${error.message}`);
   }
 
+  // `provisorio: false` — mesmo motivo de montarAlunoReal: sem isso, um
+  // aluno com visita avulsa ativa tem 2 linhas confirmado, `.maybeSingle()`
+  // falha silenciosamente (error ignorado) e essa função tratava a
+  // pessoa como "sem matrícula", inserindo uma matrícula NOVA em vez de
+  // atualizar a fixa existente.
   const { data: matriculaAtual } = await supabase
     .from("matriculas")
     .select("id, turma_id, pacote_id")
     .eq("aluno_id", alunoId)
     .eq("status", "confirmado")
+    .eq("provisorio", false)
     .maybeSingle();
 
   const aulaClamped = Math.max(0, Math.min(dados.aulaAtual, dados.total));

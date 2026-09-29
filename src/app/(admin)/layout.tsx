@@ -11,13 +11,10 @@ import { MobileHeader } from "@/components/layout/MobileHeader";
 // domínios foram ligados.
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [{ data: { user } }, solicitacoesPendentes] = await Promise.all([supabase.auth.getUser(), getSolicitacoesReal()]);
   const { data: perfil } = user
     ? await supabase.from("profiles").select("nome, foto_url").eq("auth_user_id", user.id).maybeSingle()
     : { data: null };
-  const solicitacoesPendentes = await getSolicitacoesReal();
 
   return (
     <div className="flex min-h-screen bg-cream">

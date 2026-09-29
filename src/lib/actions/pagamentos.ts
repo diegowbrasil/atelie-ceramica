@@ -20,6 +20,7 @@ export interface PagamentoReal {
   data: string;
   status: "pendente" | "pago";
   motivo: string;
+  temComprovante: boolean;
 }
 
 function formatarDataCurta(iso: string): string {
@@ -32,7 +33,7 @@ export async function getPagamentosReal(): Promise<PagamentoReal[]> {
 
   const { data: pagamentos, error } = await supabase
     .from("pagamentos")
-    .select("id, aluno_id, turma_id, descricao, valor, status, criado_em, profiles(nome, telefone)")
+    .select("id, aluno_id, turma_id, descricao, valor, status, criado_em, comprovante_url, profiles(nome, telefone)")
     .order("criado_em", { ascending: false })
     .overrideTypes<
       Array<{
@@ -43,6 +44,7 @@ export async function getPagamentosReal(): Promise<PagamentoReal[]> {
         valor: number | null;
         status: "pendente" | "pago" | "isento";
         criado_em: string;
+        comprovante_url: string | null;
         profiles: { nome: string; telefone: string | null } | null;
       }>,
       { merge: false }
@@ -75,6 +77,7 @@ export async function getPagamentosReal(): Promise<PagamentoReal[]> {
         data: formatarDataCurta(p.criado_em),
         status: p.status as "pendente" | "pago",
         motivo: pacote ? `Aula ${pacote.aulas_usadas} de ${pacote.total_aulas} sem pagamento` : "Sem pagamento",
+        temComprovante: !!p.comprovante_url,
       };
     });
 }
@@ -84,4 +87,19 @@ export async function marcarComoPago(pagamentoId: string) {
   const { error } = await supabase.from("pagamentos").update({ status: "pago", pago_em: new Date().toISOString() }).eq("id", pagamentoId);
   if (error) throw new Error(`Falha ao marcar como pago: ${error.message}`);
   revalidatePath("/pagamentos");
+}
+
+/** Signed URL de 1 minuto pro comprovante — o bucket `comprovantes` é
+ *  privado (dado pessoal, ver schema.sql), nunca expomos a URL pública.
+ *  A policy de storage.objects já restringe SELECT a admin ou ao próprio
+ *  aluno; aqui é sempre o admin lendo. */
+export async function getUrlComprovante(pagamentoId: string): Promise<string> {
+  const supabase = await createClient();
+  const { data: pagamento, error } = await supabase.from("pagamentos").select("comprovante_url").eq("id", pagamentoId).maybeSingle();
+  if (error) throw new Error(`Falha ao buscar comprovante: ${error.message}`);
+  if (!pagamento?.comprovante_url) throw new Error("Esse pagamento não tem comprovante.");
+
+  const { data, error: signError } = await supabase.storage.from("comprovantes").createSignedUrl(pagamento.comprovante_url, 60);
+  if (signError || !data) throw new Error(`Falha ao gerar link do comprovante: ${signError?.message ?? "erro desconhecido"}`);
+  return data.signedUrl;
 }
