@@ -89,13 +89,13 @@ export function TurmaDetalheClient({ slugAtual, diaAtivo, turmaRealId, capacidad
     await marcarPresenca(turmaRealId, diaAtivo, v.alunoId, v.pacoteId);
     router.refresh();
   }
-  async function handleMover(destinoSlug: string) {
+  async function handleMover(destinoSlug: string, tipo: "fixa" | "provisoria") {
     if (!modalMover?.matriculaId || !modalMover.alunoId) return;
     const destinoId = turmasReais[destinoSlug];
     if (!destinoId) return;
     setPendente(true);
     try {
-      await moverAluno(modalMover.matriculaId, modalMover.alunoId, modalMover.pacoteId ?? null, turmaRealId, destinoId);
+      await moverAluno(modalMover.matriculaId, modalMover.alunoId, modalMover.pacoteId ?? null, turmaRealId, destinoId, tipo);
       setModalMover(null);
       router.refresh();
     } finally {
@@ -295,9 +295,76 @@ function ModalMoverAluno({
   turmaAtualId: string;
   pendente: boolean;
   onClose: () => void;
-  onConfirmar: (destinoSlug: string) => void;
+  onConfirmar: (destinoSlug: string, tipo: "fixa" | "provisoria") => void;
 }) {
   const opcoesDestino = TURMAS_DIAS.flatMap((d) => d.turmas).filter((t) => t.id !== turmaAtualId);
+  const turmaAtual = TURMAS_DIAS.flatMap((d) => d.turmas).find((t) => t.id === turmaAtualId);
+  // 3 passos: escolher turma destino → só esse dia (provisório, aplica
+  // na hora) ou fixo (pede confirmação antes) — pedido do Diego
+  // (2026-09-25): o modal nunca perguntava isso, sempre movia fixo, e
+  // mudança fixa sempre precisa de "tem certeza?" antes de aplicar.
+  const [destino, setDestino] = useState<(typeof opcoesDestino)[number] | null>(null);
+  const [confirmandoFixa, setConfirmandoFixa] = useState(false);
+
+  if (destino && confirmandoFixa) {
+    return (
+      <Modal onClose={onClose}>
+        <h3 className="mb-1 text-base font-semibold text-ink">Tem certeza?</h3>
+        <p className="mb-4 text-sm text-ink-soft">
+          Quer mudar <strong className="text-ink">{aluno.nome}</strong> de{" "}
+          {turmaAtual ? `${turmaAtual.dia.split("-")[0]} · ${turmaAtual.hora}` : "turma atual"} para{" "}
+          {destino.dia.split("-")[0]} · {destino.hora} de forma <strong className="text-ink">fixa (permanente)</strong>?
+        </p>
+        <div className="flex gap-2">
+          <button
+            disabled={pendente}
+            onClick={() => setConfirmandoFixa(false)}
+            className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink disabled:opacity-60"
+          >
+            Voltar
+          </button>
+          <button
+            disabled={pendente}
+            onClick={() => onConfirmar(destino.id, "fixa")}
+            className="flex-1 rounded-xl bg-accent py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
+          >
+            {pendente ? "Movendo…" : "Confirmar mudança fixa"}
+          </button>
+        </div>
+      </Modal>
+    );
+  }
+
+  if (destino) {
+    return (
+      <Modal onClose={onClose}>
+        <h3 className="mb-1 text-base font-semibold text-ink">Mover {aluno.nome}</h3>
+        <p className="mb-4 text-sm text-ink-soft">
+          Para {destino.dia.split("-")[0]} · {destino.hora} — só esse dia ou virar a turma fixa dele?
+        </p>
+        <div className="space-y-2">
+          <button
+            disabled={pendente}
+            onClick={() => onConfirmar(destino.id, "provisoria")}
+            className="w-full rounded-xl border border-line px-3 py-2.5 text-left text-sm font-medium text-ink hover:bg-cream disabled:opacity-60"
+          >
+            Só essa turma, por um dia (reposição/visita)
+          </button>
+          <button
+            disabled={pendente}
+            onClick={() => setConfirmandoFixa(true)}
+            className="w-full rounded-xl border border-line px-3 py-2.5 text-left text-sm font-medium text-ink hover:bg-cream disabled:opacity-60"
+          >
+            Mudar fixo (permanente)
+          </button>
+        </div>
+        <button disabled={pendente} onClick={() => setDestino(null)} className="mt-4 w-full rounded-xl border border-line py-2.5 text-sm font-medium text-ink disabled:opacity-60">
+          Voltar
+        </button>
+      </Modal>
+    );
+  }
+
   return (
     <Modal onClose={onClose}>
       <h3 className="mb-1 text-base font-semibold text-ink">Mover {aluno.nome}</h3>
@@ -308,9 +375,8 @@ function ModalMoverAluno({
           return (
             <button
               key={t.id}
-              disabled={pendente}
-              onClick={() => onConfirmar(t.id)}
-              className="flex w-full items-center gap-3 rounded-lg border border-line px-3 py-2.5 text-left text-sm font-medium hover:bg-cream disabled:opacity-60"
+              onClick={() => setDestino(t)}
+              className="flex w-full items-center gap-3 rounded-lg border border-line px-3 py-2.5 text-left text-sm font-medium hover:bg-cream"
             >
               <span className={"h-2.5 w-2.5 shrink-0 rounded-full " + PONTO_COR[corPonto]} />
               {t.dia.split("-")[0]} · {t.hora}
