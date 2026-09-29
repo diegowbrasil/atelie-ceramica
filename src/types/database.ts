@@ -134,6 +134,7 @@ export interface OficinaParticipante {
   dupla_com: string | null;
   pagamento: PagamentoStatus;
   confirmado: boolean;
+  comprovante_enviado_em: string | null;
   criado_em: string;
 }
 

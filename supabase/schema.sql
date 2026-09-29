@@ -201,6 +201,14 @@ create table oficina_participantes (
   dupla_com text,                       -- nome livre, não precisa ser aluno cadastrado
   pagamento pagamento_status not null default 'pendente',
   confirmado boolean not null default false,
+  -- Aluno mandou o comprovante pelo WhatsApp (2026-09-29) — setado pelo
+  -- próprio aluno ao clicar "WhatsApp do ateliê" no ModalComprovante
+  -- (marcarComprovanteEnviado, alunoPortal.ts; via service_role com
+  -- checagem de posse em código, já que não existe policy de update pro
+  -- aluno nesta tabela). Existe só pra travar o cancelamento
+  -- (oficina_participantes_aluno_cancela, abaixo) — nunca muda
+  -- pagamento/confirmado, isso continua exclusivo do admin.
+  comprovante_enviado_em timestamptz,
   -- ordem de inscrição — não existe "número de vaga" persistido (mesma
   -- decisão de matriculas/`solicitado_em` em Turmas), a UI numera as
   -- vagas em ordem de chegada e preenche o resto como vazio até
@@ -506,6 +514,16 @@ create policy "oficina_participantes_admin_write" on oficina_participantes for a
 -- inscrito é sempre ação do admin.
 create policy "oficina_participantes_aluno_inscreve" on oficina_participantes for insert
   with check (aluno_id = current_profile_id() and pagamento = 'pendente' and confirmado = false);
+-- Aluno cancela a própria inscrição, só enquanto ainda dá pra voltar
+-- atrás sem confundir o ateliê (2026-09-29, pedido do Diego: "quanto eu
+-- tiver feito o pagamento ja e mandado o comprovante nao qro que tenha
+-- como cancelar"). Mesmo padrão de solicitacoes_vaga_aluno_delete —
+-- bloqueia por QUALQUER um dos dois sinais (admin já marcou pago OU
+-- aluno já mandou o comprovante), sem precisar checar `confirmado`: nos
+-- dois primeiros estágios (aguardando confirmação / aguardando
+-- pagamento) `pagamento` já é sempre 'pendente' por definição.
+create policy "oficina_participantes_aluno_cancela" on oficina_participantes for delete
+  using (aluno_id = current_profile_id() and pagamento = 'pendente' and comprovante_enviado_em is null);
 
 -- forno: somente admin (ferramenta exclusiva do ateliê)
 create policy "queimas_admin_all" on queimas for all using (is_admin()) with check (is_admin());

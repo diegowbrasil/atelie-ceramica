@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { FundoArgilaParallax } from "@/components/ui/FundoArgilaParallax";
 import { ModalComprovante } from "@/components/aluno/ModalComprovante";
-import { inscreverEmOficina, type OficinaParaAluno } from "@/lib/actions/alunoPortal";
+import { inscreverEmOficina, cancelarInscricaoOficina, marcarComprovanteEnviado, type OficinaParaAluno } from "@/lib/actions/alunoPortal";
 import type { StatusPecas } from "@/types/database";
 import { CalendarDays, Clock, Check } from "lucide-react";
 
@@ -31,6 +31,24 @@ export function AlunoOficinasClient({ oficinas }: { oficinas: OficinaParaAluno[]
   const router = useRouter();
   const [modalInscricao, setModalInscricao] = useState<OficinaParaAluno | null>(null);
   const [modalComprovante, setModalComprovante] = useState<OficinaParaAluno | null>(null);
+  const [modalCancelar, setModalCancelar] = useState<{ participanteId: string; nome: string } | null>(null);
+  const [cancelando, setCancelando] = useState(false);
+  const [erroCancelar, setErroCancelar] = useState<string | null>(null);
+
+  async function confirmarCancelamento() {
+    if (!modalCancelar) return;
+    setCancelando(true);
+    setErroCancelar(null);
+    try {
+      await cancelarInscricaoOficina(modalCancelar.participanteId);
+      setModalCancelar(null);
+      router.refresh();
+    } catch (e) {
+      setErroCancelar(e instanceof Error ? e.message : "Não foi possível cancelar.");
+    } finally {
+      setCancelando(false);
+    }
+  }
 
   return (
     <div className="relative">
@@ -76,7 +94,10 @@ export function AlunoOficinasClient({ oficinas }: { oficinas: OficinaParaAluno[]
                       {!minha.confirmado && (
                         <p className="mb-2 text-xs text-ink-soft">O ateliê vai confirmar sua vaga em breve — a chave Pix aparece aqui assim que confirmar.</p>
                       )}
-                      <div className="flex flex-wrap gap-1.5">
+                      {minha.confirmado && minha.pagamento === "pendente" && minha.comprovanteEnviado && (
+                        <p className="mb-2 text-xs text-ink-soft">Comprovante enviado — aguardando o ateliê confirmar o pagamento.</p>
+                      )}
+                      <div className="mb-2 flex flex-wrap gap-1.5">
                         {ETAPAS_PECAS.map((e, i) => {
                           const concluida = i <= idxAtual;
                           const atual = i === idxAtual;
@@ -94,6 +115,14 @@ export function AlunoOficinasClient({ oficinas }: { oficinas: OficinaParaAluno[]
                           );
                         })}
                       </div>
+                      {minha.pagamento === "pendente" && !minha.comprovanteEnviado && (
+                        <button
+                          onClick={() => setModalCancelar({ participanteId: minha.id, nome: o.nome })}
+                          className="text-xs font-medium text-rose-600 hover:underline"
+                        >
+                          Cancelar inscrição
+                        </button>
+                      )}
                     </div>
                   ) : !cheia ? (
                     <button
@@ -125,7 +154,27 @@ export function AlunoOficinasClient({ oficinas }: { oficinas: OficinaParaAluno[]
         <ModalComprovante
           pagamento={{ id: "", descricao: modalComprovante.nome, valor: modalComprovante.valor }}
           onClose={() => setModalComprovante(null)}
+          onEnviar={() => {
+            const participanteId = modalComprovante.minhaParticipacao?.id;
+            if (participanteId) marcarComprovanteEnviado(participanteId).then(() => router.refresh());
+          }}
         />
+      )}
+
+      {modalCancelar && (
+        <Modal onClose={() => setModalCancelar(null)}>
+          <h3 className="mb-1 text-base font-semibold text-ink">Cancelar inscrição em {modalCancelar.nome}?</h3>
+          <p className="mb-4 text-sm text-ink-soft">Sua vaga volta a ficar disponível. Essa ação não pode ser desfeita.</p>
+          {erroCancelar && <p className="mb-3 text-sm text-rose-500">{erroCancelar}</p>}
+          <div className="flex gap-2">
+            <button onClick={() => setModalCancelar(null)} disabled={cancelando} className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink disabled:opacity-60">
+              Voltar
+            </button>
+            <button onClick={confirmarCancelamento} disabled={cancelando} className="flex-1 rounded-xl bg-rose-600 py-2.5 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-60">
+              {cancelando ? "Cancelando…" : "Cancelar inscrição"}
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

@@ -329,6 +329,24 @@ function ModalCadastrarParticipante({
   const [tipo, setTipo] = useState<"individual" | "dupla">(participante?.tipo ?? "individual");
   const [duplaCom, setDuplaCom] = useState(participante?.duplaCom ?? "");
   const [pagamento, setPagamento] = useState<"pendente" | "pago">(participante?.pagamento ?? "pendente");
+  const [confirmandoRemocao, setConfirmandoRemocao] = useState(false);
+
+  if (confirmandoRemocao) {
+    return (
+      <Modal onClose={onClose}>
+        <h3 className="mb-1 text-base font-semibold text-ink">Remover {participante?.nome}?</h3>
+        <p className="mb-4 text-sm text-ink-soft">A vaga {numero} volta a ficar disponível. Essa ação não pode ser desfeita.</p>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setConfirmandoRemocao(false)} disabled={pendente} className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink disabled:opacity-60">
+            Voltar
+          </button>
+          <button type="button" onClick={onRemover} disabled={pendente} className="flex-1 rounded-xl bg-rose-600 py-2.5 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-60">
+            {pendente ? "Removendo…" : "Remover"}
+          </button>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal onClose={onClose}>
@@ -382,7 +400,7 @@ function ModalCadastrarParticipante({
           </button>
         </div>
         {editando && (
-          <button type="button" disabled={pendente} onClick={onRemover} className="mt-2 w-full rounded-xl border border-rose-200 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-60">
+          <button type="button" disabled={pendente} onClick={() => setConfirmandoRemocao(true)} className="mt-2 w-full rounded-xl border border-rose-200 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-60">
             Remover participante
           </button>
         )}

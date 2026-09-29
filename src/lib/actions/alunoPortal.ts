@@ -161,7 +161,7 @@ export interface OficinaParaAluno {
   ocupadas: number;
   descricao: string;
   statusPecas: StatusPecas;
-  minhaParticipacao: { tipo: "individual" | "dupla"; pagamento: "pendente" | "pago" | "isento"; confirmado: boolean } | null;
+  minhaParticipacao: { id: string; tipo: "individual" | "dupla"; pagamento: "pendente" | "pago" | "isento"; confirmado: boolean; comprovanteEnviado: boolean } | null;
 }
 
 export async function getOficinasParaAluno(): Promise<OficinaParaAluno[]> {
@@ -170,13 +170,13 @@ export async function getOficinasParaAluno(): Promise<OficinaParaAluno[]> {
 
   const { data: oficinas, error } = await admin
     .from("oficinas")
-    .select("id, nome, data, hora_inicio, hora_fim, valor, max_participantes, descricao, status_pecas, oficina_participantes(aluno_id, tipo, pagamento, confirmado)")
+    .select("id, nome, data, hora_inicio, hora_fim, valor, max_participantes, descricao, status_pecas, oficina_participantes(id, aluno_id, tipo, pagamento, confirmado, comprovante_enviado_em)")
     .order("data", { ascending: true })
     .overrideTypes<
       Array<{
         id: string; nome: string; data: string; hora_inicio: string; hora_fim: string;
         valor: number | null; max_participantes: number; descricao: string | null; status_pecas: StatusPecas;
-        oficina_participantes: { aluno_id: string | null; tipo: "individual" | "dupla"; pagamento: "pendente" | "pago" | "isento"; confirmado: boolean }[];
+        oficina_participantes: { id: string; aluno_id: string | null; tipo: "individual" | "dupla"; pagamento: "pendente" | "pago" | "isento"; confirmado: boolean; comprovante_enviado_em: string | null }[];
       }>,
       { merge: false }
     >();
@@ -194,7 +194,9 @@ export async function getOficinasParaAluno(): Promise<OficinaParaAluno[]> {
       ocupadas: o.oficina_participantes.length,
       descricao: o.descricao ?? "",
       statusPecas: o.status_pecas,
-      minhaParticipacao: minha ? { tipo: minha.tipo, pagamento: minha.pagamento, confirmado: minha.confirmado } : null,
+      minhaParticipacao: minha
+        ? { id: minha.id, tipo: minha.tipo, pagamento: minha.pagamento, confirmado: minha.confirmado, comprovanteEnviado: minha.comprovante_enviado_em != null }
+        : null,
     };
   });
 }
@@ -244,6 +246,41 @@ export async function inscreverEmOficina(oficinaId: string, dados: { tipo: "indi
   });
   if (error) throw new Error(`Falha ao se inscrever: ${error.message}`);
 
+  revalidatePath("/aluno/oficinas");
+}
+
+/** Aluno marca que já mandou o comprovante pelo WhatsApp (2026-09-29) —
+ *  chamado pelo ModalComprovante ao clicar "WhatsApp do ateliê". Usa
+ *  service_role porque não existe policy de update pro aluno em
+ *  `oficina_participantes` (só insert e, agora, um delete condicional —
+ *  ver schema.sql); a posse é conferida em código antes de escrever,
+ *  mesmo padrão já auditado neste arquivo pras outras chamadas de admin
+ *  client. Só grava `comprovante_enviado_em` — nunca pagamento/
+ *  confirmado, que continuam exclusivos do admin. Existe só pra travar
+ *  cancelarInscricaoOficina depois desse ponto (pedido do Diego: depois
+ *  de pagar e mandar o comprovante, não dá mais pra cancelar). */
+export async function marcarComprovanteEnviado(participanteId: string) {
+  const meuId = await meuProfileId();
+  if (!meuId) throw new Error("Não autenticado.");
+  const admin = createAdminClient();
+  const { data: participante } = await admin.from("oficina_participantes").select("id, aluno_id").eq("id", participanteId).maybeSingle();
+  if (!participante || participante.aluno_id !== meuId) throw new Error("Inscrição não encontrada.");
+  const { error } = await admin.from("oficina_participantes").update({ comprovante_enviado_em: new Date().toISOString() }).eq("id", participanteId);
+  if (error) throw new Error(`Falha ao registrar envio: ${error.message}`);
+  revalidatePath("/aluno/oficinas");
+}
+
+/** Cancela a própria inscrição numa oficina (2026-09-29, pedido do
+ *  Diego) — só enquanto a RLS (oficina_participantes_aluno_cancela)
+ *  deixar: pagamento ainda pendente E comprovante ainda não enviado.
+ *  Mesmo padrão de cancelarSolicitacao logo acima (.select("id") pra
+ *  distinguir "cancelou de verdade" de "RLS bloqueou em silêncio" — um
+ *  delete que a policy nega não vem com `error`, só devolve 0 linhas). */
+export async function cancelarInscricaoOficina(participanteId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("oficina_participantes").delete().eq("id", participanteId).select("id");
+  if (error) throw new Error(`Falha ao cancelar inscrição: ${error.message}`);
+  if (!data || data.length === 0) throw new Error("Não foi possível cancelar — o pagamento já pode ter sido confirmado ou o comprovante já foi enviado.");
   revalidatePath("/aluno/oficinas");
 }
 

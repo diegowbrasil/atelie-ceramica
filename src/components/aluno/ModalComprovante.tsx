@@ -18,9 +18,15 @@ import { Copy, Check, MessageCircle } from "lucide-react";
 interface Props {
   pagamento: { id: string; descricao: string | null; valor: number | null };
   onClose: () => void;
+  /** Opcional — chamado junto com o envio (2026-09-29), hoje só usado
+   *  pela auto-inscrição de oficina pra marcar comprovante_enviado_em
+   *  (trava o cancelamento depois disso). Fire-and-forget, mesmo padrão
+   *  não-bloqueante do resto desta função — o WhatsApp abrindo é a ação
+   *  principal, não precisa esperar nada pra fechar o modal. */
+  onEnviar?: () => void;
 }
 
-export function ModalComprovante({ pagamento, onClose }: Props) {
+export function ModalComprovante({ pagamento, onClose, onEnviar }: Props) {
   const [copiado, setCopiado] = useState(false);
 
   async function copiarChave() {
@@ -36,6 +42,7 @@ export function ModalComprovante({ pagamento, onClose }: Props) {
 
   function enviar() {
     abrirWhatsAppComprovante(pagamento.descricao, pagamento.valor);
+    onEnviar?.();
     onClose();
   }
 
