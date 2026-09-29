@@ -60,7 +60,7 @@ export default async function AlunoHomePage() {
       <FundoArgilaParallax cor={temTurma ? corFundo : null} />
       <div className="relative mx-auto max-w-md px-4 pb-24 pt-8">
       <div className="mb-6 flex items-center justify-between">
-        <span className="font-display text-xl uppercase leading-none tracking-wide text-ink">MTCST</span>
+        <span className="font-display text-xl uppercase leading-none tracking-normal text-ink">MTCST</span>
         <form action={sair}>
           <Button type="submit" variant="ghost" size="sm">Sair</Button>
         </form>

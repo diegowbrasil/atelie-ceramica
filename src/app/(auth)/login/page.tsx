@@ -54,7 +54,7 @@ export default function LoginPage() {
     <div className="relative flex min-h-screen items-center justify-center px-4">
       <FundoArgilaParallax cor="carvao" />
       <Card className="relative w-full max-w-sm animate-fade-up overflow-hidden border-2 border-carvao/40 bg-white/55 p-6 backdrop-blur-md">
-          <span className="mb-1 block font-display text-2xl uppercase leading-none tracking-wide text-ink">MTCST</span>
+          <span className="mb-1 block font-display text-2xl uppercase leading-none tracking-normal text-ink">MTCST</span>
           <p className="mb-6 text-sm text-ink-soft">Entre para acessar sua conta.</p>
 
           <form onSubmit={entrar} className="space-y-3">

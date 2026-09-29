@@ -44,7 +44,7 @@ export function Sidebar({
   return (
     <aside className="z-10 hidden md:flex md:w-32 md:shrink-0 md:flex-col md:border-r md:border-line md:bg-cream md:px-1.5 md:py-5">
       <div className="mb-6 flex justify-center px-1">
-        <span className="font-display text-2xl uppercase leading-none tracking-wide text-ink">MTCST</span>
+        <span className="font-display text-2xl uppercase leading-none tracking-normal text-ink">MTCST</span>
       </div>
 
       <nav className="flex-1 space-y-0.5">

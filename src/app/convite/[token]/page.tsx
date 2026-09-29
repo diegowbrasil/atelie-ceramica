@@ -13,7 +13,7 @@ export default async function ConvitePage({ params }: { params: Promise<{ token:
     return (
       <div className="flex min-h-screen items-center justify-center bg-cream px-4">
         <Card className="w-full max-w-sm p-6 text-center">
-          <span className="mb-3 block font-display text-2xl uppercase leading-none tracking-wide text-ink">MTCST</span>
+          <span className="mb-3 block font-display text-2xl uppercase leading-none tracking-normal text-ink">MTCST</span>
           <h1 className="mb-1 text-base font-semibold text-ink">Convite inválido ou expirado</h1>
           <p className="text-sm text-ink-soft">Peça pro ateliê gerar um link novo.</p>
         </Card>

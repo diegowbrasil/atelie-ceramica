@@ -34,7 +34,7 @@ export function AceitarConviteClient({ token, nome }: { token: string; nome: str
   return (
     <div className="flex min-h-screen items-center justify-center bg-cream px-4">
       <Card className="w-full max-w-sm animate-fade-up p-6">
-        <span className="mb-1 block font-display text-2xl uppercase leading-none tracking-wide text-ink">MTCST</span>
+        <span className="mb-1 block font-display text-2xl uppercase leading-none tracking-normal text-ink">MTCST</span>
         <p className="mb-6 text-sm text-ink-soft">Olá, {nome.split(" ")[0]}! Defina sua senha pra acessar sua conta.</p>
 
         <form onSubmit={enviar} className="space-y-3">

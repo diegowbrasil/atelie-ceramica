@@ -19,7 +19,7 @@ export function MobileHeader() {
     <header className="fixed inset-x-3 top-3 z-20 grid grid-cols-[1fr_auto_1fr] items-center rounded-full border border-white/70 bg-gradient-to-b from-white/80 to-white/50 px-4 py-5 shadow-[inset_0_1.5px_0_rgba(255,255,255,0.85),0_10px_28px_-6px_rgba(59,56,51,0.25)] backdrop-blur-2xl backdrop-saturate-150 md:hidden">
       <span />
       <span
-        className="justify-self-center font-display text-3xl font-bold uppercase leading-none tracking-wide"
+        className="justify-self-center font-display text-3xl font-bold uppercase leading-none tracking-normal"
         style={{
           backgroundImage: "linear-gradient(180deg, #0c0c0b, #000)",
           WebkitBackgroundClip: "text",
