@@ -205,7 +205,14 @@ create table oficina_participantes (
   -- decisão de matriculas/`solicitado_em` em Turmas), a UI numera as
   -- vagas em ordem de chegada e preenche o resto como vazio até
   -- `max_participantes`.
-  criado_em timestamptz not null default now()
+  criado_em timestamptz not null default now(),
+  -- Achado num pentest (2026-09-29): a auto-inscrição do aluno
+  -- (inscreverEmOficina) checa duplicidade em código, mas nada impedia um
+  -- aluno de inserir 2 linhas pra si mesmo direto pela chave anon,
+  -- pulando a Server Action. NULL != NULL em UNIQUE (padrão SQL), então
+  -- isso não afeta participante avulso (aluno_id null, cadastrado pelo
+  -- admin) — só impede a MESMA pessoa aparecer 2x na mesma oficina.
+  constraint oficina_participantes_aluno_unico unique (oficina_id, aluno_id)
 );
 
 -- ---------------------------------------------------------
@@ -485,6 +492,20 @@ create policy "oficina_participantes_select" on oficina_participantes for select
   using (aluno_id = current_profile_id() or is_admin());
 create policy "oficina_participantes_admin_write" on oficina_participantes for all
   using (is_admin()) with check (is_admin());
+-- Aluno pode se inscrever sozinho numa oficina (2026-09-29, pedido do
+-- Diego) — só na PRÓPRIA linha e sempre como "pendente"/não confirmado:
+-- o `with check` é o que impede a mesma brecha achada no pentest de
+-- profiles (um aluno não pode se inscrever já "pago" ou já "confirmado"
+-- só porque a linha é dele). Fluxo de 3 estágios usando os 2 campos que
+-- já existiam no schema, sem coluna nova: `confirmado=false` = aguardando
+-- o admin confirmar a inscrição em si (Pix ainda não aparece pro aluno);
+-- `confirmado=true, pagamento='pendente'` = aguardando pagamento (Pix já
+-- apareceu, aluno manda comprovante); `confirmado=true, pagamento='pago'`
+-- = inscrição confirmada de verdade. Sem policy de update/delete pro
+-- aluno aqui de propósito — mudar qualquer um desses 2 campos depois de
+-- inscrito é sempre ação do admin.
+create policy "oficina_participantes_aluno_inscreve" on oficina_participantes for insert
+  with check (aluno_id = current_profile_id() and pagamento = 'pendente' and confirmado = false);
 
 -- forno: somente admin (ferramenta exclusiva do ateliê)
 create policy "queimas_admin_all" on queimas for all using (is_admin()) with check (is_admin());

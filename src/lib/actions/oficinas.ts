@@ -24,6 +24,11 @@ export interface ParticipanteReal {
   tipo?: "individual" | "dupla";
   duplaCom?: string | null;
   pagamento?: "pendente" | "pago";
+  /** false = auto-inscrição do aluno ainda aguardando aprovação do admin
+   *  (Pix nem apareceu pra ele ainda) — ver inscreverEmOficina/
+   *  confirmarParticipante. Participante cadastrado pelo admin direto
+   *  (cadastrarParticipante) já nasce confirmado. */
+  confirmado?: boolean;
   _id?: string; // id real da linha em oficina_participantes, só quando ocupada — precisa pra editar/remover
 }
 
@@ -64,6 +69,7 @@ async function montarOficinaReal(row: {
     tipo: ParticipanteTipo;
     dupla_com: string | null;
     pagamento: "pendente" | "pago" | "isento";
+    confirmado: boolean;
     criado_em: string;
   }[];
 }): Promise<OficinaReal> {
@@ -75,6 +81,7 @@ async function montarOficinaReal(row: {
       tipo: p.tipo,
       duplaCom: p.dupla_com,
       pagamento: p.pagamento === "isento" ? "pago" : p.pagamento,
+      confirmado: p.confirmado,
       _id: p.id,
     }));
   const vazias: ParticipanteReal[] = [];
@@ -103,7 +110,7 @@ export async function getOficinasReal(): Promise<OficinaReal[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("oficinas")
-    .select("*, oficina_participantes(id, nome, tipo, dupla_com, pagamento, criado_em)")
+    .select("*, oficina_participantes(id, nome, tipo, dupla_com, pagamento, confirmado, criado_em)")
     .order("data", { ascending: true })
     .overrideTypes<Parameters<typeof montarOficinaReal>[0][], { merge: false }>();
   if (error) throw new Error(`Falha ao buscar oficinas: ${error.message}`);
@@ -114,7 +121,7 @@ export async function getOficinaReal(id: string): Promise<OficinaReal | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("oficinas")
-    .select("*, oficina_participantes(id, nome, tipo, dupla_com, pagamento, criado_em)")
+    .select("*, oficina_participantes(id, nome, tipo, dupla_com, pagamento, confirmado, criado_em)")
     .eq("id", id)
     .maybeSingle()
     .overrideTypes<Parameters<typeof montarOficinaReal>[0] | null, { merge: false }>();
@@ -234,4 +241,28 @@ export async function removerParticipante(participanteId: string, oficinaId: str
   const { error } = await supabase.from("oficina_participantes").delete().eq("id", participanteId);
   if (error) throw new Error(`Falha ao remover participante: ${error.message}`);
   revalidatePath(`/oficinas/${oficinaId}`);
+}
+
+/** Aprova uma auto-inscrição de aluno (2026-09-29) — o Pix só aparece pro
+ *  aluno depois disso (ver inscreverEmOficina em actions/alunoPortal.ts).
+ *  Gate deliberado, pedido do Diego: as oficinas também são vendidas pelo
+ *  site, que não fala com este banco — o admin precisa confirmar contra o
+ *  que já foi vendido por fora antes de prometer a vaga. */
+export async function confirmarParticipante(participanteId: string, oficinaId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("oficina_participantes").update({ confirmado: true }).eq("id", participanteId);
+  if (error) throw new Error(`Falha ao confirmar participante: ${error.message}`);
+  revalidatePath(`/oficinas/${oficinaId}`);
+  revalidatePath("/aluno/oficinas");
+}
+
+/** Recusa uma auto-inscrição (2026-09-29) — ex: a vaga já foi vendida no
+ *  site por fora. Remove a linha (nunca chegou a virar participação de
+ *  verdade), mesmo padrão de nunca deixar um estado "fantasma" pra trás. */
+export async function recusarParticipante(participanteId: string, oficinaId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("oficina_participantes").delete().eq("id", participanteId);
+  if (error) throw new Error(`Falha ao recusar participante: ${error.message}`);
+  revalidatePath(`/oficinas/${oficinaId}`);
+  revalidatePath("/aluno/oficinas");
 }

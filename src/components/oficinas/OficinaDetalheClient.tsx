@@ -13,12 +13,14 @@ import {
   cadastrarParticipante as cadastrarParticipanteReal,
   editarParticipante as editarParticipanteReal,
   removerParticipante as removerParticipanteReal,
+  confirmarParticipante as confirmarParticipanteReal,
+  recusarParticipante as recusarParticipanteReal,
   editarOficina,
   type OficinaReal,
   type ParticipanteReal,
 } from "@/lib/actions/oficinas";
 import type { StatusPecas } from "@/types/database";
-import { ChevronLeft, CalendarDays, Clock, CreditCard, Users, Check, Plus } from "lucide-react";
+import { ChevronLeft, CalendarDays, Clock, CreditCard, Users, Check, Plus, X } from "lucide-react";
 
 const PILL_COR: Record<CorIdentidade, string> = {
   sienna: "bg-sienna/15 text-sienna", ardosia: "bg-ardosia/15 text-ardosia", musgo: "bg-musgo/15 text-musgo", cafe: "bg-cafe/15 text-cafe",
@@ -91,6 +93,24 @@ export function OficinaDetalheClient({ oficinaInicial }: { oficinaInicial: Ofici
     try {
       await removerParticipanteReal(atual._id, oficina.id);
       setModalNumero(null);
+      router.refresh();
+    } finally {
+      setPendente(false);
+    }
+  }
+  async function confirmarInscricao(id: string) {
+    setPendente(true);
+    try {
+      await confirmarParticipanteReal(id, oficina.id);
+      router.refresh();
+    } finally {
+      setPendente(false);
+    }
+  }
+  async function recusarInscricao(id: string) {
+    setPendente(true);
+    try {
+      await recusarParticipanteReal(id, oficina.id);
       router.refresh();
     } finally {
       setPendente(false);
@@ -216,14 +236,42 @@ export function OficinaDetalheClient({ oficinaInicial }: { oficinaInicial: Ofici
       <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
         {oficina.participantes.map((p) =>
           p.nome ? (
-            <button key={p.numero} onClick={() => setModalNumero(p.numero)} className="flex w-full min-w-0 items-center gap-3 p-3 text-left hover:bg-cream">
+            <div
+              key={p.numero}
+              role="button"
+              tabIndex={0}
+              onClick={() => setModalNumero(p.numero)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setModalNumero(p.numero); }}
+              className="flex w-full min-w-0 cursor-pointer items-center gap-3 p-3 text-left hover:bg-cream"
+            >
               <Avatar nome={p.nome} size={40} />
               <div className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-ink">{p.nome}</span>
                 <span className="text-xs text-ink-soft">{p.tipo === "dupla" ? (p.duplaCom ? `Dupla com ${p.duplaCom}` : "Dupla") : "Individual"}</span>
               </div>
-              <Badge tone={p.pagamento === "pago" ? "success" : "warning"}>{p.pagamento === "pago" ? "Pago" : "Pendente"}</Badge>
-            </button>
+              {p.confirmado === false ? (
+                <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Badge tone="warning">Aguardando confirmação</Badge>
+                  <button
+                    disabled={pendente}
+                    onClick={() => p._id && recusarInscricao(p._id)}
+                    title="Recusar inscrição"
+                    className="rounded-lg border border-line p-1.5 text-ink-soft hover:bg-rose-50 hover:text-rose-600 disabled:opacity-60"
+                  >
+                    <X size={14} />
+                  </button>
+                  <button
+                    disabled={pendente}
+                    onClick={() => p._id && confirmarInscricao(p._id)}
+                    className="rounded-lg bg-accent px-2.5 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-60"
+                  >
+                    Confirmar
+                  </button>
+                </div>
+              ) : (
+                <Badge tone={p.pagamento === "pago" ? "success" : "warning"}>{p.pagamento === "pago" ? "Pago" : "Pendente"}</Badge>
+              )}
+            </div>
           ) : (
             <button key={p.numero} onClick={() => setModalNumero(p.numero)} className="flex w-full items-center gap-3 p-3 text-left hover:bg-cream">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed border-ink-soft text-ink-soft">

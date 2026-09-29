@@ -161,7 +161,7 @@ export interface OficinaParaAluno {
   ocupadas: number;
   descricao: string;
   statusPecas: StatusPecas;
-  minhaParticipacao: { tipo: "individual" | "dupla"; pagamento: "pendente" | "pago" | "isento" } | null;
+  minhaParticipacao: { tipo: "individual" | "dupla"; pagamento: "pendente" | "pago" | "isento"; confirmado: boolean } | null;
 }
 
 export async function getOficinasParaAluno(): Promise<OficinaParaAluno[]> {
@@ -170,13 +170,13 @@ export async function getOficinasParaAluno(): Promise<OficinaParaAluno[]> {
 
   const { data: oficinas, error } = await admin
     .from("oficinas")
-    .select("id, nome, data, hora_inicio, hora_fim, valor, max_participantes, descricao, status_pecas, oficina_participantes(aluno_id, tipo, pagamento)")
+    .select("id, nome, data, hora_inicio, hora_fim, valor, max_participantes, descricao, status_pecas, oficina_participantes(aluno_id, tipo, pagamento, confirmado)")
     .order("data", { ascending: true })
     .overrideTypes<
       Array<{
         id: string; nome: string; data: string; hora_inicio: string; hora_fim: string;
         valor: number | null; max_participantes: number; descricao: string | null; status_pecas: StatusPecas;
-        oficina_participantes: { aluno_id: string | null; tipo: "individual" | "dupla"; pagamento: "pendente" | "pago" | "isento" }[];
+        oficina_participantes: { aluno_id: string | null; tipo: "individual" | "dupla"; pagamento: "pendente" | "pago" | "isento"; confirmado: boolean }[];
       }>,
       { merge: false }
     >();
@@ -194,9 +194,57 @@ export async function getOficinasParaAluno(): Promise<OficinaParaAluno[]> {
       ocupadas: o.oficina_participantes.length,
       descricao: o.descricao ?? "",
       statusPecas: o.status_pecas,
-      minhaParticipacao: minha ? { tipo: minha.tipo, pagamento: minha.pagamento } : null,
+      minhaParticipacao: minha ? { tipo: minha.tipo, pagamento: minha.pagamento, confirmado: minha.confirmado } : null,
     };
   });
+}
+
+/** Aluno se inscreve sozinho numa oficina com vaga livre (2026-09-29,
+ *  pedido do Diego). Entra como "pendente" E `confirmado: false` — a RLS
+ *  (`oficina_participantes_aluno_inscreve`) já garante isso mesmo se este
+ *  código tivesse um bug. Fluxo de 3 estágios, pedido explícito do Diego
+ *  ("as oficinas estão à venda no site também... a pessoa tenta comprar e
+ *  já está esgotado porém não foi atualizado" — o app não é a única fonte
+ *  de verdade de vagas vendidas): inscrição não confirma vaga sozinha, o
+ *  admin PRECISA aprovar contra o que já foi vendido por fora antes do
+ *  Pix aparecer pro aluno (ver confirmarParticipante em actions/
+ *  oficinas.ts). A checagem de vagas/duplicidade precisa acontecer aqui
+ *  (não tem como expressar "menos que max_participantes linhas já
+ *  existem" numa policy). Usa admin só pra ENXERGAR a contagem de vagas e
+ *  se essa pessoa já está inscrita — nunca devolve esse dado bruto pro
+ *  client, mesmo padrão de getOficinasParaAluno. */
+export async function inscreverEmOficina(oficinaId: string, dados: { tipo: "individual" | "dupla"; duplaCom?: string | null }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado.");
+  const { data: perfil } = await supabase.from("profiles").select("id, nome").eq("auth_user_id", user.id).maybeSingle();
+  if (!perfil) throw new Error("Perfil não encontrado.");
+
+  const admin = createAdminClient();
+  const { data: oficina } = await admin
+    .from("oficinas")
+    .select("max_participantes, oficina_participantes(aluno_id)")
+    .eq("id", oficinaId)
+    .maybeSingle()
+    .overrideTypes<{ max_participantes: number; oficina_participantes: { aluno_id: string | null }[] } | null, { merge: false }>();
+  if (!oficina) throw new Error("Oficina não encontrada.");
+  if (oficina.oficina_participantes.some((p) => p.aluno_id === perfil.id)) throw new Error("Você já está inscrito nessa oficina.");
+  if (oficina.oficina_participantes.length >= oficina.max_participantes) throw new Error("Essa oficina não tem mais vagas.");
+
+  const { error } = await supabase.from("oficina_participantes").insert({
+    oficina_id: oficinaId,
+    aluno_id: perfil.id,
+    nome: perfil.nome,
+    tipo: dados.tipo,
+    dupla_com: dados.tipo === "dupla" ? (dados.duplaCom ?? null) : null,
+    pagamento: "pendente",
+    confirmado: false,
+  });
+  if (error) throw new Error(`Falha ao se inscrever: ${error.message}`);
+
+  revalidatePath("/aluno/oficinas");
 }
 
 /** Histórico de aulas/pagamentos do próprio aluno (2026-09-25). As duas
