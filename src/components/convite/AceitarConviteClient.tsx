@@ -27,7 +27,7 @@ export function AceitarConviteClient({ token, nome }: { token: string; nome: str
       setPendente(false);
       return;
     }
-    router.push("/aluno");
+    router.push(resultado.role === "admin" ? "/dashboard" : "/aluno");
     router.refresh();
   }
 

@@ -61,24 +61,31 @@ export async function verificarConvite(token: string): Promise<ConviteInfo | nul
   return { nome: data.nome };
 }
 
-export async function aceitarConvite(token: string, senha: string): Promise<{ ok: true } | { ok: false; erro: string }> {
+export async function aceitarConvite(token: string, senha: string): Promise<{ ok: true; role: "admin" | "aluno" } | { ok: false; erro: string }> {
   if (senha.length < 6) return { ok: false, erro: "A senha precisa ter pelo menos 6 caracteres." };
 
   const admin = createAdminClient();
   const { data: perfil } = await admin
     .from("profiles")
-    .select("id, telefone, convite_expira_em, auth_user_id")
+    .select("id, role, telefone, email, convite_expira_em, auth_user_id")
     .eq("convite_token", token)
     .maybeSingle();
   if (!perfil) return { ok: false, erro: "Convite inválido." };
   if (perfil.auth_user_id) return { ok: false, erro: "Essa conta já foi ativada — faça login normalmente." };
   if (!perfil.convite_expira_em || new Date(perfil.convite_expira_em) < new Date()) return { ok: false, erro: "Esse link expirou — peça um convite novo no ateliê." };
-  if (!perfil.telefone) return { ok: false, erro: "Esse cadastro não tem telefone. Peça pro ateliê adicionar antes de tentar de novo." };
 
-  const emailSintetico = emailSinteticoDoTelefone(perfil.telefone);
+  // Admin loga com e-mail de verdade (digitado na hora de convidar);
+  // aluno loga com telefone por baixo de um e-mail sintético (a leva de
+  // dado real nunca trouxe e-mail de aluno — ver comentário no topo do
+  // arquivo). Mesmo convite/token pros dois papéis, só a origem do
+  // e-mail muda.
+  const ehAdmin = perfil.role === "admin";
+  if (ehAdmin && !perfil.email) return { ok: false, erro: "Esse cadastro não tem e-mail. Peça pro ateliê gerar o convite de novo." };
+  if (!ehAdmin && !perfil.telefone) return { ok: false, erro: "Esse cadastro não tem telefone. Peça pro ateliê adicionar antes de tentar de novo." };
+  const emailLogin = ehAdmin ? perfil.email! : emailSinteticoDoTelefone(perfil.telefone!);
 
   const { data: novoUsuario, error: criarError } = await admin.auth.admin.createUser({
-    email: emailSintetico,
+    email: emailLogin,
     password: senha,
     email_confirm: true,
   });
@@ -90,13 +97,95 @@ export async function aceitarConvite(token: string, senha: string): Promise<{ ok
     .eq("id", perfil.id);
   if (linkError) return { ok: false, erro: `Falha ao vincular conta: ${linkError.message}` };
 
-  // Assina o aluno de verdade na mesma ida — `createClient()` (não o
+  // Assina a pessoa de verdade na mesma ida — `createClient()` (não o
   // admin) escreve os cookies de sessão certos porque roda dentro do
   // mesmo request desta Server Action, evitando uma segunda ida à tela
   // de login logo depois de criar a conta.
   const cliente = await createClient();
-  const { error: loginError } = await cliente.auth.signInWithPassword({ email: emailSintetico, password: senha });
+  const { error: loginError } = await cliente.auth.signInWithPassword({ email: emailLogin, password: senha });
   if (loginError) return { ok: false, erro: `Conta criada, mas o login automático falhou — entre pela tela de login. (${loginError.message})` };
 
-  return { ok: true };
+  return { ok: true, role: ehAdmin ? "admin" : "aluno" };
+}
+
+/** Convida um novo admin (2026-09-30, pedido do Diego — antes só existia
+ *  convite pra aluno). Mesmo mecanismo (token/expiração em `profiles`),
+ *  só que aqui a Server Action TAMBÉM cria o cadastro (aluno já tem o
+ *  cadastro feito na hora da matrícula; admin não tem esse passo
+ *  anterior). Usa o client normal (RLS), não service_role — a policy
+ *  `profiles_admin_insert` (`is_admin() or auth_user_id = auth.uid()`)
+ *  já garante que só um admin logado consegue criar outro admin; ninguém
+ *  não-admin passa por aqui mesmo chamando a action direto. Reenviar pra
+ *  um e-mail com convite ainda pendente atualiza o mesmo cadastro (token
+ *  novo) em vez de duplicar linha. */
+export async function convidarAdmin(dados: { nome: string; email: string }): Promise<{ token: string }> {
+  const supabase = await createClient();
+  const email = dados.email.trim().toLowerCase();
+  if (!email.includes("@")) throw new Error("E-mail inválido.");
+
+  const { data: existente } = await supabase.from("profiles").select("id, auth_user_id").eq("email", email).eq("role", "admin").maybeSingle();
+  if (existente?.auth_user_id) throw new Error("Já existe uma conta admin ativa com esse e-mail.");
+
+  const token = crypto.randomUUID();
+  const expiraEm = new Date(Date.now() + CONVITE_VALIDADE_DIAS * 24 * 3600 * 1000).toISOString();
+
+  if (existente) {
+    const { error } = await supabase.from("profiles").update({ nome: dados.nome, convite_token: token, convite_expira_em: expiraEm }).eq("id", existente.id);
+    if (error) throw new Error(`Falha ao reenviar convite: ${error.message}`);
+  } else {
+    const { error } = await supabase.from("profiles").insert({ role: "admin", nome: dados.nome, email, convite_token: token, convite_expira_em: expiraEm });
+    if (error) throw new Error(`Falha ao convidar admin: ${error.message}`);
+  }
+
+  revalidatePath("/configuracoes");
+  return { token };
+}
+
+export interface AdminInfo {
+  id: string;
+  nome: string;
+  email: string | null;
+  status: "ativo" | "pendente" | "expirado";
+}
+
+export async function listarAdmins(): Promise<AdminInfo[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("profiles").select("id, nome, email, auth_user_id, convite_expira_em").eq("role", "admin").order("nome");
+  if (error) throw new Error(`Falha ao buscar admins: ${error.message}`);
+  return (data ?? []).map((p): AdminInfo => ({
+    id: p.id,
+    nome: p.nome,
+    email: p.email,
+    status: p.auth_user_id ? "ativo" : p.convite_expira_em && new Date(p.convite_expira_em) > new Date() ? "pendente" : "expirado",
+  }));
+}
+
+/** Remove um admin — apaga o cadastro E o acesso de login (diferente de
+ *  excluirAluno, que só apaga `profiles`; aqui vale a pena fechar a
+ *  conta de verdade, não só tirar da lista, já que é acesso
+ *  administrativo). Duas travas que só fazem sentido pra admin (nenhuma
+ *  tem equivalente do lado aluno): não dá pra remover a si mesmo (evita
+ *  se trancar fora sem querer) nem remover o ÚLTIMO admin (evita
+ *  ninguém mais conseguir entrar na área administrativa). */
+export async function removerAdmin(adminId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado.");
+
+  const { data: eu } = await supabase.from("profiles").select("id, role").eq("auth_user_id", user.id).maybeSingle();
+  if (eu?.role !== "admin") throw new Error("Só admin pode fazer isso.");
+  if (eu.id === adminId) throw new Error("Você não pode remover a própria conta por aqui.");
+
+  const { count } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "admin");
+  if ((count ?? 0) <= 1) throw new Error("Esse é o único admin — não dá pra remover.");
+
+  const admin = createAdminClient();
+  const { data: alvo } = await admin.from("profiles").select("auth_user_id").eq("id", adminId).maybeSingle();
+  if (alvo?.auth_user_id) await admin.auth.admin.deleteUser(alvo.auth_user_id);
+  const { error } = await admin.from("profiles").delete().eq("id", adminId);
+  if (error) throw new Error(`Falha ao remover admin: ${error.message}`);
+
+  revalidatePath("/configuracoes");
 }
