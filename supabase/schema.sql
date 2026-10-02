@@ -578,3 +578,54 @@ create policy "comprovantes_aluno_le_proprio" on storage.objects for select
   using (bucket_id = 'comprovantes' and (storage.foldername(name))[1] = current_profile_id()::text);
 create policy "comprovantes_admin_le_tudo" on storage.objects for select
   using (bucket_id = 'comprovantes' and is_admin());
+
+-- ---------------------------------------------------------
+-- LEMBRETES POR WHATSAPP (2026-10-02)
+-- ---------------------------------------------------------
+-- Pedido do Diego: lembrete automático no dia da aula (bom dia) e na
+-- véspera da oficina, pela API oficial do WhatsApp (Meta). O disparo é um
+-- cron diário da Vercel (/api/cron/lembretes) — tokens da Meta ficam em
+-- variáveis de ambiente, NUNCA aqui. Estas 2 tabelas só guardam o que o
+-- admin controla pela tela de Configurações e o registro do que já saiu.
+
+-- Uma linha só (id sempre 1). `modo`: desligado = não envia nada;
+-- teste = envia só pro `numero_teste` (pra validar antes de ligar de
+-- verdade); ativo = envia pros alunos. Começa desligado de propósito —
+-- nada sai pra aluno nenhum até o admin escolher "ativo" na tela.
+create table lembretes_config (
+  id int primary key default 1 check (id = 1),
+  modo text not null default 'desligado' check (modo in ('desligado','teste','ativo')),
+  numero_teste text,
+  atualizado_em timestamptz not null default now()
+);
+insert into lembretes_config (id) values (1) on conflict (id) do nothing;
+
+-- Registro de cada lembrete enviado. A unique é o que impede mandar o
+-- mesmo lembrete 2x pra mesma pessoa (a Vercel pode disparar o mesmo
+-- cron mais de uma vez): o envio primeiro "reserva" a linha (insert) e só
+-- manda se a reserva deu certo. Chave pelo telefone, não pelo aluno —
+-- participante avulso de oficina não tem aluno_id.
+create table lembretes_enviados (
+  id uuid primary key default uuid_generate_v4(),
+  tipo text not null check (tipo in ('aula','oficina')),
+  referencia_id uuid not null,          -- turma_id (aula) ou oficina_id
+  data_referencia date not null,        -- data da aula / da oficina
+  aluno_id uuid references profiles(id) on delete set null,
+  nome text not null,
+  telefone text not null,
+  status text not null default 'enviando' check (status in ('enviando','enviado','erro')),
+  erro text,
+  whatsapp_message_id text,
+  criado_em timestamptz not null default now(),
+  unique (tipo, referencia_id, data_referencia, telefone)
+);
+
+alter table lembretes_config enable row level security;
+alter table lembretes_enviados enable row level security;
+
+-- Só admin vê/muda a configuração. O registro de envios o admin só lê —
+-- quem escreve é o cron (service_role, que ignora RLS).
+create policy "lembretes_config_admin_all" on lembretes_config for all
+  using (is_admin()) with check (is_admin());
+create policy "lembretes_enviados_admin_select" on lembretes_enviados for select
+  using (is_admin());

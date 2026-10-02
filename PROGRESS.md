@@ -3438,3 +3438,23 @@ a partir do `icon.svg` existente via canvas no navegador, sem precisar
 mexer no `next/og` (que já tem o bug documentado de path com espaço no
 Windows). Os dois confirmados ao vivo no site publicado antes de pedir
 pro Diego testar no celular de verdade.
+
+### 2026-09-29/30 — Oficinas pelo aluno, pentests, convite de admin (resumo; detalhe nos commits)
+
+- Aluno se inscreve sozinho em oficina (3 estágios: aguardando confirmação → aguardando pagamento → confirmada) e cancela enquanto não pagou nem mandou comprovante. RLS dedicada pra cada passo.
+- Pentests com a chave anon acharam e fecharam: `profiles.role` autopromovível (policy de update sem `with check`) e inscrição duplicada em oficina (unique nova).
+- Configurações deixou de ser "Em breve": convite de admin pelo mesmo mecanismo do convite de aluno.
+
+### 2026-10-02 — Lembretes automáticos por WhatsApp
+
+Pedido do Diego: lembrete no dia da aula ("bom dia") e na véspera da oficina. Decisões tomadas com ele, nessa ordem: API oficial da Meta (~US$ 0,0068 por mensagem de utilidade no Brasil, ~R$ 10/mês no volume do ateliê) com **número novo só pra avisos** — o número da Hanna exigiria empresa intermediária (~€ 49/mês) e arriscaria o WhatsApp principal.
+
+- **Disparo**: cron diário da Vercel (`vercel.json`, 11h UTC = 8h Brasília; no plano grátis pode atrasar até 1h) chama `/api/cron/lembretes`, protegido por `CRON_SECRET` (sem ele, recusa sempre). `middleware.ts` libera `/api/cron` sem sessão — antes redirecionaria o cron pro login.
+- **Quem recebe** (`planejarLembretes`, `src/lib/lembretesServidor.ts`): matrícula fixa confirmada da turma do dia; pula quem está "Ausente" naquele dia, visita provisória (não tem data) e quem não tem telefone. Oficina: só inscrição confirmada, telefone do participante ou do cadastro do aluno.
+- **Textos**: modelos `lembrete_aula`/`lembrete_oficina`, espelhados em `src/lib/lembretes.ts`. A Meta só manda texto aprovado — mudar um texto exige mudar lá também.
+- **Segurança de envio**: começa `desligado`; modo `teste` manda só pro número de teste (até 3/dia); `ativo` reserva cada envio em `lembretes_enviados` (unique) antes de mandar, então cron duplicado nunca manda 2x.
+- **Tela**: Configurações → Lembretes por WhatsApp (modo, número de teste, "Enviar teste agora", prévia por data, últimos envios).
+- **Achado importante**: 46 dos 47 alunos reais não têm telefone (a leva de dados nunca trouxe) e a ficha do aluno nunca teve onde digitar um. Agora tem (`atualizarTelefoneAluno` — pra quem já usa o app, atualiza também o e-mail sintético de login). Participante de oficina cadastrado à mão também ganhou campo de telefone.
+- **Achado em produção**: erro lançado por Server Action vira texto genérico em inglês no build de produção (ver CLAUDE.md §8). Ações novas e as de admin passaram a devolver o erro como valor (`Resultado`, `src/lib/resultado.ts`).
+
+Falta (lado do Diego): rodar o SQL da seção "LEMBRETES POR WHATSAPP" do schema, configurar a conta da Meta + aprovar os 2 modelos, colocar `WHATSAPP_TOKEN`/`WHATSAPP_PHONE_NUMBER_ID`/`CRON_SECRET` na Vercel e cadastrar os telefones dos alunos.

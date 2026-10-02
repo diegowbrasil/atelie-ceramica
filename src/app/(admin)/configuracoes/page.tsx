@@ -1,12 +1,13 @@
 import { listarAdmins } from "@/lib/actions/convite";
+import { getLembretesPainel } from "@/lib/actions/lembretes";
 import { ConfiguracoesClient } from "@/components/configuracoes/ConfiguracoesClient";
 
-// Server Component — busca os admins reais. Interatividade (convidar,
-// remover) mora em ConfiguracoesClient. Primeira tela real aqui (era
-// EmBreve) — pedido do Diego (2026-09-30): "preciso criar as contas do
-// admin", sem precisar pedir pra mim toda vez (mesmo motivo do convite
-// de aluno em Alunos).
+// Server Component — busca os admins reais e o estado dos lembretes por
+// WhatsApp. Interatividade mora em ConfiguracoesClient/LembretesCard.
+// Primeira tela real aqui (era EmBreve) — pedidos do Diego: contas de
+// admin (2026-09-30) e lembretes automáticos (2026-10-02), os dois sem
+// precisar pedir pra mim toda vez.
 export default async function ConfiguracoesPage() {
-  const admins = await listarAdmins();
-  return <ConfiguracoesClient adminsIniciais={admins} />;
+  const [admins, lembretes] = await Promise.all([listarAdmins(), getLembretesPainel()]);
+  return <ConfiguracoesClient adminsIniciais={admins} lembretes={lembretes} />;
 }

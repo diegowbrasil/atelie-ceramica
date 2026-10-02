@@ -26,6 +26,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { emailSinteticoDoTelefone } from "@/lib/telefone";
+import type { Resultado } from "@/lib/resultado";
 
 const CONVITE_VALIDADE_DIAS = 7;
 
@@ -118,27 +119,27 @@ export async function aceitarConvite(token: string, senha: string): Promise<{ ok
  *  não-admin passa por aqui mesmo chamando a action direto. Reenviar pra
  *  um e-mail com convite ainda pendente atualiza o mesmo cadastro (token
  *  novo) em vez de duplicar linha. */
-export async function convidarAdmin(dados: { nome: string; email: string }): Promise<{ token: string }> {
+export async function convidarAdmin(dados: { nome: string; email: string }): Promise<Resultado<{ token: string }>> {
   const supabase = await createClient();
   const email = dados.email.trim().toLowerCase();
-  if (!email.includes("@")) throw new Error("E-mail inválido.");
+  if (!email.includes("@")) return { ok: false, erro: "E-mail inválido." };
 
   const { data: existente } = await supabase.from("profiles").select("id, auth_user_id").eq("email", email).eq("role", "admin").maybeSingle();
-  if (existente?.auth_user_id) throw new Error("Já existe uma conta admin ativa com esse e-mail.");
+  if (existente?.auth_user_id) return { ok: false, erro: "Já existe uma conta admin ativa com esse e-mail." };
 
   const token = crypto.randomUUID();
   const expiraEm = new Date(Date.now() + CONVITE_VALIDADE_DIAS * 24 * 3600 * 1000).toISOString();
 
   if (existente) {
     const { error } = await supabase.from("profiles").update({ nome: dados.nome, convite_token: token, convite_expira_em: expiraEm }).eq("id", existente.id);
-    if (error) throw new Error(`Falha ao reenviar convite: ${error.message}`);
+    if (error) return { ok: false, erro: `Não deu pra reenviar o convite: ${error.message}` };
   } else {
     const { error } = await supabase.from("profiles").insert({ role: "admin", nome: dados.nome, email, convite_token: token, convite_expira_em: expiraEm });
-    if (error) throw new Error(`Falha ao convidar admin: ${error.message}`);
+    if (error) return { ok: false, erro: `Não deu pra convidar: ${error.message}` };
   }
 
   revalidatePath("/configuracoes");
-  return { token };
+  return { ok: true, token };
 }
 
 export interface AdminInfo {
@@ -167,25 +168,26 @@ export async function listarAdmins(): Promise<AdminInfo[]> {
  *  tem equivalente do lado aluno): não dá pra remover a si mesmo (evita
  *  se trancar fora sem querer) nem remover o ÚLTIMO admin (evita
  *  ninguém mais conseguir entrar na área administrativa). */
-export async function removerAdmin(adminId: string) {
+export async function removerAdmin(adminId: string): Promise<Resultado> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Não autenticado.");
+  if (!user) return { ok: false, erro: "Sua sessão expirou — entre de novo." };
 
   const { data: eu } = await supabase.from("profiles").select("id, role").eq("auth_user_id", user.id).maybeSingle();
-  if (eu?.role !== "admin") throw new Error("Só admin pode fazer isso.");
-  if (eu.id === adminId) throw new Error("Você não pode remover a própria conta por aqui.");
+  if (eu?.role !== "admin") return { ok: false, erro: "Só admin pode fazer isso." };
+  if (eu.id === adminId) return { ok: false, erro: "Você não pode remover a própria conta por aqui." };
 
   const { count } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "admin");
-  if ((count ?? 0) <= 1) throw new Error("Esse é o único admin — não dá pra remover.");
+  if ((count ?? 0) <= 1) return { ok: false, erro: "Esse é o único admin — não dá pra remover." };
 
   const admin = createAdminClient();
   const { data: alvo } = await admin.from("profiles").select("auth_user_id").eq("id", adminId).maybeSingle();
   if (alvo?.auth_user_id) await admin.auth.admin.deleteUser(alvo.auth_user_id);
   const { error } = await admin.from("profiles").delete().eq("id", adminId);
-  if (error) throw new Error(`Falha ao remover admin: ${error.message}`);
+  if (error) return { ok: false, erro: `Não deu pra remover: ${error.message}` };
 
   revalidatePath("/configuracoes");
+  return { ok: true };
 }

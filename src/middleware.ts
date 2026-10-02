@@ -42,8 +42,10 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // /convite/[token] é a página pública de aceitar convite (2026-09-24) —
-  // por definição ninguém está logado ainda nesse fluxo.
-  const publica = path === "/login" || path.startsWith("/convite");
+  // por definição ninguém está logado ainda nesse fluxo. /api/cron é
+  // chamado pela própria Vercel, sem sessão — a rota confere o
+  // CRON_SECRET sozinha e recusa qualquer outra chamada.
+  const publica = path === "/login" || path.startsWith("/convite") || path.startsWith("/api/cron");
 
   if (!user && !publica) {
     return NextResponse.redirect(new URL("/login", request.url));

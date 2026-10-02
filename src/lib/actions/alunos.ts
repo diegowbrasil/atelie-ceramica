@@ -12,6 +12,9 @@
 // CLAUDE.md pra Fase 11).
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { emailSinteticoDoTelefone } from "@/lib/telefone";
+import type { Resultado } from "@/lib/resultado";
 import { revalidatePath } from "next/cache";
 
 export interface AlunoReal {
@@ -247,6 +250,46 @@ export async function editarAluno(
   revalidatePath(`/alunos/${alunoId}`);
   revalidatePath("/turmas");
   revalidatePath("/pagamentos");
+}
+
+/** Só o telefone (2026-10-02) — separado de editarAluno de propósito: lá
+ *  salvar mexe em pacote/matrícula/pagamento junto, e trocar um telefone
+ *  não pode ter esse efeito colateral. Achado ao montar os lembretes por
+ *  WhatsApp: 46 dos 47 alunos reais vieram sem telefone e a tela nunca
+ *  teve onde digitar um. Pra quem já usa o app, o login é um e-mail
+ *  sintético derivado do telefone (convite.ts) — por isso a conta de
+ *  acesso é atualizada junto, senão o aluno não conseguiria mais entrar
+ *  com o número novo. */
+export async function atualizarTelefoneAluno(alunoId: string, telefone: string): Promise<Resultado> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: eu } = user ? await supabase.from("profiles").select("role").eq("auth_user_id", user.id).maybeSingle() : { data: null };
+  if (eu?.role !== "admin") return { ok: false, erro: "Só admin pode fazer isso." };
+
+  const digitosBrutos = telefone.replace(/\D/g, "");
+  const digitos = digitosBrutos.startsWith("55") && digitosBrutos.length >= 12 ? digitosBrutos.slice(2) : digitosBrutos;
+  if (digitos.length > 0 && digitos.length !== 10 && digitos.length !== 11) {
+    return { ok: false, erro: "Telefone inválido — use DDD + número, ex: (14) 99999-9999." };
+  }
+  const formatado =
+    digitos.length === 11 ? `(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7)}`
+    : digitos.length === 10 ? `(${digitos.slice(0, 2)}) ${digitos.slice(2, 6)}-${digitos.slice(6)}`
+    : null;
+
+  const { data: perfil } = await supabase.from("profiles").select("auth_user_id").eq("id", alunoId).maybeSingle();
+  if (perfil?.auth_user_id) {
+    if (!formatado) return { ok: false, erro: "Esse aluno já usa o app — o telefone é o login dele, não dá pra deixar em branco." };
+    const { error } = await createAdminClient().auth.admin.updateUserById(perfil.auth_user_id, { email: emailSinteticoDoTelefone(formatado), email_confirm: true });
+    if (error) return { ok: false, erro: `Não deu pra atualizar o login do aluno: ${error.message}` };
+  }
+
+  const { error } = await supabase.from("profiles").update({ telefone: formatado }).eq("id", alunoId);
+  if (error) return { ok: false, erro: `Não deu pra salvar o telefone: ${error.message}` };
+  revalidatePath("/alunos");
+  revalidatePath(`/alunos/${alunoId}`);
+  return { ok: true };
 }
 
 /** Diferente de "remover da turma" (moverAluno/matricula vira 'recusado')

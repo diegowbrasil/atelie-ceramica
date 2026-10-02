@@ -71,7 +71,7 @@ export function OficinaDetalheClient({ oficinaInicial }: { oficinaInicial: Ofici
     }
   }
 
-  async function salvarParticipante(numero: number, dados: { nome: string; tipo: "individual" | "dupla"; duplaCom: string | null; pagamento: "pendente" | "pago" }) {
+  async function salvarParticipante(numero: number, dados: { nome: string; telefone: string | null; tipo: "individual" | "dupla"; duplaCom: string | null; pagamento: "pendente" | "pago" }) {
     const atual = oficina.participantes.find((p) => p.numero === numero);
     setPendente(true);
     try {
@@ -321,11 +321,12 @@ function ModalCadastrarParticipante({
   opcoesDupla: string[];
   pendente: boolean;
   onClose: () => void;
-  onSalvar: (dados: { nome: string; tipo: "individual" | "dupla"; duplaCom: string | null; pagamento: "pendente" | "pago" }) => void;
+  onSalvar: (dados: { nome: string; telefone: string | null; tipo: "individual" | "dupla"; duplaCom: string | null; pagamento: "pendente" | "pago" }) => void;
   onRemover: () => void;
 }) {
   const editando = !!participante;
   const [nome, setNome] = useState(participante?.nome ?? "");
+  const [telefone, setTelefone] = useState(participante?.telefone ?? "");
   const [tipo, setTipo] = useState<"individual" | "dupla">(participante?.tipo ?? "individual");
   const [duplaCom, setDuplaCom] = useState(participante?.duplaCom ?? "");
   const [pagamento, setPagamento] = useState<"pendente" | "pago">(participante?.pagamento ?? "pendente");
@@ -355,11 +356,14 @@ function ModalCadastrarParticipante({
         onSubmit={(e) => {
           e.preventDefault();
           if (!nome.trim()) return;
-          onSalvar({ nome: nome.trim(), tipo, duplaCom: tipo === "dupla" ? duplaCom || null : null, pagamento });
+          onSalvar({ nome: nome.trim(), telefone: telefone.trim() || null, tipo, duplaCom: tipo === "dupla" ? duplaCom || null : null, pagamento });
         }}
       >
         <label className="mb-1 block text-xs font-medium text-ink-soft">Nome</label>
         <input autoFocus value={nome} onChange={(e) => setNome(e.target.value)} className="mb-3 w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-ink" placeholder="Nome do participante" />
+
+        <label className="mb-1 block text-xs font-medium text-ink-soft">Telefone (opcional, pro lembrete no WhatsApp)</label>
+        <input type="tel" value={telefone} onChange={(e) => setTelefone(e.target.value)} className="mb-3 w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-ink" placeholder="(14) 99999-9999" />
 
         <label className="mb-1 block text-xs font-medium text-ink-soft">Tipo</label>
         <div className="mb-3 flex gap-2">

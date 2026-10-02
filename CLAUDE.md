@@ -1899,6 +1899,20 @@ decisão no início da §2).
   `read_console_messages` e `javascript_tool`
   (`getBoundingClientRect`/`getComputedStyle`) antes de concluir que há um
   bug real — só then vale insistir em screenshot.
+- **Erro LANÇADO (`throw`) por Server Action perde a mensagem no build de
+  produção** — o client recebe "An error occurred in the Server Components
+  render. The specific message is omitted in production builds..." (em
+  inglês), não o texto em português. Em `next dev` a mensagem real
+  aparece, então o problema passa despercebido testando só em dev (achado
+  2026-10-02, com um build de produção local). Erro esperado (validação,
+  regra de negócio) deve VOLTAR como valor: `Promise<Resultado<...>>` de
+  `src/lib/resultado.ts`, e o client faz `if (!r.ok) setErro(r.erro)`. No
+  `catch`, usar `mensagemDeErro(e, "texto padrão")`, que troca o texto
+  genérico em inglês por um em português. Pra testar como o usuário vê:
+  `npm run build` com o dev server PARADO (build com dev rodando corrompe
+  o `.next` do dev) e depois o servidor `prod-local` do launch.json
+  (porta 3001). Ações antigas que ainda lançam erro com mensagem pro
+  usuário foram registradas como pendência, não convertidas ainda.
 - **Um `Server Action` (`"use server"` no topo do arquivo) só pode
   exportar funções ASYNC** — Next.js trata TODA export desse arquivo como
   uma Server Action chamável do client, e recusa compilar (`"Server

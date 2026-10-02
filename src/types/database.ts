@@ -224,6 +224,30 @@ export interface Aviso {
   ativo: boolean;
 }
 
+export type LembretesModo = "desligado" | "teste" | "ativo";
+export type LembreteTipo = "aula" | "oficina";
+
+export interface LembretesConfig {
+  id: number;
+  modo: LembretesModo;
+  numero_teste: string | null;
+  atualizado_em: string;
+}
+
+export interface LembreteEnviado {
+  id: string;
+  tipo: LembreteTipo;
+  referencia_id: string;
+  data_referencia: string;
+  aluno_id: string | null;
+  nome: string;
+  telefone: string;
+  status: "enviando" | "enviado" | "erro";
+  erro: string | null;
+  whatsapp_message_id: string | null;
+  criado_em: string;
+}
+
 // Formato exigido pelo `GenericSchema`/`GenericTable` do postgrest-js —
 // `Relationships` é obrigatório mesmo sem FK modeladas aqui (achado
 // 2026-09-21: sem isso, `Database["public"]` não satisfaz `GenericSchema`
@@ -270,6 +294,8 @@ export interface Database {
       notificacoes: { Row: Prettify<Notificacao>; Insert: Prettify<Partial<Notificacao>>; Update: Prettify<Partial<Notificacao>>; Relationships: [] };
       pagamentos: { Row: Prettify<Pagamento>; Insert: Prettify<Partial<Pagamento>>; Update: Prettify<Partial<Pagamento>>; Relationships: [] };
       avisos: { Row: Prettify<Aviso>; Insert: Prettify<Partial<Aviso>>; Update: Prettify<Partial<Aviso>>; Relationships: [] };
+      lembretes_config: { Row: Prettify<LembretesConfig>; Insert: Prettify<Partial<LembretesConfig>>; Update: Prettify<Partial<LembretesConfig>>; Relationships: [] };
+      lembretes_enviados: { Row: Prettify<LembreteEnviado>; Insert: Prettify<Partial<LembreteEnviado>>; Update: Prettify<Partial<LembreteEnviado>>; Relationships: [] };
     };
     Views: {};
     Functions: {};

@@ -9,8 +9,9 @@ import { ProgressRing } from "@/components/ui/ProgressRing";
 import { Toggle } from "@/components/ui/Toggle";
 import { TURMA_LABEL_COR, type CorIdentidade } from "@/lib/alunos";
 import { abrirWhatsAppCobranca } from "@/lib/whatsapp";
-import { editarAluno, excluirAluno, type AlunoReal } from "@/lib/actions/alunos";
+import { editarAluno, excluirAluno, atualizarTelefoneAluno, type AlunoReal } from "@/lib/actions/alunos";
 import { gerarConvite } from "@/lib/actions/convite";
+import { mensagemDeErro } from "@/lib/resultado";
 import { ChevronLeft, Phone, Pencil, Trash2, UserPlus, Copy, Check } from "lucide-react";
 
 const COR_HEX: Record<CorIdentidade, string> = {
@@ -52,6 +53,24 @@ export function AlunoDetalheClient({ alunoInicial, turmas }: Props) {
   const [totalForm, setTotalForm] = useState(aluno.total);
   const [aulaForm, setAulaForm] = useState(aluno.aula);
   const [pagoForm, setPagoForm] = useState(aluno.status !== "pendente");
+  const [editandoTel, setEditandoTel] = useState(false);
+  const [telForm, setTelForm] = useState(aluno.tel ?? "");
+  const [erroTel, setErroTel] = useState<string | null>(null);
+
+  async function salvarTelefone() {
+    setPendente(true);
+    setErroTel(null);
+    try {
+      const r = await atualizarTelefoneAluno(aluno.id, telForm);
+      if (!r.ok) return setErroTel(r.erro);
+      setEditandoTel(false);
+      router.refresh();
+    } catch (e) {
+      setErroTel(mensagemDeErro(e, "Não deu pra salvar o telefone. Tenta de novo."));
+    } finally {
+      setPendente(false);
+    }
+  }
 
   const cor = TURMA_LABEL_COR[aluno.turma] ?? "sienna";
   const pct = aluno.total ? (aluno.aula / aluno.total) * 100 : 0;
@@ -134,10 +153,43 @@ export function AlunoDetalheClient({ alunoInicial, turmas }: Props) {
 
       <div className="mb-4 rounded-2xl border border-line bg-white p-4">
         <h3 className="mb-3 text-sm font-semibold text-ink">Dados de contato</h3>
-        <div className="flex items-center gap-2.5 text-sm text-ink">
-          <Phone size={15} className="shrink-0 text-ink-soft" />
-          {aluno.tel || <span className="text-ink-soft">Telefone não informado</span>}
-        </div>
+        {editandoTel ? (
+          <div>
+            <div className="flex gap-2">
+              <input
+                autoFocus
+                type="tel"
+                value={telForm}
+                onChange={(e) => setTelForm(e.target.value)}
+                placeholder="(14) 99999-9999"
+                aria-label="Telefone"
+                className="min-w-0 flex-1 rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-ink"
+              />
+              <button onClick={() => setEditandoTel(false)} disabled={pendente} className="shrink-0 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink disabled:opacity-60">
+                Cancelar
+              </button>
+              <button onClick={salvarTelefone} disabled={pendente} className="shrink-0 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60">
+                Salvar
+              </button>
+            </div>
+            {erroTel && <p className="mt-2 text-sm text-rose-600">{erroTel}</p>}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2.5 text-sm text-ink">
+            <Phone size={15} className="shrink-0 text-ink-soft" />
+            <span className="min-w-0 flex-1">{aluno.tel || <span className="text-ink-soft">Telefone não informado</span>}</span>
+            <button
+              onClick={() => {
+                setTelForm(aluno.tel ?? "");
+                setErroTel(null);
+                setEditandoTel(true);
+              }}
+              className="flex shrink-0 items-center gap-1 text-xs font-medium text-ink-soft hover:text-ink"
+            >
+              <Pencil size={13} /> {aluno.tel ? "Editar" : "Adicionar"}
+            </button>
+          </div>
+        )}
 
         <div className="mt-3 border-t border-line pt-3">
           {aluno.temContaAtiva ? (

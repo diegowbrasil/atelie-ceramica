@@ -24,6 +24,9 @@ export interface ParticipanteReal {
   tipo?: "individual" | "dupla";
   duplaCom?: string | null;
   pagamento?: "pendente" | "pago";
+  /** Só de quem foi cadastrado à mão pelo admin (quem se inscreveu pelo
+   *  app usa o telefone do próprio cadastro de aluno). */
+  telefone?: string | null;
   /** false = auto-inscrição do aluno ainda aguardando aprovação do admin
    *  (Pix nem apareceu pra ele ainda) — ver inscreverEmOficina/
    *  confirmarParticipante. Participante cadastrado pelo admin direto
@@ -66,6 +69,7 @@ async function montarOficinaReal(row: {
   oficina_participantes: {
     id: string;
     nome: string;
+    telefone: string | null;
     tipo: ParticipanteTipo;
     dupla_com: string | null;
     pagamento: "pendente" | "pago" | "isento";
@@ -78,6 +82,7 @@ async function montarOficinaReal(row: {
     .map((p, i): ParticipanteReal => ({
       numero: i + 1,
       nome: p.nome,
+      telefone: p.telefone,
       tipo: p.tipo,
       duplaCom: p.dupla_com,
       pagamento: p.pagamento === "isento" ? "pago" : p.pagamento,
@@ -110,7 +115,7 @@ export async function getOficinasReal(): Promise<OficinaReal[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("oficinas")
-    .select("*, oficina_participantes(id, nome, tipo, dupla_com, pagamento, confirmado, criado_em)")
+    .select("*, oficina_participantes(id, nome, telefone, tipo, dupla_com, pagamento, confirmado, criado_em)")
     .order("data", { ascending: true })
     .overrideTypes<Parameters<typeof montarOficinaReal>[0][], { merge: false }>();
   if (error) throw new Error(`Falha ao buscar oficinas: ${error.message}`);
@@ -121,7 +126,7 @@ export async function getOficinaReal(id: string): Promise<OficinaReal | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("oficinas")
-    .select("*, oficina_participantes(id, nome, tipo, dupla_com, pagamento, confirmado, criado_em)")
+    .select("*, oficina_participantes(id, nome, telefone, tipo, dupla_com, pagamento, confirmado, criado_em)")
     .eq("id", id)
     .maybeSingle()
     .overrideTypes<Parameters<typeof montarOficinaReal>[0] | null, { merge: false }>();
@@ -207,12 +212,13 @@ export async function editarOficina(
 
 export async function cadastrarParticipante(
   oficinaId: string,
-  dados: { nome: string; tipo: "individual" | "dupla"; duplaCom?: string | null; pagamento: "pendente" | "pago" }
+  dados: { nome: string; telefone?: string | null; tipo: "individual" | "dupla"; duplaCom?: string | null; pagamento: "pendente" | "pago" }
 ) {
   const supabase = await createClient();
   const { error } = await supabase.from("oficina_participantes").insert({
     oficina_id: oficinaId,
     nome: dados.nome,
+    telefone: dados.telefone || null,
     tipo: dados.tipo,
     dupla_com: dados.duplaCom ?? null,
     pagamento: dados.pagamento,
@@ -225,12 +231,12 @@ export async function cadastrarParticipante(
 export async function editarParticipante(
   participanteId: string,
   oficinaId: string,
-  dados: { nome: string; tipo: "individual" | "dupla"; duplaCom?: string | null; pagamento: "pendente" | "pago" }
+  dados: { nome: string; telefone?: string | null; tipo: "individual" | "dupla"; duplaCom?: string | null; pagamento: "pendente" | "pago" }
 ) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("oficina_participantes")
-    .update({ nome: dados.nome, tipo: dados.tipo, dupla_com: dados.duplaCom ?? null, pagamento: dados.pagamento })
+    .update({ nome: dados.nome, telefone: dados.telefone || null, tipo: dados.tipo, dupla_com: dados.duplaCom ?? null, pagamento: dados.pagamento })
     .eq("id", participanteId);
   if (error) throw new Error(`Falha ao editar participante: ${error.message}`);
   revalidatePath(`/oficinas/${oficinaId}`);
