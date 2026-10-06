@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { planejarLembretes, enviarModeloWhatsApp, whatsappConfigurado, type LembretePlanejado } from "@/lib/lembretesServidor";
-import { primeiroNome, telefoneParaWhatsApp } from "@/lib/lembretes";
+import { primeiroNome, telefoneParaWhatsApp, formatarTelefoneBR } from "@/lib/lembretes";
 import type { Resultado } from "@/lib/resultado";
 import type { LembreteEnviado, LembretesModo } from "@/types/database";
 
@@ -22,29 +22,98 @@ async function exigirAdmin() {
   return { supabase, nome: perfil.nome };
 }
 
+export interface RespostaAluno {
+  id: string;
+  /** Nome do cadastro do aluno; sem cadastro, o nome do perfil do WhatsApp. */
+  nome: string | null;
+  /** Como o WhatsApp identifica o número (só dígitos, com 55) — serve pro link "Responder". */
+  telefone: string;
+  telefoneFormatado: string;
+  texto: string | null;
+  tipo: string;
+  lida: boolean;
+  /** Já formatado no servidor, no fuso do ateliê (evita diferença de formato servidor × navegador). */
+  quando: string;
+}
+
 export interface PainelLembretes {
   /** false = as tabelas dos lembretes ainda não foram criadas no banco. */
   instalado: boolean;
   apiConfigurada: boolean;
   agendamentoConfigurado: boolean;
+  respostasConfigurado: boolean;
   modo: LembretesModo;
   numeroTeste: string;
   ultimosEnvios: Pick<LembreteEnviado, "id" | "tipo" | "data_referencia" | "nome" | "status" | "erro">[];
+  respostas: RespostaAluno[];
+}
+
+interface RespostaComAluno {
+  id: string;
+  telefone: string;
+  nome_whatsapp: string | null;
+  texto: string | null;
+  tipo: string;
+  lida: boolean;
+  recebida_em: string;
+  profiles: { nome: string } | null;
 }
 
 export async function getLembretesPainel(): Promise<PainelLembretes> {
   const { supabase } = await exigirAdmin();
-  const base = { apiConfigurada: whatsappConfigurado(), agendamentoConfigurado: !!process.env.CRON_SECRET };
+  const base = {
+    apiConfigurada: whatsappConfigurado(),
+    agendamentoConfigurado: !!process.env.CRON_SECRET,
+    respostasConfigurado: !!process.env.WHATSAPP_VERIFY_TOKEN && !!process.env.WHATSAPP_APP_SECRET,
+  };
 
-  const [{ data: config, error: eConfig }, { data: envios, error: eEnvios }] = await Promise.all([
+  const [{ data: config, error: eConfig }, { data: envios, error: eEnvios }, { data: respostas, error: eRespostas }] = await Promise.all([
     supabase.from("lembretes_config").select("modo, numero_teste").eq("id", 1).maybeSingle(),
     supabase.from("lembretes_enviados").select("id, tipo, data_referencia, nome, status, erro").order("criado_em", { ascending: false }).limit(30),
+    supabase
+      .from("whatsapp_respostas")
+      .select("id, telefone, nome_whatsapp, texto, tipo, lida, recebida_em, profiles(nome)")
+      .order("recebida_em", { ascending: false })
+      .limit(50)
+      .overrideTypes<RespostaComAluno[], { merge: false }>(),
   ]);
   // Tabelas ainda não criadas: a tela mostra o aviso em vez de derrubar a
   // página inteira (mesma lição do crash de comprovante_url no Dashboard).
-  if (eConfig || eEnvios) return { ...base, instalado: false, modo: "desligado", numeroTeste: "", ultimosEnvios: [] };
+  if (eConfig || eEnvios || eRespostas) return { ...base, instalado: false, modo: "desligado", numeroTeste: "", ultimosEnvios: [], respostas: [] };
 
-  return { ...base, instalado: true, modo: config?.modo ?? "desligado", numeroTeste: config?.numero_teste ?? "", ultimosEnvios: envios ?? [] };
+  return {
+    ...base,
+    instalado: true,
+    modo: config?.modo ?? "desligado",
+    numeroTeste: config?.numero_teste ?? "",
+    ultimosEnvios: envios ?? [],
+    respostas: (respostas ?? []).map((r) => ({
+      id: r.id,
+      nome: r.profiles?.nome ?? r.nome_whatsapp,
+      telefone: r.telefone,
+      telefoneFormatado: formatarTelefoneBR(r.telefone),
+      texto: r.texto,
+      tipo: r.tipo,
+      lida: r.lida,
+      quando: new Date(r.recebida_em).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }),
+    })),
+  };
+}
+
+export async function marcarRespostasComoLidas(): Promise<Resultado> {
+  const { supabase } = await exigirAdmin();
+  const { error } = await supabase.from("whatsapp_respostas").update({ lida: true }).eq("lida", false);
+  if (error) return { ok: false, erro: `Não deu pra marcar como lidas: ${error.message}` };
+  revalidatePath("/configuracoes");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/** Pro aviso no Dashboard. 0 se a tabela ainda não existir. */
+export async function contarRespostasNaoLidas(): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase.from("whatsapp_respostas").select("id", { count: "exact", head: true }).eq("lida", false);
+  return error ? 0 : (count ?? 0);
 }
 
 export async function salvarConfigLembretes(dados: { modo: LembretesModo; numeroTeste: string }): Promise<Resultado> {

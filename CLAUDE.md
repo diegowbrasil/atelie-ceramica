@@ -1913,6 +1913,14 @@ decisão no início da §2).
   o `.next` do dev) e depois o servidor `prod-local` do launch.json
   (porta 3001). Ações antigas que ainda lançam erro com mensagem pro
   usuário foram registradas como pendência, não convertidas ainda.
+- **Contagem com `head: true` numa tabela que NÃO existe não dá erro** —
+  o `supabase-js` transforma o 404 vazio em "204, sem erro, `count:
+  null`" (achado 2026-10-06: um script de checagem disse que a tabela
+  `whatsapp_respostas` existia quando não existia). Pra saber se uma
+  tabela existe, usar `select("*").limit(1)`, que aí sim devolve o erro.
+  Em código de produção, contagem `head: true` sobre tabela que pode não
+  ter sido criada ainda deve tratar `count` nulo como 0, nunca como
+  "tabela ok".
 - **Um `Server Action` (`"use server"` no topo do arquivo) só pode
   exportar funções ASYNC** — Next.js trata TODA export desse arquivo como
   uma Server Action chamável do client, e recusa compilar (`"Server

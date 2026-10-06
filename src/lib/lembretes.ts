@@ -55,6 +55,14 @@ export function diaDaSemana(dataISO: string): DiaSemana {
   return DIAS_POR_INDICE[new Date(Date.UTC(a, m - 1, d)).getUTCDay()];
 }
 
+/** "5514999998888" → "(14) 99999-8888", pra exibir. */
+export function formatarTelefoneBR(digitosCom55: string): string {
+  const d = digitosCom55.startsWith("55") ? digitosCom55.slice(2) : digitosCom55;
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return digitosCom55;
+}
+
 /** Formato que a API do WhatsApp espera no `to`: só dígitos, com 55.
  *  `null` pra número que não tem cara de celular brasileiro com DDD. */
 export function telefoneParaWhatsApp(tel: string | null | undefined): string | null {

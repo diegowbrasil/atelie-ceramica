@@ -3458,3 +3458,12 @@ Pedido do Diego: lembrete no dia da aula ("bom dia") e na véspera da oficina. D
 - **Achado em produção**: erro lançado por Server Action vira texto genérico em inglês no build de produção (ver CLAUDE.md §8). Ações novas e as de admin passaram a devolver o erro como valor (`Resultado`, `src/lib/resultado.ts`).
 
 Falta (lado do Diego): rodar o SQL da seção "LEMBRETES POR WHATSAPP" do schema, configurar a conta da Meta + aprovar os 2 modelos, colocar `WHATSAPP_TOKEN`/`WHATSAPP_PHONE_NUMBER_ID`/`CRON_SECRET` na Vercel e cadastrar os telefones dos alunos.
+
+### 2026-10-06 — Respostas aos lembretes + escolha do número
+
+- **Número dos lembretes**: Diego escolheu chip novo só pra avisos (eSIM avulso da Claro, R$ 20,99, tudo online), instalado num iPhone SE de reserva. Não precisa ficar com ele: só recebe o código da Meta uma vez. Linha mantida com recarga simples (R$ 15 a cada 2 meses) — a Anatel só cancela 75 dias depois do aviso de crédito vencido.
+- **Respostas dos alunos**: número da API não tem caixa de entrada, então a Meta manda cada resposta pro webhook `/api/whatsapp/webhook` (público no middleware, conferido pela assinatura `x-hub-signature-256` com o App Secret; sem ela, 401). Guarda em `whatsapp_respostas`, liga ao aluno pelo telefone (compara sem o nono dígito, que o WhatsApp às vezes omite), manda uma resposta automática por pessoa a cada 24h ("este número só envia lembretes... fala com a Hanna no (14) 99725-7052") e mostra em Configurações (marcar como lidas, "Responder pelo seu WhatsApp") + aviso no Dashboard quando tem resposta nova.
+- O mesmo webhook marca como erro, em "Últimos envios", lembrete que a Meta avisa que não foi entregue (ex.: número sem WhatsApp).
+- Testado localmente sem enviar nada: verificação da Meta (token certo/errado), assinatura ausente/falsa recusada, assinatura certa chegando no banco.
+
+Falta (lado do Diego): rodar o SQL da tabela `whatsapp_respostas`; na Vercel, `WHATSAPP_VERIFY_TOKEN` e `WHATSAPP_APP_SECRET`; no app da Meta, cadastrar o webhook e assinar o campo `messages`.

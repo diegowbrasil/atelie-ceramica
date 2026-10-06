@@ -142,11 +142,9 @@ export function whatsappConfigurado(): boolean {
   return !!process.env.WHATSAPP_TOKEN && !!process.env.WHATSAPP_PHONE_NUMBER_ID;
 }
 
-export async function enviarModeloWhatsApp(
-  para: string,
-  tipo: TipoLembrete,
-  parametros: string[]
-): Promise<{ ok: true; id: string } | { ok: false; erro: string }> {
+type ResultadoEnvio = { ok: true; id: string } | { ok: false; erro: string };
+
+async function postarMensagemWhatsApp(mensagem: Record<string, unknown>): Promise<ResultadoEnvio> {
   const token = process.env.WHATSAPP_TOKEN;
   const numeroId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!token || !numeroId) return { ok: false, erro: "A conta do WhatsApp (Meta) ainda não foi configurada." };
@@ -155,16 +153,7 @@ export async function enviarModeloWhatsApp(
     const resposta = await fetch(`https://graph.facebook.com/${VERSAO_API_META}/${numeroId}/messages`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to: para,
-        type: "template",
-        template: {
-          name: MODELOS[tipo].nome,
-          language: { code: "pt_BR" },
-          components: [{ type: "body", parameters: parametros.map((text) => ({ type: "text", text })) }],
-        },
-      }),
+      body: JSON.stringify({ messaging_product: "whatsapp", ...mensagem }),
       signal: AbortSignal.timeout(15000),
     });
     const corpo = (await resposta.json().catch(() => null)) as { error?: { message?: string }; messages?: { id?: string }[] } | null;
@@ -174,6 +163,24 @@ export async function enviarModeloWhatsApp(
   } catch (e) {
     return { ok: false, erro: e instanceof Error ? e.message : "Falha de rede ao falar com a Meta." };
   }
+}
+
+export function enviarModeloWhatsApp(para: string, tipo: TipoLembrete, parametros: string[]): Promise<ResultadoEnvio> {
+  return postarMensagemWhatsApp({
+    to: para,
+    type: "template",
+    template: {
+      name: MODELOS[tipo].nome,
+      language: { code: "pt_BR" },
+      components: [{ type: "body", parameters: parametros.map((text) => ({ type: "text", text })) }],
+    },
+  });
+}
+
+/** Texto livre — a Meta só aceita isso em até 24h depois da última
+ *  mensagem que a pessoa mandou (fora disso, só modelo aprovado). */
+export function enviarTextoWhatsApp(para: string, texto: string): Promise<ResultadoEnvio> {
+  return postarMensagemWhatsApp({ to: para, type: "text", text: { body: texto } });
 }
 
 export interface ResumoExecucao {

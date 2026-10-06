@@ -10,9 +10,10 @@ import { getSolicitacoesReal } from "@/lib/actions/solicitacoes";
 import { getPagamentosReal } from "@/lib/actions/pagamentos";
 import { getOficinasReal, type OficinaReal } from "@/lib/actions/oficinas";
 import { getTurmaPorSlug, getRosterTurma, listarTurmas, type VagaReal } from "@/lib/actions/turmas";
+import { contarRespostasNaoLidas } from "@/lib/actions/lembretes";
 import { TURMAS_DIAS } from "@/lib/turmasDias";
 import { FUNDOS_ARGILA } from "@/lib/fundosArgila";
-import { GraduationCap, Users, RotateCcw, CreditCard, CalendarDays } from "lucide-react";
+import { GraduationCap, Users, RotateCcw, CreditCard, CalendarDays, MessageCircle, ChevronRight } from "lucide-react";
 
 // Última peça ligada aos dados reais (2026-09-24) — os 7 domínios já
 // existiam de verdade, o Dashboard só agregava mock por cima deles.
@@ -130,7 +131,7 @@ export default async function DashboardPage() {
   const hoje = new Date();
   const hojeDiaId = diaIdDeHoje();
 
-  const [avisos, forno1, forno2, solicitacoes, pagamentos, oficinas, turmasLista, turmasComRoster] = await Promise.all([
+  const [avisos, forno1, forno2, solicitacoes, pagamentos, oficinas, turmasLista, turmasComRoster, respostasNovas] = await Promise.all([
     getAvisosReal(),
     getFornadasReal("forno1"),
     getFornadasReal("forno2"),
@@ -139,6 +140,7 @@ export default async function DashboardPage() {
     getOficinasReal(),
     listarTurmas(),
     getRostersPorTurma(),
+    contarRespostasNaoLidas(),
   ]);
 
   const diaHojeInfo = TURMAS_DIAS.find((d) => d.id === hojeDiaId);
@@ -166,6 +168,21 @@ export default async function DashboardPage() {
       <p className="text-sm text-ink-soft">{hoje.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}</p>
 
       <AvisosCard avisosIniciais={avisos} />
+
+      {/* Resposta a lembrete costuma ser "não vou poder ir hoje" — precisa
+         aparecer onde a Hanna olha todo dia, não só em Configurações. */}
+      {respostasNovas > 0 && (
+        <Link
+          href="/configuracoes#respostas"
+          className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 hover:border-emerald-300"
+        >
+          <MessageCircle size={18} className="shrink-0" />
+          <span className="min-w-0 flex-1">
+            {respostasNovas === 1 ? "1 resposta nova" : `${respostasNovas} respostas novas`} aos lembretes do WhatsApp
+          </span>
+          <ChevronRight size={16} className="shrink-0" />
+        </Link>
+      )}
 
       <div className="grid min-w-0 gap-3 lg:grid-cols-[300px_1fr]">
         <div className="grid min-w-0 grid-cols-2 gap-2">

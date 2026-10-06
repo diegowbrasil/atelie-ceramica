@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
-import { salvarConfigLembretes, previaLembretes, enviarTesteAgora, type PainelLembretes } from "@/lib/actions/lembretes";
+import {
+  salvarConfigLembretes, previaLembretes, enviarTesteAgora, marcarRespostasComoLidas, type PainelLembretes, type RespostaAluno,
+} from "@/lib/actions/lembretes";
 import type { LembretePlanejado } from "@/lib/lembretesServidor";
 import { hojeNoAtelie } from "@/lib/lembretes";
 import { mensagemDeErro } from "@/lib/resultado";
@@ -121,6 +123,7 @@ export function LembretesCard({ painel }: { painel: PainelLembretes }) {
         <ul className="space-y-1.5 text-sm">
           <ItemConfig ok={painel.apiConfigurada} label="Conta do WhatsApp (Meta)" okLabel="Conectada" />
           <ItemConfig ok={painel.agendamentoConfigurado} label="Envio diário automático" okLabel="Agendado" />
+          <ItemConfig ok={painel.respostasConfigurado} label="Receber respostas dos alunos" okLabel="Conectado" />
         </ul>
 
         <div>
@@ -251,6 +254,8 @@ export function LembretesCard({ painel }: { painel: PainelLembretes }) {
           )}
         </div>
 
+        {painel.instalado && <RespostasAlunos respostas={painel.respostas} />}
+
         {painel.instalado && (
           <div className="border-t border-line pt-4">
             <p className="mb-1.5 text-xs font-medium text-ink-soft">Últimos envios</p>
@@ -293,6 +298,72 @@ export function LembretesCard({ painel }: { painel: PainelLembretes }) {
         </Modal>
       )}
     </section>
+  );
+}
+
+const ROTULO_TIPO: Record<string, string> = {
+  audio: "áudio", image: "foto", video: "vídeo", document: "documento", sticker: "figurinha", location: "localização", contacts: "contato",
+};
+
+function RespostasAlunos({ respostas }: { respostas: RespostaAluno[] }) {
+  const router = useRouter();
+  const [marcando, setMarcando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const naoLidas = respostas.filter((r) => !r.lida).length;
+
+  async function marcarLidas() {
+    setMarcando(true);
+    setErro(null);
+    try {
+      const r = await marcarRespostasComoLidas();
+      if (!r.ok) return setErro(r.erro);
+      router.refresh();
+    } catch (e) {
+      setErro(mensagemDeErro(e, "Não deu pra marcar como lidas. Tenta de novo."));
+    } finally {
+      setMarcando(false);
+    }
+  }
+
+  return (
+    <div id="respostas" className="scroll-mt-28 border-t border-line pt-4">
+      <div className="mb-1.5 flex items-center justify-between gap-3">
+        <p className="text-xs font-medium text-ink-soft">
+          Respostas dos alunos{naoLidas > 0 ? ` · ${naoLidas} ${naoLidas === 1 ? "nova" : "novas"}` : ""}
+        </p>
+        {naoLidas > 0 && (
+          <button onClick={marcarLidas} disabled={marcando} className="shrink-0 text-xs font-medium text-ink-soft hover:text-ink disabled:opacity-60">
+            {marcando ? "Marcando…" : "Marcar todas como lidas"}
+          </button>
+        )}
+      </div>
+      {erro && <p className="mb-2 text-sm text-rose-600">{erro}</p>}
+      {respostas.length === 0 ? (
+        <p className="text-sm text-ink-soft">
+          Nenhuma resposta ainda. Quem responder um lembrete aparece aqui, e recebe na hora um aviso pra falar com a Hanna no número dela.
+        </p>
+      ) : (
+        <ul className="divide-y divide-line rounded-xl border border-line">
+          {respostas.map((r) => (
+            <li key={r.id} className={"p-2.5 text-sm " + (r.lida ? "" : "bg-accent-soft")}>
+              <div className="flex items-start justify-between gap-3">
+                <p className="min-w-0 truncate font-medium text-ink">{r.nome ?? r.telefoneFormatado}</p>
+                <span className="shrink-0 text-xs text-ink-soft">{r.quando}</span>
+              </div>
+              <p className="mt-0.5 whitespace-pre-wrap break-words text-ink">{r.texto ?? `[${ROTULO_TIPO[r.tipo] ?? "mensagem"}]`}</p>
+              <a
+                href={`https://wa.me/${r.telefone}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-block text-xs font-medium text-accent hover:underline"
+              >
+                Responder pelo seu WhatsApp
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

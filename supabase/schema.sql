@@ -629,3 +629,28 @@ create policy "lembretes_config_admin_all" on lembretes_config for all
   using (is_admin()) with check (is_admin());
 create policy "lembretes_enviados_admin_select" on lembretes_enviados for select
   using (is_admin());
+
+-- Respostas dos alunos aos lembretes (2026-10-06). O número da API não
+-- tem caixa de entrada: a Meta só repassa cada mensagem recebida pro
+-- webhook do app (/api/whatsapp/webhook), que guarda aqui. Sem isso a
+-- resposta se perdia. Quem escreve é o webhook (service_role); o admin lê
+-- e marca como lida.
+create table whatsapp_respostas (
+  id uuid primary key default uuid_generate_v4(),
+  whatsapp_message_id text not null unique,   -- a Meta às vezes reentrega o mesmo evento
+  telefone text not null,                     -- quem respondeu, como o WhatsApp identifica (só dígitos, com 55)
+  nome_whatsapp text,                         -- nome do perfil do WhatsApp da pessoa
+  aluno_id uuid references profiles(id) on delete set null,
+  texto text,                                 -- null quando não é texto (áudio, foto...)
+  tipo text not null,
+  resposta_automatica_enviada boolean not null default false,
+  lida boolean not null default false,
+  recebida_em timestamptz not null default now()
+);
+create index idx_whatsapp_respostas_nao_lidas on whatsapp_respostas(recebida_em) where not lida;
+
+alter table whatsapp_respostas enable row level security;
+create policy "whatsapp_respostas_admin_select" on whatsapp_respostas for select
+  using (is_admin());
+create policy "whatsapp_respostas_admin_update" on whatsapp_respostas for update
+  using (is_admin()) with check (is_admin());
