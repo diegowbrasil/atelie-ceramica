@@ -121,7 +121,9 @@ export function OficinaDetalheClient({ oficinaInicial }: { oficinaInicial: Ofici
   const pagos = preenchidos.filter((p) => p.pagamento === "pago").length;
   const pendentes = preenchidos.filter((p) => p.pagamento === "pendente").length;
   const duplas = preenchidos.filter((p) => p.tipo === "dupla").length;
-  const opcoesDupla = preenchidos.filter((p) => p.tipo !== "dupla").map((p) => p.nome!);
+  // Sem repetir nome: várias vagas "Vaga vendida" (vendidas fora do app)
+  // virariam opções iguais, com a mesma key no <option>.
+  const opcoesDupla = [...new Set(preenchidos.filter((p) => p.tipo !== "dupla").map((p) => p.nome!))];
   const idxAtual = ETAPAS_PECAS.findIndex((e) => e.id === oficina.statusPecas);
 
   return (

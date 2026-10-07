@@ -3467,3 +3467,9 @@ Falta (lado do Diego): rodar o SQL da seção "LEMBRETES POR WHATSAPP" do schema
 - Testado localmente sem enviar nada: verificação da Meta (token certo/errado), assinatura ausente/falsa recusada, assinatura certa chegando no banco.
 
 Falta (lado do Diego): rodar o SQL da tabela `whatsapp_respostas`; na Vercel, `WHATSAPP_VERIFY_TOKEN` e `WHATSAPP_APP_SECRET`; no app da Meta, cadastrar o webhook e assinar o campo `messages`.
+
+### 2026-10-07 — Vagas reais das oficinas
+
+- Diego passou as vagas livres de cada oficina (10/10: 1 · 24/10: 4 · 14/11: 10 · 28/11: 5 · 12/12: 12 · 19/12 Marmorizado: 10). Capacidade continua 12; as vagas vendidas por fora do app (site etc.) viraram participantes **"Vaga vendida"** (individual, pago, confirmado, sem telefone) — 30 no total. Assim aluno e admin veem o número certo sem mudar o schema, e a Hanna pode tocar numa delas e trocar pelo nome/telefone de quem comprou (aí a pessoa passa a receber o lembrete da véspera).
+- Removida a inscrição do aluno de teste "Teste PWA" que ocupava uma das 12 vagas de 10/10.
+- "Dupla com" deixou de repetir nome igual (várias "Vaga vendida" viravam opções duplicadas).
