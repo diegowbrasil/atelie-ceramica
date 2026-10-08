@@ -3473,3 +3473,13 @@ Falta (lado do Diego): rodar o SQL da tabela `whatsapp_respostas`; na Vercel, `W
 - Diego passou as vagas livres de cada oficina (10/10: 1 · 24/10: 4 · 14/11: 10 · 28/11: 5 · 12/12: 12 · 19/12 Marmorizado: 10). Capacidade continua 12; as vagas vendidas por fora do app (site etc.) viraram participantes **"Vaga vendida"** (individual, pago, confirmado, sem telefone) — 30 no total. Assim aluno e admin veem o número certo sem mudar o schema, e a Hanna pode tocar numa delas e trocar pelo nome/telefone de quem comprou (aí a pessoa passa a receber o lembrete da véspera).
 - Removida a inscrição do aluno de teste "Teste PWA" que ocupava uma das 12 vagas de 10/10.
 - "Dupla com" deixou de repetir nome igual (várias "Vaga vendida" viravam opções duplicadas).
+
+### 2026-10-08 — Renovar pacote pelo app + preços e Pix em Configurações
+
+- Diego viu um vídeo de concorrente (ScholaMea) e escolheu só **renovar pacote**. Recusou foto de peça e "aluno desmarcar aula" (quem marca presença é a Hanna; se o aluno não vem, ela só não marca).
+- Preços passados por ele: **pacote de 4 aulas R$ 460, aula avulsa R$ 160**. Regras (as sugeridas, ele não se opôs): renova só quando o pacote acaba; o pacote novo conta na hora e a cobrança fica pendente até o admin marcar como pago.
+- **Aluno** (Minha Turma): pacote em X/X e sem cobrança aberta → botão "Renovar pacote" → escolhe pacote/avulsa → abre direto o modal de pagamento. **Admin** (página do aluno): mesmo modal, pode renovar mesmo com cobrança antiga pendente. Lógica em `src/lib/actions/renovacao.ts`: encerra o pacote atual (`status: encerrado`, condicional — trava clique duplo/duas abas), cria o novo, liga na matrícula fixa, cria o pagamento com o preço lido no servidor.
+- **`atelie_config`** (tabela nova, 1 linha): chave Pix + preços, editáveis em Configurações → "Preços e Pix". Chega nas telas por `ConfigAtelieProvider` (layouts admin e aluno). A chave Pix fixa no código (`ateliedeceramica@pix.com.br`, herdada do demo — era de exemplo e já aparecia pros alunos nas oficinas) saiu; sem chave cadastrada o modal manda combinar pelo WhatsApp.
+- Testado local com aluno descartável: renovação pelo aluno e pelo admin, conferido no banco; chamadas forjadas direto na Server Action (renovar com aulas sobrando, tipo inventado, aluno chamando a ação de admin, renovar com cobrança pendente) todas recusadas; 3 renovações simultâneas → só 1 passou.
+
+Falta (lado do Diego): rodar o SQL de `atelie_config` (fim do schema.sql) e cadastrar a chave Pix de verdade em Configurações.

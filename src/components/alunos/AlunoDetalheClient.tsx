@@ -11,8 +11,11 @@ import { TURMA_LABEL_COR, type CorIdentidade } from "@/lib/alunos";
 import { abrirWhatsAppCobranca } from "@/lib/whatsapp";
 import { editarAluno, excluirAluno, atualizarTelefoneAluno, type AlunoReal } from "@/lib/actions/alunos";
 import { gerarConvite } from "@/lib/actions/convite";
+import { renovarPacoteAluno } from "@/lib/actions/renovacao";
+import { useConfigAtelie } from "@/components/ConfigAtelieProvider";
+import { ModalRenovarPacote } from "@/components/ModalRenovarPacote";
 import { mensagemDeErro } from "@/lib/resultado";
-import { ChevronLeft, Phone, Pencil, Trash2, UserPlus, Copy, Check } from "lucide-react";
+import { ChevronLeft, Phone, Pencil, Trash2, UserPlus, Copy, Check, RefreshCw } from "lucide-react";
 
 const COR_HEX: Record<CorIdentidade, string> = {
   sienna: "rgb(var(--sienna))", ardosia: "rgb(var(--ardosia))", musgo: "rgb(var(--musgo))", cafe: "rgb(var(--cafe))", ocre: "rgb(var(--ocre))",
@@ -56,6 +59,9 @@ export function AlunoDetalheClient({ alunoInicial, turmas }: Props) {
   const [editandoTel, setEditandoTel] = useState(false);
   const [telForm, setTelForm] = useState(aluno.tel ?? "");
   const [erroTel, setErroTel] = useState<string | null>(null);
+  const [renovando, setRenovando] = useState(false);
+  const { pixChave } = useConfigAtelie();
+  const pacoteAcabou = !!aluno.turmaId && aluno.aula >= aluno.total;
 
   async function salvarTelefone() {
     setPendente(true);
@@ -231,7 +237,7 @@ export function AlunoDetalheClient({ alunoInicial, turmas }: Props) {
             </dl>
             {aluno.status === "pendente" && (
               <div className="mt-3 flex flex-wrap gap-2">
-                <button onClick={() => abrirWhatsAppCobranca(aluno.tel, aluno.nome, null)} className="flex-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700">
+                <button onClick={() => abrirWhatsAppCobranca(aluno.tel, aluno.nome, null, pixChave)} className="flex-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700">
                   Cobrar no WhatsApp
                 </button>
                 <button
@@ -242,6 +248,14 @@ export function AlunoDetalheClient({ alunoInicial, turmas }: Props) {
                   {pendente ? "Salvando…" : "Marcar como pago"}
                 </button>
               </div>
+            )}
+            {pacoteAcabou && (
+              <button
+                onClick={() => setRenovando(true)}
+                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-medium text-white hover:bg-accent-hover"
+              >
+                <RefreshCw size={13} /> Renovar pacote
+              </button>
             )}
           </>
         ) : (
@@ -321,6 +335,22 @@ export function AlunoDetalheClient({ alunoInicial, turmas }: Props) {
             </button>
           </div>
         </Modal>
+      )}
+
+      {renovando && (
+        <ModalRenovarPacote
+          titulo={`Renovar pacote de ${aluno.nome.split(" ")[0]}`}
+          explicacao="O pacote novo começa a contar na próxima aula. A cobrança fica pendente em Pagamentos até você marcar como pago."
+          onClose={() => setRenovando(false)}
+          onConfirmar={async (tipo) => {
+            const r = await renovarPacoteAluno(aluno.id, tipo);
+            if (r.ok) {
+              setRenovando(false);
+              router.refresh();
+            }
+            return r;
+          }}
+        />
       )}
 
       {confirmandoExclusao && (

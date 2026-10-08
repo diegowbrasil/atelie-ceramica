@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
 import { Avatar } from "@/components/ui/Avatar";
 import { mensagemCobranca, abrirWhatsAppCobranca } from "@/lib/whatsapp";
+import { useConfigAtelie } from "@/components/ConfigAtelieProvider";
 import { marcarComoPago, type PagamentoReal } from "@/lib/actions/pagamentos";
 import { CreditCard, Check, Users, Clock, Search, X } from "lucide-react";
 
@@ -29,6 +30,7 @@ export function PagamentosClient({ pagamentosIniciais }: Props) {
   const [pagamentos, setPagamentos] = useState<PagamentoReal[]>(pagamentosIniciais);
   const [busca, setBusca] = useState("");
   const [modalCobranca, setModalCobranca] = useState<PagamentoReal | null>(null);
+  const { pixChave } = useConfigAtelie();
 
   // Esta tela não remonta sozinha ao navegar (sem param dinâmico na rota)
   // — mesmo padrão de resync de AvisosCard/AlunosListClient.
@@ -129,14 +131,14 @@ export function PagamentosClient({ pagamentosIniciais }: Props) {
       {modalCobranca && (
         <Modal onClose={() => setModalCobranca(null)}>
           <h3 className="mb-3 text-base font-semibold text-ink">Cobrar {modalCobranca.nome.split(" ")[0]}</h3>
-          <div className="mb-4 rounded-xl bg-cream p-3 text-sm text-ink">{mensagemCobranca(modalCobranca.nome, modalCobranca.valor)}</div>
+          <div className="mb-4 rounded-xl bg-cream p-3 text-sm text-ink">{mensagemCobranca(modalCobranca.nome, modalCobranca.valor, pixChave)}</div>
           <div className="flex gap-2">
             <button onClick={() => setModalCobranca(null)} className="flex-1 rounded-xl border border-line py-2.5 text-sm font-medium text-ink">
               Cancelar
             </button>
             <button
               onClick={() => {
-                abrirWhatsAppCobranca(modalCobranca.telefone, modalCobranca.nome, modalCobranca.valor);
+                abrirWhatsAppCobranca(modalCobranca.telefone, modalCobranca.nome, modalCobranca.valor, pixChave);
                 setModalCobranca(null);
               }}
               className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700"

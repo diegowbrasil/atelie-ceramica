@@ -261,6 +261,14 @@ export interface WhatsappResposta {
   recebida_em: string;
 }
 
+export interface AtelieConfig {
+  id: number;
+  pix_chave: string | null;
+  preco_pacote: number;
+  preco_avulsa: number;
+  atualizado_em: string;
+}
+
 // Formato exigido pelo `GenericSchema`/`GenericTable` do postgrest-js —
 // `Relationships` é obrigatório mesmo sem FK modeladas aqui (achado
 // 2026-09-21: sem isso, `Database["public"]` não satisfaz `GenericSchema`
@@ -310,6 +318,7 @@ export interface Database {
       lembretes_config: { Row: Prettify<LembretesConfig>; Insert: Prettify<Partial<LembretesConfig>>; Update: Prettify<Partial<LembretesConfig>>; Relationships: [] };
       lembretes_enviados: { Row: Prettify<LembreteEnviado>; Insert: Prettify<Partial<LembreteEnviado>>; Update: Prettify<Partial<LembreteEnviado>>; Relationships: [] };
       whatsapp_respostas: { Row: Prettify<WhatsappResposta>; Insert: Prettify<Partial<WhatsappResposta>>; Update: Prettify<Partial<WhatsappResposta>>; Relationships: [] };
+      atelie_config: { Row: Prettify<AtelieConfig>; Insert: Prettify<Partial<AtelieConfig>>; Update: Prettify<Partial<AtelieConfig>>; Relationships: [] };
     };
     Views: {};
     Functions: {};

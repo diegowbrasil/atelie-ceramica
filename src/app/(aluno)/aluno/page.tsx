@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { BadgePagamentoPendente } from "@/components/aluno/BadgePagamentoPendente";
+import { RenovarPacoteAluno } from "@/components/aluno/RenovarPacoteAluno";
 import { FundoArgilaParallax } from "@/components/ui/FundoArgilaParallax";
 import { TURMA_LABEL_COR, type CorIdentidade } from "@/lib/alunos";
 
@@ -54,6 +55,9 @@ export default async function AlunoHomePage() {
   const corFundo = corBruta === "cafe" ? "musgo" : corBruta;
   const cor = corBruta;
   const pct = aluno.total ? (aluno.aula / aluno.total) * 100 : 0;
+  // Pacote acabou e não tem cobrança em aberto (com cobrança pendente a
+  // renovação é bloqueada no servidor também — ver actions/renovacao.ts).
+  const podeRenovar = temTurma && aluno.aula >= aluno.total && aluno.status !== "pendente";
 
   return (
     <div className="relative">
@@ -101,6 +105,7 @@ export default async function AlunoHomePage() {
                 </div>
               </div>
             </div>
+            <RenovarPacoteAluno podeRenovar={podeRenovar} />
         </Card>
       ) : (
         <Card className="mb-4 p-5 text-center">

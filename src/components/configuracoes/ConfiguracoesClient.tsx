@@ -9,6 +9,7 @@ import { convidarAdmin, removerAdmin, type AdminInfo } from "@/lib/actions/convi
 import type { PainelLembretes } from "@/lib/actions/lembretes";
 import { mensagemDeErro } from "@/lib/resultado";
 import { LembretesCard } from "@/components/configuracoes/LembretesCard";
+import { PrecosPixCard } from "@/components/configuracoes/PrecosPixCard";
 import { Copy, Check, Trash2, ShieldPlus } from "lucide-react";
 
 // Primeira tela real de Configurações (era EmBreve) — pedido do Diego
@@ -102,6 +103,8 @@ export function ConfiguracoesClient({ adminsIniciais, lembretes }: { adminsInici
         </div>
         {erroLista && <p className="mt-2 text-sm text-rose-600">{erroLista}</p>}
       </section>
+
+      <PrecosPixCard />
 
       <LembretesCard painel={lembretes} />
 

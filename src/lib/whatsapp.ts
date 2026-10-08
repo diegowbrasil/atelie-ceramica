@@ -3,14 +3,16 @@
 // "valor: R$ {valor}" só entra na mensagem quando valor não é null (a leva
 // de dados reais nunca informou valor, então isso saía "R$ null" antes).
 
-export const PIX_CHAVE = "ateliedeceramica@pix.com.br";
-
-export function mensagemCobranca(nome: string, valor: number | null) {
-  return `Oi ${nome.split(" ")[0]}! Vi que seu pacote de cerâmica foi finalizado 😊 Quer renovar? Segue a chave Pix: ${PIX_CHAVE}${valor != null ? ` — valor: R$ ${valor}` : ""}. Qualquer dúvida me chama por aqui!`;
+// Chave Pix vem de Configurações (atelie_config, 2026-10-08) — a que
+// ficava fixa aqui era de exemplo, herdada do demo. Sem chave cadastrada,
+// a mensagem sai sem ela em vez de mandar uma chave errada.
+export function mensagemCobranca(nome: string, valor: number | null, pixChave: string | null) {
+  const pix = pixChave ? ` Segue a chave Pix: ${pixChave}` : "";
+  return `Oi ${nome.split(" ")[0]}! Vi que seu pacote de cerâmica foi finalizado 😊 Quer renovar?${pix}${valor != null ? ` — valor: R$ ${valor}` : ""}. Qualquer dúvida me chama por aqui!`;
 }
 
-export function abrirWhatsAppCobranca(telefone: string | null | undefined, nome: string, valor: number | null) {
-  window.open(`https://wa.me/${telefone || ""}?text=${encodeURIComponent(mensagemCobranca(nome, valor))}`, "_blank");
+export function abrirWhatsAppCobranca(telefone: string | null | undefined, nome: string, valor: number | null, pixChave: string | null) {
+  window.open(`https://wa.me/${telefone || ""}?text=${encodeURIComponent(mensagemCobranca(nome, valor, pixChave))}`, "_blank");
 }
 
 // Número real do ateliê (2026-09-29, informado pelo Diego: "+55 14

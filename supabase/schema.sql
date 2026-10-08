@@ -654,3 +654,28 @@ create policy "whatsapp_respostas_admin_select" on whatsapp_respostas for select
   using (is_admin());
 create policy "whatsapp_respostas_admin_update" on whatsapp_respostas for update
   using (is_admin()) with check (is_admin());
+
+-- ---------------------------------------------------------
+-- CONFIGURAÇÕES DO ATELIÊ — preços e chave Pix (2026-10-08)
+-- ---------------------------------------------------------
+-- Pedido do Diego junto com "renovar pacote pelo app": o aluno precisa
+-- ver quanto vai pagar e pra qual chave. Ficam aqui (não no código) pra
+-- Hanna mudar sozinha em Configurações. Uma linha só (id sempre 1), mesmo
+-- padrão de lembretes_config. `pix_chave` começa vazia: a que estava no
+-- código era de exemplo, e sem chave a tela manda o aluno pedir pelo
+-- WhatsApp em vez de mostrar uma chave errada.
+create table atelie_config (
+  id int primary key default 1 check (id = 1),
+  pix_chave text,
+  preco_pacote numeric(10,2) not null default 460,   -- pacote de 4 aulas
+  preco_avulsa numeric(10,2) not null default 160,   -- aula avulsa
+  atualizado_em timestamptz not null default now()
+);
+insert into atelie_config (id) values (1) on conflict (id) do nothing;
+
+alter table atelie_config enable row level security;
+-- Qualquer pessoa logada lê (o aluno vê preço e chave Pix); só admin muda.
+create policy "atelie_config_select" on atelie_config for select
+  using (auth.uid() is not null);
+create policy "atelie_config_admin_write" on atelie_config for all
+  using (is_admin()) with check (is_admin());

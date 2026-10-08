@@ -3,6 +3,8 @@ import { getSolicitacoesReal } from "@/lib/actions/solicitacoes";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { MobileHeader } from "@/components/layout/MobileHeader";
+import { ConfigAtelieProvider } from "@/components/ConfigAtelieProvider";
+import { getConfigAtelie } from "@/lib/configAtelie";
 
 // Nome/foto do admin logado + contagem real de solicitações pendentes
 // (2026-09-25) — até aqui o layout inteiro (visível em toda página
@@ -11,12 +13,13 @@ import { MobileHeader } from "@/components/layout/MobileHeader";
 // domínios foram ligados.
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const [{ data: { user } }, solicitacoesPendentes] = await Promise.all([supabase.auth.getUser(), getSolicitacoesReal()]);
+  const [{ data: { user } }, solicitacoesPendentes, config] = await Promise.all([supabase.auth.getUser(), getSolicitacoesReal(), getConfigAtelie()]);
   const { data: perfil } = user
     ? await supabase.from("profiles").select("nome, foto_url").eq("auth_user_id", user.id).maybeSingle()
     : { data: null };
 
   return (
+    <ConfigAtelieProvider config={config}>
     <div className="flex min-h-screen bg-cream">
       <Sidebar userName={perfil?.nome ?? "Admin"} fotoUrl={perfil?.foto_url} badges={{ solicitacoes: solicitacoesPendentes.length }} />
       <MobileHeader />
@@ -27,5 +30,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <main className="flex-1 pt-24 md:pt-0">{children}</main>
       <MobileNav badgeSolicitacoes={solicitacoesPendentes.length} />
     </div>
+    </ConfigAtelieProvider>
   );
 }
