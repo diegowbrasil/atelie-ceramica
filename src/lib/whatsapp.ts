@@ -41,3 +41,27 @@ export function mensagemComprovante(descricao: string | null, valor: number | nu
 export function abrirWhatsAppComprovante(descricao: string | null, valor: number | null) {
   window.open(`https://wa.me/${ATELIE_WHATSAPP}?text=${encodeURIComponent(mensagemComprovante(descricao, valor))}`, "_blank");
 }
+
+/** Mensagem de "pacote fechou" (2026-10-08) — datas reais, situação do
+ *  pagamento e, pedido do Diego, o Pix + preços pra pessoa renovar
+ *  respondendo no WhatsApp mesmo, sem precisar abrir o app. */
+export function mensagemPacoteFechado(
+  r: { nome: string; totalAulas: number; aulasUsadas: number; datas: string[]; pendente: { valor: number | null } | null; usaOApp: boolean },
+  config: { pixChave: string | null; precoPacote: number; precoAvulsa: number }
+) {
+  const reais = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: Number.isInteger(v) ? 0 : 2 })}`;
+  const listar = (itens: string[]) => (itens.length <= 1 ? itens.join("") : `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`);
+
+  const linhas = [`Oi, ${r.nome.split(" ")[0]}! Seu pacote de ${r.totalAulas} aula${r.totalAulas > 1 ? "s" : ""} fechou 🎉`];
+  // Aula dada antes de o app guardar a data da presença fica de fora: o
+  // modal avisa a Hanna (pedido do Diego) e ela completa a data no texto.
+  if (r.aulasUsadas > 0) linhas.push(`Suas aulas: ${listar(r.datas)}`);
+  linhas.push(r.pendente ? `Pagamento deste pacote: pendente${r.pendente.valor != null ? ` (${reais(r.pendente.valor)})` : ""}` : "Pagamento: pago ✅");
+  linhas.push("");
+  linhas.push("Pacote fechado! Vamos renovar?");
+  linhas.push(`Pacote 4 aulas: ${reais(config.precoPacote)} · Aula avulsa: ${reais(config.precoAvulsa)}`);
+  linhas.push(config.pixChave ? `Pix: ${config.pixChave}` : "Me chama aqui que te passo o Pix.");
+  if (config.pixChave) linhas.push("É só mandar o comprovante aqui que eu já renovo.");
+  if (r.usaOApp) linhas.push('Se preferir, dá pra renovar pelo app também, em "Renovar pacote".');
+  return linhas.join("\n");
+}

@@ -15,6 +15,7 @@ import { revalidatePath } from "next/cache";
 import { getConfigAtelie } from "@/lib/configAtelie";
 import { RENOVACAO, ehTipoRenovacao, precoDe, type TipoRenovacao } from "@/lib/pacotes";
 import type { Resultado } from "@/lib/resultado";
+import { telefoneParaWhatsApp } from "@/lib/lembretes";
 
 type Banco = ReturnType<typeof createAdminClient> | Awaited<ReturnType<typeof createClient>>;
 type CobrancaCriada = { pagamento: { id: string; descricao: string; valor: number } };
@@ -126,4 +127,77 @@ export async function renovarPacoteAluno(alunoId: string, tipo: TipoRenovacao): 
   if (perfil?.role !== "admin") return { ok: false, erro: "Só admin pode fazer isso." };
 
   return executarRenovacao(supabase, alunoId, tipo, { bloquearComPendente: false });
+}
+
+export interface ResumoPacote {
+  nome: string;
+  /** Só dígitos com 55, pronto pro wa.me — null sem telefone válido. */
+  telefoneWhatsApp: string | null;
+  totalAulas: number;
+  aulasUsadas: number;
+  /** "dd/mm" das presenças do pacote atual, em ordem. Pode ter menos que
+   *  aulasUsadas: aulas dadas antes do app registrar presença não têm data. */
+  datas: string[];
+  /** null = nada pendente. */
+  pendente: { valor: number | null } | null;
+  usaOApp: boolean;
+}
+
+/** Resumo pra mensagem de "pacote fechou" (2026-10-08, pedido do Diego):
+ *  datas reais em que a pessoa veio (não semanas seguidas — ela pode pular
+ *  uma), situação do pagamento, e o resto (Pix, preços) a tela completa
+ *  com a configuração do ateliê. Não existe ligação direta presença →
+ *  pacote no schema; como cada presença marcada soma 1 no pacote atual, as
+ *  últimas `aulas_usadas` presenças são as dele. */
+export async function getResumoPacote(alunoId: string): Promise<Resultado<{ resumo: ResumoPacote }>> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, erro: "Sua sessão expirou. Entre de novo." };
+  const { data: eu } = await supabase.from("profiles").select("role").eq("auth_user_id", user.id).maybeSingle();
+  if (eu?.role !== "admin") return { ok: false, erro: "Só admin pode fazer isso." };
+
+  const [{ data: perfil }, { data: matricula }, { data: presencas }, { data: pendentes }] = await Promise.all([
+    supabase.from("profiles").select("nome, telefone, auth_user_id").eq("id", alunoId).maybeSingle(),
+    supabase
+      .from("matriculas")
+      .select("pacotes(total_aulas, aulas_usadas)")
+      .eq("aluno_id", alunoId)
+      .eq("status", "confirmado")
+      .eq("provisorio", false)
+      .maybeSingle()
+      .overrideTypes<{ pacotes: { total_aulas: number; aulas_usadas: number } | null } | null, { merge: false }>(),
+    supabase
+      .from("presencas")
+      .select("aulas(data)")
+      .eq("aluno_id", alunoId)
+      .eq("status", "presente")
+      .overrideTypes<Array<{ aulas: { data: string } | null }>, { merge: false }>(),
+    supabase.from("pagamentos").select("valor").eq("aluno_id", alunoId).eq("status", "pendente").order("criado_em", { ascending: false }).limit(1),
+  ]);
+  if (!perfil) return { ok: false, erro: "Aluno não encontrado." };
+  const pacote = matricula?.pacotes;
+  if (!pacote) return { ok: false, erro: "Esse aluno não tem pacote numa turma fixa." };
+
+  const datas = (presencas ?? [])
+    .map((p) => p.aulas?.data)
+    .filter((d): d is string => !!d)
+    .sort()
+    .slice(-pacote.aulas_usadas)
+    .map((d) => `${d.slice(8, 10)}/${d.slice(5, 7)}`);
+  if (pacote.aulas_usadas === 0) datas.length = 0;
+
+  return {
+    ok: true,
+    resumo: {
+      nome: perfil.nome,
+      telefoneWhatsApp: telefoneParaWhatsApp(perfil.telefone),
+      totalAulas: pacote.total_aulas,
+      aulasUsadas: pacote.aulas_usadas,
+      datas,
+      pendente: pendentes && pendentes.length > 0 ? { valor: pendentes[0].valor } : null,
+      usaOApp: !!perfil.auth_user_id,
+    },
+  };
 }

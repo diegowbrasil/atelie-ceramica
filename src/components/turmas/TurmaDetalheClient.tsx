@@ -11,6 +11,7 @@ import { ProgressRing } from "@/components/ui/ProgressRing";
 import { GripVertical, Plus } from "lucide-react";
 import { TURMAS_DIAS, corTurma, type CorIdentidade } from "@/lib/turmasDias";
 import { FundoArgilaParallax } from "@/components/ui/FundoArgilaParallax";
+import { ModalResumoPacote } from "@/components/ModalResumoPacote";
 import { cadastrarAluno, toggleStatusAula, marcarPresenca, moverAluno, type VagaReal } from "@/lib/actions/turmas";
 
 // Referência de comportamento: demo/AtelieDemo.jsx (Turmas). Ligado aos
@@ -54,6 +55,7 @@ export function TurmaDetalheClient({ slugAtual, diaAtivo, turmaRealId, capacidad
   const [modalVaga, setModalVaga] = useState<number | null>(null);
   const [modalMover, setModalMover] = useState<VagaReal | null>(null);
   const [pendente, setPendente] = useState(false);
+  const [pacoteFechou, setPacoteFechou] = useState<{ alunoId: string; nome: string } | null>(null);
 
   const diaInfo = TURMAS_DIAS.find((d) => d.id === diaAtivo) ?? TURMAS_DIAS[1];
   const turmaInfo = diaInfo.turmas.find((t) => t.id === slugAtual) ?? diaInfo.turmas[0];
@@ -88,6 +90,9 @@ export function TurmaDetalheClient({ slugAtual, diaAtivo, turmaRealId, capacidad
     );
     await marcarPresenca(turmaRealId, diaAtivo, v.alunoId, v.pacoteId);
     router.refresh();
+    // Essa presença fechou o pacote: oferece mandar o resumo + Pix pra
+    // renovar (2026-10-08). Desmarcar nunca abre.
+    if (!v.presente && v.aula + 1 === v.total) setPacoteFechou({ alunoId: v.alunoId, nome: v.nome ?? "" });
   }
   async function handleMover(destinoSlug: string, tipo: "fixa" | "provisoria") {
     if (!modalMover?.matriculaId || !modalMover.alunoId) return;
@@ -223,6 +228,13 @@ export function TurmaDetalheClient({ slugAtual, diaAtivo, turmaRealId, capacidad
         </div>
       </div>
 
+      {pacoteFechou && (
+        <ModalResumoPacote
+          alunoId={pacoteFechou.alunoId}
+          titulo={`Pacote de ${pacoteFechou.nome.split(" ")[0]} fechou`}
+          onClose={() => setPacoteFechou(null)}
+        />
+      )}
       {modalVaga !== null && (
         <ModalCadastrarAluno numero={modalVaga} pendente={pendente} onClose={() => setModalVaga(null)} onSalvar={handleCadastrar} />
       )}

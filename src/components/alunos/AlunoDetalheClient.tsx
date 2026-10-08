@@ -14,8 +14,9 @@ import { gerarConvite } from "@/lib/actions/convite";
 import { renovarPacoteAluno } from "@/lib/actions/renovacao";
 import { useConfigAtelie } from "@/components/ConfigAtelieProvider";
 import { ModalRenovarPacote } from "@/components/ModalRenovarPacote";
+import { ModalResumoPacote } from "@/components/ModalResumoPacote";
 import { mensagemDeErro } from "@/lib/resultado";
-import { ChevronLeft, Phone, Pencil, Trash2, UserPlus, Copy, Check, RefreshCw } from "lucide-react";
+import { ChevronLeft, Phone, Pencil, Trash2, UserPlus, Copy, Check, RefreshCw, MessageCircle } from "lucide-react";
 
 const COR_HEX: Record<CorIdentidade, string> = {
   sienna: "rgb(var(--sienna))", ardosia: "rgb(var(--ardosia))", musgo: "rgb(var(--musgo))", cafe: "rgb(var(--cafe))", ocre: "rgb(var(--ocre))",
@@ -60,6 +61,7 @@ export function AlunoDetalheClient({ alunoInicial, turmas }: Props) {
   const [telForm, setTelForm] = useState(aluno.tel ?? "");
   const [erroTel, setErroTel] = useState<string | null>(null);
   const [renovando, setRenovando] = useState(false);
+  const [resumoAberto, setResumoAberto] = useState(false);
   const { pixChave } = useConfigAtelie();
   const pacoteAcabou = !!aluno.turmaId && aluno.aula >= aluno.total;
 
@@ -250,12 +252,20 @@ export function AlunoDetalheClient({ alunoInicial, turmas }: Props) {
               </div>
             )}
             {pacoteAcabou && (
-              <button
-                onClick={() => setRenovando(true)}
-                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-medium text-white hover:bg-accent-hover"
-              >
-                <RefreshCw size={13} /> Renovar pacote
-              </button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  onClick={() => setResumoAberto(true)}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-line px-3 py-2 text-xs font-medium text-ink hover:bg-cream"
+                >
+                  <MessageCircle size={13} /> Mandar resumo
+                </button>
+                <button
+                  onClick={() => setRenovando(true)}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-medium text-white hover:bg-accent-hover"
+                >
+                  <RefreshCw size={13} /> Renovar pacote
+                </button>
+              </div>
             )}
           </>
         ) : (
@@ -335,6 +345,10 @@ export function AlunoDetalheClient({ alunoInicial, turmas }: Props) {
             </button>
           </div>
         </Modal>
+      )}
+
+      {resumoAberto && (
+        <ModalResumoPacote alunoId={aluno.id} titulo={`Pacote de ${aluno.nome.split(" ")[0]}`} onClose={() => setResumoAberto(false)} />
       )}
 
       {renovando && (
